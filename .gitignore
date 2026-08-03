@@ -1,0 +1,43 @@
+# --- Dados (NUNCA versionar) ---------------------------------------------
+# O dataset SINAN/SIM tem ~888 MB e fica fora do repo.
+# Ver docs/contrato-dados.md para a origem e o layout esperado.
+data/
+*.parquet
+*.geojson
+*.geojson.gz
+*.topojson
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.csv
+
+# --- Python ---------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Streamlit ------------------------------------------------------------
+.streamlit/secrets.toml
+
+# --- DuckDB ---------------------------------------------------------------
+*.duckdb
+*.duckdb.wal
+
+# --- Cache local ----------------------------------------------------------
+.cache/
+cache/
+
+# --- Editores / SO --------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

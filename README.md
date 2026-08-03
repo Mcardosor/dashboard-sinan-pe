@@ -1,0 +1,72 @@
+# dashboard-sinan-pe
+
+Dashboard de vigilância epidemiológica SINAN em Streamlit/Python, com foco em
+Pernambuco. Reconstrução de um dashboard Shiny/R desenvolvido por outra equipe —
+mesmo escopo funcional, com ganhos de performance e de acabamento visual.
+
+**Status:** em construção. Primeira entrega: Tuberculose.
+
+---
+
+## Objetivo
+
+Três metas, nesta ordem de prioridade:
+
+1. **Paridade funcional** com o dashboard em R — mesmos KPIs, mesmos gráficos,
+   mesma navegação. Divergências numéricas são permitidas apenas quando
+   intencionais e registradas em `tests/paridade/excecoes.md`.
+2. **Mais rápido.** O original faz round-trip ao servidor R a cada interação e
+   simplifica geometria a cada redesenho do mapa. Aqui: DuckDB sobre parquet
+   pré-agregado, geometria simplificada uma vez em disco, cache do Streamlit.
+3. **Mais bonito.** Preserva o que o original acertou (cor por métrica, cards com
+   acento lateral, escala por quantil) e corrige o que ficou fraco (alturas
+   fixas, ausência de tema escuro, tipografia sem escala).
+
+## Escopo
+
+| Doença | Situação |
+|---|---|
+| Tuberculose | Primeira entrega — valida o core completo |
+| Hanseníase | Depois. Único caso com trabalho real (grau de incapacidade, classificação operacional, casos 0–14) |
+| Dengue | Depois. Entra como configuração |
+| Zika | Depois. Entra como configuração |
+
+A arquitetura segue o padrão de *disease pack* do projeto original: o core é
+único e cada doença é um arquivo de configuração (cores, rótulos, layout de KPI,
+variáveis de composição).
+
+## Stack
+
+- **Dados:** DuckDB sobre parquet particionado (Hive), leitura direta sem ETL
+- **App:** Streamlit
+- **Gráficos:** a definir entre `streamlit-echarts` e Plotly
+- **Mapa:** a definir entre Folium e Plotly choropleth
+
+## Dados
+
+Não versionados. São ~888 MB em 2.814 arquivos parquet, originados do projeto em
+R da equipe parceira. O layout esperado, o significado de cada dataset e as
+armadilhas conhecidas estão em **[docs/contrato-dados.md](docs/contrato-dados.md)**.
+
+Coloque os dados em `data/parquet/dashboard/` na raiz do projeto, ou aponte a
+variável de ambiente `SINAN_DATA_DIR` para onde eles estiverem.
+
+## Documentação
+
+- **[docs/cronograma.md](docs/cronograma.md)** — plano de 7 semanas com marcos e riscos
+- **[docs/inventario-funcionalidades.md](docs/inventario-funcionalidades.md)** — checklist de paridade com o original
+- **[docs/contrato-dados.md](docs/contrato-dados.md)** — datasets, esquemas, fórmulas dos KPIs e armadilhas
+
+## Estrutura
+
+```
+src/
+  data/         camada DuckDB: conexão, readers por dataset, KPIs
+  theme/        tokens de design, gerador de rampa de cor, componentes visuais
+  components/   KPI cards, mapa, gráficos
+  pages/        telas do Streamlit
+tests/
+  paridade/     harness que compara os números contra o dashboard em R
+scripts/        pré-processamento (simplificação de geometria, etc.)
+docs/           documentação do projeto
+```
