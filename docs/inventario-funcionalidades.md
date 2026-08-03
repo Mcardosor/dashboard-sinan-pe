@@ -101,6 +101,19 @@ Comportamento:
 - [ ] Tratamento de erro por componente — um gráfico quebrado não derruba a página
 - [ ] Estados vazios (ano sem dado, município sem caso)
 
+## Além do original
+
+Funcionalidade que o dashboard em R não tem. Ver `docs/analise-livre.md`.
+
+### Aba de Análise Livre (Superset)
+- [ ] Views curadas: `vw_incidencia`, `vw_serie_mensal`, `vw_obitos_sim`, `vw_sinan_variaveis`
+- [ ] `trim()` e mapa canônico de doença aplicados dentro das views
+- [ ] Conexão DuckDB registrada no Superset
+- [ ] Iframe no mesmo domínio, subcaminho `/cenarios/superset/`
+- [ ] Redirecionamento pós-login para o Explore de `vw_incidencia`
+- [ ] Role Gamma para analistas
+- [ ] Auto-cadastro restrito por domínio de e-mail institucional
+
 ## Deliberadamente fora
 
 O original despeja um arquivo `.Rmd` de debug a cada render — havia ~90 acumulados

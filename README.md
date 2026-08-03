@@ -22,6 +22,11 @@ Três metas, nesta ordem de prioridade:
    acento lateral, escala por quantil) e corrige o que ficou fraco (alturas
    fixas, ausência de tema escuro, tipografia sem escala).
 
+Além da paridade, há uma funcionalidade que o original em R não tem: a aba de
+**Análise Livre** com Apache Superset, para exploração self-service. Reaproveita
+a arquitetura já em produção no projeto `dashboard-tb-v4`. Ver
+**[docs/analise-livre.md](docs/analise-livre.md)**.
+
 ## Escopo
 
 | Doença | Situação |
@@ -41,6 +46,7 @@ variáveis de composição).
 - **App:** Streamlit
 - **Gráficos:** a definir entre `streamlit-echarts` e Plotly
 - **Mapa:** a definir entre Folium e Plotly choropleth
+- **Análise livre:** Apache Superset sobre DuckDB, embutido no mesmo domínio
 
 ## Dados
 
@@ -53,9 +59,10 @@ variável de ambiente `SINAN_DATA_DIR` para onde eles estiverem.
 
 ## Documentação
 
-- **[docs/cronograma.md](docs/cronograma.md)** — plano de 7 semanas com marcos e riscos
+- **[docs/cronograma.md](docs/cronograma.md)** — plano de 8 semanas com marcos e riscos
 - **[docs/inventario-funcionalidades.md](docs/inventario-funcionalidades.md)** — checklist de paridade com o original
 - **[docs/contrato-dados.md](docs/contrato-dados.md)** — datasets, esquemas, fórmulas dos KPIs e armadilhas
+- **[docs/analise-livre.md](docs/analise-livre.md)** — integração com Apache Superset
 
 ## Estrutura
 

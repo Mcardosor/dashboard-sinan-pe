@@ -1,7 +1,7 @@
 # Cronograma
 
 **Escopo:** Tuberculose · **Dedicação:** 40h/semana · **Equipe:** 1 dev
-**Início:** 03/ago/2026 · **Entrega:** 18/set/2026 · **Duração:** 7 semanas
+**Início:** 03/ago/2026 · **Entrega:** 25/set/2026 · **Duração:** 8 semanas
 
 | Semana | Período | Fase |
 |---|---|---|
@@ -11,7 +11,8 @@
 | 4 | 24–28/ago | Gráficos |
 | 5 | 31/ago–04/set | TB específico + composição |
 | 6 | 07–11/set | Paridade + performance |
-| 7 | 14–18/set | Polimento + deploy |
+| 7 | 14–18/set | Análise livre (Superset) |
+| 8 | 21–25/set | Polimento + deploy |
 
 ---
 
@@ -83,7 +84,7 @@
 ## Semana 3 — Mapa (17–21/ago) ⚠️ semana de risco
 
 > Componente mais difícil do projeto — 2.507 linhas no original. Se algo estourar
-> o prazo, é aqui. A semana 7 existe como folga para isso.
+> o prazo, é aqui. A semana 8 existe como folga para isso.
 
 ### 3.1 Camada base
 - [ ] Escolher biblioteca (Folium vs Plotly choropleth) e provar com o nível BR
@@ -188,21 +189,64 @@
 
 ---
 
-## Semana 7 — Polimento + deploy (14–18/set)
+## Semana 7 — Análise livre / Superset (14–18/set)
 
-### 7.1 Acabamento visual
+> Não se parte do zero: o **dashboard-tb-v4** já resolveu esta integração e está
+> em produção. Ler `docs/analise-livre.md` e o `PLANO_SEMANA.md` do v4 **antes**
+> de começar — os problemas difíceis (cookie `SameSite` no iframe, subcaminho no
+> Flask, imagem com `duckdb-engine`) já têm solução registrada.
+
+### 7.1 Views curadas
+- [ ] `vw_incidencia` — `incidence` + `incidence_0_14` + `dim_geo`, larga (~325 k linhas)
+- [ ] `vw_serie_mensal` — `_cache_ts` (1,2 M)
+- [ ] `vw_obitos_sim` — `cache_ts_sim_obitos` + `obitos_sim_faixa` (122 k)
+- [ ] `vw_sinan_variaveis` — `sinan_landing` + `sinan_dict` (28,9 M)
+- [ ] Aplicar `trim()` no `valor` e o mapa canônico de doença **dentro das views** —
+      é aqui que as armadilhas 2, 3 e 5 morrem para todo mundo
+- [ ] Script reprodutível de criação (`docker exec ... python -c "import duckdb; ..."`),
+      não pela UI do SQL Lab
+
+### 7.2 Conexão no Superset
+- [ ] Montar os parquets deste projeto no container como somente leitura (`:ro`)
+- [ ] Arquivo DuckDB persistente `/app/superset_home/sinan_pe.duckdb` — nunca `:memory:`
+- [ ] Cadastrar a URI `duckdb:////app/superset_home/sinan_pe.duckdb` via
+      "Connect this database with a SQLAlchemy URI string"
+- [ ] Habilitar `Allow DDL and DML` em *Advanced > SQL Lab*
+- [ ] Registrar os 4 datasets e conferir tipos e rótulos das colunas
+
+### 7.3 Aba no dashboard
+- [ ] Iframe no mesmo domínio, subcaminho `/cenarios/superset/`
+- [ ] Conferir `ENABLE_PROXY_FIX` **e** `APPLICATION_ROOT` — só um dos dois = tela preta
+- [ ] nginx: estripar o prefixo no `proxy_pass` e rota `/static/` dedicada
+- [ ] Redirecionamento pós-login para o Explore de `vw_incidencia`
+
+### 7.4 Acesso e validação
+- [ ] Role Gamma para analistas (leitura e exploração, sem acesso administrativo)
+- [ ] Restringir o auto-cadastro por domínio de e-mail institucional — pendência
+      herdada do v4, hoje é aberto a qualquer um na rede interna
+- [ ] Trocar a senha de admin temporária — pendência herdada do v4
+- [ ] Teste com um analista real montando um gráfico do zero
+
+**Pronto quando:** um analista entra pela aba, monta um gráfico sobre
+`vw_incidencia` e não esbarra em nenhuma das armadilhas do contrato de dados.
+
+---
+
+## Semana 8 — Polimento + deploy (21–25/set)
+
+### 8.1 Acabamento visual
 - [ ] Responsivo — remover as alturas fixas de 760px e 520px do original
 - [ ] Tema escuro
 - [ ] Escala tipográfica consistente
 - [ ] Aumentar os tooltips (10,5px no original é pequeno demais)
 
-### 7.2 Acessibilidade
+### 8.2 Acessibilidade
 - [ ] Navegação por teclado nos cards
 - [ ] `aria-label` / `aria-pressed`
 - [ ] Contraste
 - [ ] `prefers-reduced-motion`
 
-### 7.3 Entrega
+### 8.3 Entrega
 - [ ] Deploy
 - [ ] README de execução
 - [ ] Registrar as divergências metodológicas para a equipe de R
@@ -220,7 +264,8 @@ Dengue e Zika são quase idênticas entre si.
 
 | Risco | Impacto | Mitigação |
 |---|---|---|
-| Mapa com drill-down + recortes de PE estourar a semana 3 | Alto | Semana 7 reservada como folga |
+| Mapa com drill-down + recortes de PE estourar a semana 3 | Alto | Semana 8 reservada como folga |
 | Divergência metodológica não resolvida cedo | Alto | Gate na semana 1, antes de fixar as referências |
 | Painel de composição lento (28,9 M linhas em `sinan_landing`) | Médio | Partition pruning + cache; medir na semana 5, não na 6 |
 | Biblioteca de mapa escolhida não suportar o drill-down | Médio | Provar com o nível BR logo em 3.1, antes de investir |
+| Superset: auto-cadastro aberto e senha de admin temporária (herdado do v4) | Médio | Resolver em 7.4, antes de qualquer uso real continuado |
