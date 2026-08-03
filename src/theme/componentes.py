@@ -106,12 +106,20 @@ def css_base() -> str:
   background: var(--kpi-accent);
 }}
 .kpi-text {{ min-width: 0; }}
+/* O original usava `nowrap` + reticências, e cortava 28% de rótulos como
+   "Taxa de mortalidade (por 100 mil hab.)". Aqui o título quebra em até duas
+   linhas e a altura é reservada, para os cards não ficarem desalinhados. */
 .kpi-title {{
   font-size: {tokens.TEXTO_SM};
   font-weight: 700;
   opacity: .74;
   margin-bottom: 3px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  min-height: 2.5em;
 }}
 .kpi-value {{
   font-size: {tokens.TEXTO_XL};

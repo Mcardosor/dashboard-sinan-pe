@@ -77,7 +77,9 @@ Comportamento:
 ### Pirâmide etária
 - [ ] População como fundo + casos sobrepostos (estilo IBGE)
 - [ ] `ratio` por faixa
-- [ ] Alternância `tipo` = CASOS / CURA / OBITOS
+- [ ] Alternância `tipo` = CASOS / CURA / OBITOS — **CURA e OBITOS estão vazios
+      para TB**; a pirâmide de óbitos tem de sair de `obitos_sim_faixa`.
+      Ver contrato-dados, armadilha 9
 
 ### Fora das abas
 - [ ] Cultura em retratamento (TB)

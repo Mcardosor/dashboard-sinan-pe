@@ -135,3 +135,49 @@ inconsistência, porque lê das mesmas duas fontes do mesmo jeito.
 **Pendência para a equipe de R:** confirmar qual dataset usa residência e qual
 usa notificação. Sem isso não dá para decidir qual é a fonte autoritativa do
 total anual. Limites monitorados em `tests/paridade/test_consistencia.py`.
+
+### 8. Dois arquivos de esquemas diferentes no mesmo diretório
+
+`indicadores_tb_contatos` e `indicadores_tb_cultura_retratamento` têm dois
+arquivos lado a lado:
+
+| Arquivo | Linhas | Colunas |
+|---|---|---|
+| `por_ano.parquet` | 17 | agregado nacional por ano |
+| `por_ano_geo.parquet` | 53.779 / 27.351 | o mesmo, mais `CO_MUNI_RESIDENCIA` |
+
+Ler o diretório inteiro adota o esquema do primeiro arquivo em ordem alfabética
+e **descarta a coluna geográfica do segundo, sem erro**. É a mesma falha do glob
+de níveis. Por isso `conexao.caminho()` exige nomear o arquivo nesses dois casos.
+
+A coluna se chama `CO_MUNI_RESIDENCIA` — **residência**, não notificação. É a
+melhor pista que temos sobre a armadilha 7. O código `0` marca município
+ignorado.
+
+### 9. A pirâmide de tuberculose só tem CASOS
+
+O dataset `piramides` particiona por `tipo` ∈ CASOS, CURA, OBITOS. Para
+tuberculose, **CURA e OBITOS somam zero** em todos os 15 anos e nos três
+níveis. Só a dengue tem OBITOS preenchido; hanseníase e zika também estão
+vazias.
+
+Consequência: a alternância CASOS/CURA/ÓBITOS da pirâmide etária não funciona
+na entrega de TB. A pirâmide de óbitos precisa sair de `obitos_sim_faixa`, que
+tem o dado (6.354 óbitos no Brasil em 2024). Esse dataset, por sua vez, só
+existe no nível MUN — a agregação para UF e BR é feita na query.
+
+## Conciliação entre fontes
+
+Quatro datasets respondem "quantos casos", em três camadas que não conciliam:
+
+| Camada | Fontes | DF/2024 | Divergência |
+|---|---|---|---|
+| 1 | `incidence`, `cases_new` | 440 | entre si, ≤ 0,098% (3 das 27 UFs) |
+| 2 | `_cache_ts` | 474 | +7,7% sobre a camada 1 — ver armadilha 7 |
+| 3 | `piramides` | 474 | camada 2 menos registros sem sexo ou faixa (≤ 0,13%) |
+
+Para óbitos, `cache_ts_sim_obitos` (6.376 no BR/2024) e `obitos_sim_faixa`
+(6.354) divergem em 0,35%.
+
+**Nenhuma fonte é exatamente igual a outra.** Os limites medidos estão fixados
+em `tests/paridade/test_consistencia.py`.
