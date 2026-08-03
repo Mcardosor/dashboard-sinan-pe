@@ -1,0 +1,278 @@
+{
+  "BR/2024": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2024,
+      "nivel": "BR",
+      "uf": null,
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 85932.0,
+      "obitos": 6376.0,
+      "cura": 49114.0,
+      "pop": 212583750.0,
+      "incid": 40.422656952847994,
+      "mortalidade": 2.9992885157026348,
+      "letalidade": 7.419820323046129,
+      "casos_0_14": 2534.0,
+      "taxa_det_0_14": 6.025484852385252,
+      "hiv_pos_pct": 13.07089952698316,
+      "interrupcao_trat_pct": 14.911675773168533,
+      "interrupcao_trat_pct_ms": 17.195121951219512
+    }
+  },
+  "BR/2020": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2020,
+      "nivel": "BR",
+      "uf": null,
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 68848.0,
+      "obitos": 4568.0,
+      "cura": 47436.0,
+      "pop": 209164889.0,
+      "incid": 32.9156582298093,
+      "mortalidade": 2.18392294320487,
+      "letalidade": 6.63490587961887,
+      "casos_0_14": 1509.0,
+      "taxa_det_0_14": 3.446093674691635,
+      "hiv_pos_pct": 10.217360965738608,
+      "interrupcao_trat_pct": 12.468682019353388,
+      "interrupcao_trat_pct_ms": 14.068563515450139
+    }
+  },
+  "BR/2015": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2015,
+      "nivel": "BR",
+      "uf": null,
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 69447.0,
+      "obitos": 4608.0,
+      "cura": 49813.0,
+      "pop": 202403642.0,
+      "incid": 34.31114149615944,
+      "mortalidade": 2.276638875895326,
+      "letalidade": 6.635275821849756,
+      "casos_0_14": 1774.0,
+      "taxa_det_0_14": 3.898753289023658,
+      "hiv_pos_pct": 12.656224417398898,
+      "interrupcao_trat_pct": 9.449192782526115,
+      "interrupcao_trat_pct_ms": 11.196250319938573
+    }
+  },
+  "PE/2024": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2024,
+      "nivel": "UF",
+      "uf": "PE",
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 5246.0,
+      "obitos": 475.0,
+      "cura": 2619.0,
+      "pop": 9539029.0,
+      "incid": 54.995115330920996,
+      "mortalidade": 4.97954246705823,
+      "letalidade": 9.054517727792604,
+      "casos_0_14": 205.0,
+      "taxa_det_0_14": 10.4127142796916,
+      "hiv_pos_pct": 13.89090909090909,
+      "interrupcao_trat_pct": 11.885057471264368,
+      "interrupcao_trat_pct_ms": 14.753189129229062
+    }
+  },
+  "PE/2023": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2023,
+      "nivel": "UF",
+      "uf": "PE",
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 5360.0,
+      "obitos": 452.0,
+      "cura": 3027.0,
+      "pop": 9514483.0,
+      "incid": 56.33516818517622,
+      "mortalidade": 4.750652242481278,
+      "letalidade": 8.432835820895521,
+      "casos_0_14": 201.0,
+      "taxa_det_0_14": 10.041504886865711,
+      "hiv_pos_pct": 14.22110552763819,
+      "interrupcao_trat_pct": 11.620668188420835,
+      "interrupcao_trat_pct_ms": 14.35897435897436
+    }
+  },
+  "PE/2020": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2020,
+      "nivel": "UF",
+      "uf": "PE",
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 4212.0,
+      "obitos": 318.0,
+      "cura": 2807.0,
+      "pop": 9438962.0,
+      "incid": 44.62355076755262,
+      "mortalidade": 3.3690145166385883,
+      "letalidade": 7.54985754985755,
+      "casos_0_14": 117.0,
+      "taxa_det_0_14": 5.605190502220278,
+      "hiv_pos_pct": 12.433687002652519,
+      "interrupcao_trat_pct": 9.810959559703278,
+      "interrupcao_trat_pct_ms": 11.564442042691164
+    }
+  },
+  "PE/2015": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2015,
+      "nivel": "UF",
+      "uf": "PE",
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 4434.0,
+      "obitos": 420.0,
+      "cura": 2936.0,
+      "pop": 9213107.0,
+      "incid": 48.127086768882634,
+      "mortalidade": 4.558722697999708,
+      "letalidade": 9.472259810554803,
+      "casos_0_14": 92.0,
+      "taxa_det_0_14": 4.153648890253373,
+      "hiv_pos_pct": 15.19028871391076,
+      "interrupcao_trat_pct": 8.887886307241146,
+      "interrupcao_trat_pct_ms": 10.378573268091682
+    }
+  },
+  "SP/2024": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2024,
+      "nivel": "UF",
+      "uf": "SP",
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 20367.0,
+      "obitos": 1374.0,
+      "cura": 13315.0,
+      "pop": 45973194.0,
+      "incid": 44.30190340919102,
+      "mortalidade": 2.988698153102001,
+      "letalidade": 6.746207099720134,
+      "casos_0_14": 615.0,
+      "taxa_det_0_14": 7.140902310482485,
+      "hiv_pos_pct": 10.43830217819673,
+      "interrupcao_trat_pct": 16.85823754789272,
+      "interrupcao_trat_pct_ms": 17.40252608456892
+    }
+  },
+  "AC/2024": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2024,
+      "nivel": "UF",
+      "uf": "AC",
+      "mun6": null
+    },
+    "kpis": {
+      "casos": 528.0,
+      "obitos": 34.0,
+      "cura": 416.0,
+      "pop": 880631.0,
+      "incid": 59.957008099873846,
+      "mortalidade": 3.860867945825209,
+      "letalidade": 6.4393939393939394,
+      "casos_0_14": 8.0,
+      "taxa_det_0_14": 3.5317593459181693,
+      "hiv_pos_pct": 4.563492063492063,
+      "interrupcao_trat_pct": 9.671179883945841,
+      "interrupcao_trat_pct_ms": 9.84251968503937
+    }
+  },
+  "Recife/2024": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2024,
+      "nivel": "MUN",
+      "uf": "PE",
+      "mun6": "261160"
+    },
+    "kpis": {
+      "casos": 1608.0,
+      "obitos": 136.0,
+      "cura": 896.0,
+      "pop": 1587707.0,
+      "incid": 101.27813255216486,
+      "mortalidade": 8.565812205904491,
+      "letalidade": 8.45771144278607,
+      "casos_0_14": 59.0,
+      "taxa_det_0_14": 21.10142273660417,
+      "hiv_pos_pct": 15.762834417932032,
+      "interrupcao_trat_pct": 16.62286465177398,
+      "interrupcao_trat_pct_ms": 20.045558086560366
+    }
+  },
+  "Recife/2020": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2020,
+      "nivel": "MUN",
+      "uf": "PE",
+      "mun6": "261160"
+    },
+    "kpis": {
+      "casos": 1293.0,
+      "obitos": 89.0,
+      "cura": 856.0,
+      "pop": 1598198.0,
+      "incid": 80.90361769943398,
+      "mortalidade": 5.568771829272718,
+      "letalidade": 6.883217324052591,
+      "casos_0_14": 28.0,
+      "taxa_det_0_14": 9.448765754973257,
+      "hiv_pos_pct": 14.869466515323497,
+      "interrupcao_trat_pct": 13.255813953488373,
+      "interrupcao_trat_pct_ms": 15.60344827586207
+    }
+  },
+  "Petrolina/2024": {
+    "escopo": {
+      "doenca": "TUBERCULOSE",
+      "ano": 2024,
+      "nivel": "MUN",
+      "uf": "PE",
+      "mun6": "261110"
+    },
+    "kpis": {
+      "casos": 73.0,
+      "obitos": 3.0,
+      "cura": 51.0,
+      "pop": 414083.0,
+      "incid": 17.629315861795824,
+      "mortalidade": 0.7244924326765407,
+      "letalidade": 4.10958904109589,
+      "casos_0_14": 2.0,
+      "taxa_det_0_14": 2.0562169720148873,
+      "hiv_pos_pct": 6.8493150684931505,
+      "interrupcao_trat_pct": 10.0,
+      "interrupcao_trat_pct_ms": 10.9375
+    }
+  }
+}

@@ -24,12 +24,21 @@ fonte de macrorregião e região de saúde. Copie para `data/support/`.
 | `piramides` | 13,2 M | `nivel/tipo/doenca/ano` | Pirâmide etária. `tipo` ∈ CASOS, CURA, OBITOS. Campos `valor`, `pop`, `ratio` |
 | `sinan_landing` | 28,9 M | `doenca/nivel/ano` | Variáveis SINAN em formato longo: `variavel`, `valor`, `valor_lbl`, `n` |
 | `sinan_dict` | 4,5 k | — | Dicionário de código → rótulo |
-| `cache_ts_sim_obitos` | 65 k | `doenca/nivel/ano` | Óbitos do SIM, mensais |
+| `cache_ts_sim_obitos` | 65 k | `nivel/doenca/ano` | Óbitos do SIM, mensais |
 | `obitos_sim_faixa` | 57 k | `doenca/nivel/ano` | Óbitos do SIM por sexo e faixa etária |
 | `cases_new` | 205 k | `doenca/ano` | Casos novos por `cod_mun6` |
 | `indicadores_tb_contatos` | 54 k | — | TB: contatos identificados vs examinados |
 | `indicadores_tb_cultura_retratamento` | 27 k | — | TB: cultura em casos de retratamento |
 | `_geo_cache/` | 652 MB | `municipios/uf=XX/` | GeoJSON por UF + `municipios_centroids.parquet` |
+
+A ordem das partições **não é uniforme** e a diferença é sutil: `cache_ts_sim_obitos`
+é `nivel/doenca/ano`, mas `obitos_sim_faixa`, que também vem do SIM, é
+`doenca/nivel/ano`. A ordem de cada dataset está declarada em
+`src/data/conexao.py::PARTICOES`.
+
+Globar a raiz de um dataset e filtrar no `WHERE` **não** funciona: os arquivos de
+`nivel=BR` não têm a coluna `uf`, e o DuckDB resolve a união pelo esquema do
+primeiro arquivo, fazendo colunas sumirem. Por isso a poda é feita pelo caminho.
 
 ## Fórmulas dos KPIs
 
@@ -92,3 +101,14 @@ Os rótulos foram achatados em Favorável / Desfavorável / Não avaliado. Os c�
 `2` (abandono), `3` e `4` (óbitos) e `9` (falência) aparecem todos como
 "Desfavorável". Para separar óbito de abandono, use o **código**, nunca o
 `valor_lbl`.
+
+### 6. O código do município tem dois comprimentos
+
+`incidence` e `incidence_0_14` trazem `cod_mun7` (7 dígitos) e `cod_mun6`.
+Todos os outros datasets — `sinan_landing`, `_cache_ts`, `piramides`,
+`cache_ts_sim_obitos` — chaveiam por `geo_id`, que tem **6**.
+
+Cruzar os dois não levanta erro: devolve vazio. O 7º dígito é verificador e não
+é reconstruível por truncamento, então a aplicação usa o código de **6 dígitos**
+como chave canônica em todo lugar (`src/data/escopo.py`), deixando o de 7
+apenas para exibição.
