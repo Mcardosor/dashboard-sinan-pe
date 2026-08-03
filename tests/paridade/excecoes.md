@@ -6,6 +6,7 @@ registrada aqui, com justificativa. O que não estiver listado e divergir é bug
 | KPI | Regra do R | Regra adotada aqui | Justificativa | Decidido em |
 |---|---|---|---|---|
 | `interrupcao_trat_pct` | `SITUA_ENCE=2` / todos os encerramentos | *a decidir* | *a decidir* | *pendente — gate da semana 1* |
+| Total anual no nível UF | KPI de `incidence`, série de `_cache_ts`, sem conciliação | *a decidir* | Os dois divergem por UF (DF chega a 36,8%). Precisa saber qual usa residência e qual usa notificação. | *pendente — ver contrato-dados, armadilha 7* |
 
 ## Divergências visuais
 

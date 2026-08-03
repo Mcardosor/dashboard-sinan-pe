@@ -112,3 +112,26 @@ Cruzar os dois não levanta erro: devolve vazio. O 7º dígito é verificador e 
 é reconstruível por truncamento, então a aplicação usa o código de **6 dígitos**
 como chave canônica em todo lugar (`src/data/escopo.py`), deixando o de 7
 apenas para exibição.
+
+### 7. A série mensal não fecha com o total anual, por UF
+
+`incidence` (anual) e `_cache_ts` (mensal) atribuem o caso a UFs diferentes.
+Nacionalmente as diferenças se cancelam — o pior ano desvia 0,0086% — mas por
+UF o desvio é grande e sistemático:
+
+| Recorte | Desvio |
+|---|---|
+| DF | 7,7% (2024) a **36,8%** (2011) — o pior em todos os 15 anos |
+| Demais UFs | 4,5% a 13,9%, concentrado em PI, TO e AP |
+
+O padrão (DF ganhando enquanto GO e TO perdem) é compatível com **UF de
+residência** num dataset e **UF de notificação** no outro. A queda ao longo dos
+anos acompanha a melhora do preenchimento no SINAN.
+
+Consequência prática: no nível UF, o card de KPI e o gráfico de série temporal
+mostram totais diferentes para o mesmo recorte. O dashboard em R tem a mesma
+inconsistência, porque lê das mesmas duas fontes do mesmo jeito.
+
+**Pendência para a equipe de R:** confirmar qual dataset usa residência e qual
+usa notificação. Sem isso não dá para decidir qual é a fonte autoritativa do
+total anual. Limites monitorados em `tests/paridade/test_consistencia.py`.
