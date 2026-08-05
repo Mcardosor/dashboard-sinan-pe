@@ -197,3 +197,97 @@ def test_metricas_pintaveis_cobrem_todas_as_ufs(metrica: str) -> None:
     valores = leitura.valores_por_geografia(Escopo("TB", 2024, "BR"), metrica)
     assert len(valores) == 27
     assert valores.index.is_unique
+
+
+# ---------------------------------------------------------------------------
+# Clique no mapa (pydeck)
+# ---------------------------------------------------------------------------
+# O coroplético do Plotly não emite evento de clique — ver docs/mapa-clique.md.
+# O `GeoJsonLayer` do deck.gl faz picking por GPU, e o evento do
+# `st.pydeck_chart` traz a feição inteira, com as propriedades dela.
+
+
+class _Evento:
+    def __init__(self, selection):
+        self.selection = selection
+
+
+def _evento_com(props: dict):
+    return _Evento({"objects": {"camada-0": [{"properties": props}]}})
+
+
+def test_extrai_uf_do_clique() -> None:
+    assert mapa.alvo_do_clique_deck(_evento_com({"uf": "PE"})) == "PE"
+
+
+def test_extrai_municipio_do_clique() -> None:
+    props = {"cod_mun6": "261160", "nome_mun": "Recife", "uf": "PE"}
+    assert mapa.alvo_do_clique_deck(_evento_com(props)) == "261160"
+
+
+def test_municipio_tem_precedencia_sobre_a_uf() -> None:
+    """A feição de município também carrega `uf`; a chave mais específica vence."""
+    props = {"uf": "PE", "cod_mun6": "261160"}
+    assert mapa.alvo_do_clique_deck(_evento_com(props)) == "261160"
+
+
+def test_extrai_regiao_de_saude() -> None:
+    assert mapa.alvo_do_clique_deck(_evento_com({"regiao": "Sertão"})) == "Sertão"
+
+
+@pytest.mark.parametrize(
+    "evento",
+    [
+        None,
+        _Evento(None),
+        _Evento({}),
+        _Evento({"objects": {}}),
+        _Evento({"objects": {"camada-0": []}}),
+        _Evento({"objects": {"camada-0": [{"properties": {}}]}}),
+        _Evento({"objects": {"camada-0": ["texto solto"]}}),
+        {"selection": {"objects": {"camada-0": [{"properties": {"uf": "SP"}}]}}},
+    ],
+)
+def test_evento_estranho_nao_derruba_a_pagina(evento) -> None:
+    """O formato do evento é detalhe interno do Streamlit e já mudou entre
+    versões. Se vier algo inesperado, o mapa apenas não navega."""
+    resultado = mapa.alvo_do_clique_deck(evento)
+    assert resultado is None or isinstance(resultado, str)
+
+
+def test_evento_em_dicionario_tambem_funciona() -> None:
+    bruto = {"selection": {"objects": {"c": [{"properties": {"uf": "BA"}}]}}}
+    assert mapa.alvo_do_clique_deck(bruto) == "BA"
+
+
+# ---------------------------------------------------------------------------
+# Legenda em HTML
+# ---------------------------------------------------------------------------
+
+
+def test_legenda_cobre_todas_as_classes() -> None:
+    """O deck.gl não desenha legenda; ela é HTML, como os cards de KPI."""
+    escala = mapa.escala_quantil(pd.Series(range(100)), RAMPA)
+    html = mapa.legenda(escala, "Incidência")
+    for rotulo in escala.rotulos:
+        assert rotulo in html
+    assert mapa.ROTULO_SEM_DADO in html
+    assert "Incidência" in html
+
+
+def test_legenda_escapa_o_titulo() -> None:
+    escala = mapa.escala_quantil(pd.Series(range(10)), RAMPA)
+    assert "<script>" not in mapa.legenda(escala, "<script>alert(1)</script>")
+
+
+def test_deck_pinta_cada_feicao() -> None:
+    from src.data import geo, leitura
+    from src.data.escopo import Escopo
+
+    camada = geo.municipios("PE")
+    valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf="PE"), "incid")
+    desenho, escala = mapa.deck(
+        camada, valores, chave="cod_mun6", rampa=RAMPA, rotulo_metrica="Incidência"
+    )
+    assert len(desenho.layers) == 1
+    assert escala.classes == mapa.CLASSES

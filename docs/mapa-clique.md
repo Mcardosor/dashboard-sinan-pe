@@ -36,7 +36,23 @@ vez de `geo=` no `update_layout` — este último era um erro real de minha
 parte, porque passar o dicionário inteiro sobrescreve o enquadramento, mas
 corrigi-lo não resolveu o problema de fundo.
 
-## Próximo caminho a testar
+## Resolvido: pydeck
+
+Funciona. Verificado no navegador com cliques reais: clicar num estado navega
+para ele e o mapa redesenha com os municípios; clicar num município navega
+para ele. Em cada passo, a trilha, os seletores da barra lateral, os KPIs e a
+legenda acompanham.
+
+O evento do `st.pydeck_chart` traz a feição inteira, com as propriedades — a
+chave sai de `properties.cod_mun6` ou `properties.uf`. A extração é tolerante
+a formato inesperado de propósito: o payload é detalhe interno do Streamlit e
+já mudou entre versões, então uma mudança futura faz o mapa deixar de navegar,
+não a página cair.
+
+A legenda passou a ser HTML, já que o deck.gl não desenha uma. Mesmo padrão
+dos cards de KPI.
+
+## O caminho descartado (mantido como registro)
 
 **pydeck.** `st.pydeck_chart` tem `on_select` nativo (verificado na assinatura)
 e o `GeoJsonLayer` do deck.gl tem *picking* por GPU, que é o mecanismo de

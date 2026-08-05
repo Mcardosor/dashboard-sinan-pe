@@ -413,6 +413,33 @@ section[data-testid="stSidebar"] {{
 }}
 .sinan-painel-mapa {{ min-height: {tokens.ALTURA_MIN_MAPA}; }}
 .sinan-painel-graficos {{ min-height: {tokens.ALTURA_MIN_PAINEL}; }}
+/* Legenda do mapa. O deck.gl não desenha uma, então ela é HTML — mesmo
+   padrão dos cards de KPI. */
+.mapa-legenda {{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 8px;
+  font-family: var(--fonte);
+  font-size: {tokens.TEXTO_XS};
+  color: inherit;
+}}
+.mapa-legenda-titulo {{
+  flex-basis: 100%;
+  font-size: {tokens.TEXTO_SM};
+  font-weight: 700;
+  opacity: .74;
+  margin-bottom: 2px;
+}}
+.mapa-legenda-item {{ display: inline-flex; align-items: center; gap: 6px; }}
+.mapa-legenda-item i {{
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}}
+
 .sinan-painel-vazio {{
   display: flex;
   align-items: center;

@@ -285,8 +285,16 @@ def test_paineis_usam_altura_minima_e_nao_fixa() -> None:
     css = c.css_layout()
     assert "min-height" in css
 
-    nus = re.findall(r"(?<![-\w])height\s*:\s*[^;]+;", css)
-    assert not nus, f"altura fixa encontrada: {nus}"
+    # A regra vale para os painéis, não para o CSS inteiro: o quadradinho de
+    # cor da legenda tem altura fixa de propósito.
+    blocos = re.findall(r"\.sinan-painel[^{]*\{([^}]*)\}", css)
+    assert blocos, "não achei as regras de painel"
+    nus = [
+        achado
+        for bloco in blocos
+        for achado in re.findall(r"(?<![-\w])height\s*:\s*[^;]+;", bloco)
+    ]
+    assert not nus, f"altura fixa em painel: {nus}"
 
 
 def test_faixa_de_intro_sem_imagens_ocupa_a_largura_toda() -> None:

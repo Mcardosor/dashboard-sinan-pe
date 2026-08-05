@@ -220,11 +220,9 @@ with esquerda:
         )
     else:
         camada = _camada(nav.nivel, nav.uf)
-        contorno, _ = _geojson(nav.nivel, nav.uf)
         chave = "uf" if nivel_mapa == "UF" else "cod_mun6"
-        figura = mapa.figura(
+        desenho, escala = mapa.deck(
             camada,
-            contorno,
             valores,
             chave=chave,
             rampa=pack.rampa_mapa(nav.metrica),
@@ -232,16 +230,33 @@ with esquerda:
             coluna_nome="nome_mun" if chave == "cod_mun6" else "uf",
             decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
         )
-        # Sem `on_select`: o coroplético do maplibre não emite `plotly_click`,
-        # verificado com clique real e sintético. O drill-down por clique está
-        # bloqueado nesta rota — ver docs/mapa-clique.md. Por ora a navegação
-        # é pelos seletores da barra lateral, que já operam a mesma máquina
-        # de estados que o mapa vai operar.
-        st.plotly_chart(
-            figura,
+
+        # pydeck, e não Plotly: o coroplético do Plotly não emite evento de
+        # clique. Ver docs/mapa-clique.md. A chave inclui o recorte para o
+        # Streamlit recriar o widget ao mudar de nível — senão a seleção
+        # anterior redispara a cada rerun e prende a navegação num laço.
+        evento = st.pydeck_chart(
+            desenho,
             use_container_width=True,
-            config={"displayModeBar": False, "scrollZoom": True},
+            height=mapa.ALTURA,
+            key=f"mapa-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}",
+            on_select="rerun",
+            selection_mode="single-object",
         )
+
+        st.markdown(
+            mapa.legenda(escala, pack.rotulo(nav.metrica)), unsafe_allow_html=True
+        )
+
+        if alvo := mapa.alvo_do_clique_deck(evento):
+            if nivel_mapa == "UF" and alvo != nav.uf:
+                nav.entrar_uf(alvo)
+                st.rerun()
+            elif nivel_mapa == "MUN" and alvo != nav.mun:
+                nomes = _municipios(nav.uf)
+                if alvo in nomes:
+                    nav.entrar_municipio(alvo, nome=nomes[alvo])
+                    st.rerun()
 
 direita.markdown(
     ui.painel_vazio("Gráficos", "Entram na semana 4"), unsafe_allow_html=True

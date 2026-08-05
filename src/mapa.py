@@ -240,3 +240,132 @@ def alvo_do_clique(evento) -> str | None:
         if valor not in (None, ""):
             return str(valor)
     return None
+
+
+def _rgb(cor: str) -> list[int]:
+    """`#RRGGBB` para `[r, g, b]`, que é como o deck.gl espera."""
+    texto = cor.lstrip("#")
+    return [int(texto[i : i + 2], 16) for i in (0, 2, 4)]
+
+
+def deck(
+    camada,
+    valores: pd.Series,
+    *,
+    chave: str,
+    rampa: list[str],
+    rotulo_metrica: str,
+    coluna_nome: str = "nome_mun",
+    decimais: int = 1,
+    altura: int = ALTURA,
+):
+    """Mapa em pydeck, para o drill-down por clique.
+
+    O coroplético do Plotly não emite evento de clique — ver
+    docs/mapa-clique.md. O ``GeoJsonLayer`` do deck.gl faz *picking* por GPU,
+    que é o caminho que sobrou.
+
+    Devolve ``(deck, escala)``: a escala sai junto porque o deck.gl não desenha
+    legenda, e ela é montada em HTML por :func:`legenda`.
+    """
+    import pydeck
+
+    colunas = list(dict.fromkeys([chave, coluna_nome if coluna_nome in camada else chave]))
+    dados = camada[[*colunas, "geometry"]].copy()
+    dados["valor"] = dados[chave].map(valores)
+
+    escala = escala_quantil(dados["valor"], rampa, decimais=decimais)
+    dados["classe"] = classificar(dados["valor"], escala)
+    dados["cor"] = dados["classe"].map(
+        lambda c: _rgb(escala.cores.get(c, SEM_DADO))
+    )
+    dados["exibicao"] = dados["valor"].map(
+        lambda v: "—" if pd.isna(v) else _formatar(float(v), decimais)
+    )
+    dados["rotulo"] = dados[colunas[-1]].astype(str)
+
+    quadro = enquadrar(tuple(camada.total_bounds))
+
+    camada_geo = pydeck.Layer(
+        "GeoJsonLayer",
+        data=dados.__geo_interface__,
+        get_fill_color="properties.cor",
+        get_line_color=[255, 255, 255, 150],
+        line_width_min_pixels=0.6,
+        stroked=True,
+        filled=True,
+        # `pickable` é o que faz o clique existir; `auto_highlight` dá o
+        # retorno visual que o hover do Plotly dava de graça.
+        pickable=True,
+        auto_highlight=True,
+        highlight_color=[255, 255, 255, 60],
+    )
+
+    return (
+        pydeck.Deck(
+            layers=[camada_geo],
+            initial_view_state=pydeck.ViewState(
+                latitude=quadro["center"]["lat"],
+                longitude=quadro["center"]["lon"],
+                zoom=quadro["zoom"],
+                bearing=0,
+                pitch=0,
+                height=altura,
+            ),
+            map_provider=None,
+            tooltip={
+                "html": f"<b>{{rotulo}}</b><br>{rotulo_metrica}: {{exibicao}}",
+                "style": {
+                    "backgroundColor": "rgba(17,24,39,.96)",
+                    "color": "#fff",
+                    "fontSize": "12px",
+                    "borderRadius": "10px",
+                    "padding": "6px 8px",
+                },
+            },
+        ),
+        escala,
+    )
+
+
+def legenda(escala: Escala, titulo: str) -> str:
+    """Legenda em HTML — o deck.gl não desenha uma."""
+    from html import escape
+
+    itens = "".join(
+        f'<span class="mapa-legenda-item">'
+        f'<i style="background:{escape(escala.cores[r])}"></i>{escape(r)}</span>'
+        for r in [*escala.rotulos, ROTULO_SEM_DADO]
+        if r in escala.cores
+    )
+    return (
+        f'<div class="mapa-legenda">'
+        f'<div class="mapa-legenda-titulo">{escape(titulo)}</div>{itens}</div>'
+    )
+
+
+def alvo_do_clique_deck(evento) -> str | None:
+    """Chave da geografia clicada no ``st.pydeck_chart``.
+
+    O evento traz os objetos selecionados por camada; cada objeto é a feição
+    GeoJSON, então a chave está em ``properties``.
+    """
+    if not evento:
+        return None
+
+    selecao = getattr(evento, "selection", None)
+    if selecao is None and isinstance(evento, dict):
+        selecao = evento.get("selection")
+    if not isinstance(selecao, dict):
+        return None
+
+    objetos = selecao.get("objects") or {}
+    for lista in objetos.values():
+        if not lista:
+            continue
+        props = lista[0].get("properties") if isinstance(lista[0], dict) else None
+        if isinstance(props, dict):
+            for campo in ("cod_mun6", "uf", "regiao"):
+                if props.get(campo):
+                    return str(props[campo])
+    return None

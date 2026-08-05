@@ -108,10 +108,13 @@ detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 - [x] Carregar geometria pré-simplificada (`src/data/geo.py`)
 
 ### 3.2 Drill-down
-- [ ] BR → UF por clique
-- [ ] UF → MUN por clique
+- [x] BR → UF por clique
+- [x] UF → MUN por clique
 - [ ] Modo "detalhe" do município
-- [ ] `fitBounds` ao trocar de nível
+- [x] Enquadramento ao trocar de nível
+
+Feito em **pydeck**, não em Plotly: o coroplético do Plotly não emite evento
+de clique, nem na versão maplibre nem na SVG. Ver `docs/mapa-clique.md`.
 
 ### 3.3 Escala de cor
 - [x] Quantil k=6 sobre a métrica ativa, com quantis repetidos colapsados —
