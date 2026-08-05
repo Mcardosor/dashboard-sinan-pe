@@ -1,20 +1,36 @@
 """Dashboard SINAN — Tuberculose.
 
-Esqueleto da semana 1: sidebar, faixa de KPIs e o recorte em `session_state`.
-Mapa e gráficos entram nas semanas 3 e 4.
+Estado da semana 2: navegação, faixa de KPIs e o recorte vivo em
+``st.session_state``. Mapa e gráficos entram nas semanas 3 e 4.
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
+from src.data import config, geo
 from src.data import kpis as calc
 from src.data import leitura
 from src.data.escopo import Escopo
 from src.doencas import tuberculose as pack
+from src.estado import RECORTES, Navegacao
 from src.theme import componentes as ui
 
 st.set_page_config(page_title=f"SINAN — {pack.TITULO}", layout="wide")
+
+#: KPIs por linha. Um `st.columns` por linha, e não um único para todas: ao
+#: empilhar no mobile, o Streamlit renderiza coluna a coluna, e um grid único
+#: entregaria os cards fora da ordem do `LAYOUT_KPI`.
+POR_LINHA = 3
+
+ROTULO_RECORTE = {
+    "MUN": "Municípios",
+    "MACRO": "Macrorregiões",
+    "MICRO": "Regiões de saúde",
+}
+
+BRASIL = "— Brasil —"
+TODA_A_UF = "— toda a UF —"
 
 
 @st.cache_resource
@@ -27,48 +43,105 @@ def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
     return calc.calcular(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
 
 
-def _ufs() -> list[str]:
-    from src.data import config
+@st.cache_data(ttl=3600)
+def _municipios(uf: str) -> dict[str, str]:
+    """Código de 6 dígitos → nome, para o seletor e para a trilha."""
+    camada = geo.municipios(uf)
+    return dict(zip(camada["cod_mun6"], camada["nome_mun"]))
 
-    return sorted(config.CODIGO_POR_UF)
+
+def _navegacao() -> Navegacao:
+    if "nav" not in st.session_state:
+        st.session_state.nav = Navegacao(doenca=pack.DOENCA, ano=_anos()[-2])
+    return st.session_state.nav
 
 
 st.markdown(ui.css_base(), unsafe_allow_html=True)
 
-# A métrica ativa vive no estado da sessão; clicar num card a substitui.
-# Precisa existir antes da sidebar, que já a exibe.
-st.session_state.setdefault("metrica", pack.LAYOUT_KPI[0])
+nav = _navegacao()
+anos = _anos()
+ufs = sorted(config.CODIGO_POR_UF)
 
 
-def selecionar_metrica(chave: str) -> None:
-    st.session_state.metrica = chave
-
-
+# --- Barra lateral ---------------------------------------------------------
 with st.sidebar:
     st.title(pack.TITULO)
-    anos = _anos()
-    ano = st.select_slider("Ano", options=anos, value=anos[-2])
 
-    nivel = st.radio("Nível", ["BR", "UF", "MUN"], horizontal=True)
-    uf = st.selectbox("UF", _ufs(), index=_ufs().index("PE")) if nivel in ("UF", "MUN") else None
-    mun = st.text_input("Município (código IBGE)", "261160") if nivel == "MUN" else None
+    nav.ano = st.select_slider("Ano", options=anos, value=nav.ano)
 
-    escopo_txt = {"BR": "Brasil", "UF": f"UF {uf}", "MUN": f"Município {mun}"}[nivel]
-    st.caption(f"Escopo: {escopo_txt} • Ano: {ano}")
-    st.caption(f"Métrica ativa: {pack.rotulo(st.session_state.metrica)}")
+    st.divider()
 
-atual = _kpis(pack.DOENCA, ano, nivel, uf, mun)
-anterior = _kpis(pack.DOENCA, ano - 1, nivel, uf, mun) if ano - 1 >= anos[0] else None
+    # Enquanto o mapa não existe, estes seletores fazem o papel do clique nele.
+    # Na semana 3 passam a ser espelho da navegação, não a origem dela.
+    destino = st.selectbox(
+        "Unidade da federação",
+        [BRASIL, *ufs],
+        index=0 if nav.uf is None else ufs.index(nav.uf) + 1,
+    )
+    if destino == BRASIL:
+        if nav.nivel != "BR":
+            nav.reset()
+    elif destino != nav.uf:
+        nav.entrar_uf(destino)
 
-#: KPIs por linha. Um `st.columns` por linha, e não um único para todos: ao
-#: empilhar no mobile, o Streamlit renderiza coluna a coluna, e um grid único
-#: entregaria os cards fora da ordem do `LAYOUT_KPI`.
-POR_LINHA = 3
+    if nav.uf:
+        if nav.tem_recortes_de_saude:
+            recorte = st.radio(
+                "Recorte",
+                RECORTES,
+                format_func=ROTULO_RECORTE.get,
+                index=RECORTES.index(nav.recorte),
+                horizontal=True,
+            )
+            if recorte != nav.recorte:
+                nav.definir_recorte(recorte)
+
+        nomes = _municipios(nav.uf)
+        opcoes = [TODA_A_UF, *sorted(nomes, key=lambda c: nomes[c])]
+        selecionado = nav.mun if nav.mun in nomes else None
+        municipio = st.selectbox(
+            "Município",
+            opcoes,
+            index=0 if selecionado is None else opcoes.index(selecionado),
+            format_func=lambda c: c if c == TODA_A_UF else nomes[c],
+        )
+        if municipio == TODA_A_UF:
+            if nav.nivel == "MUN":
+                nav.voltar()
+        elif municipio != nav.mun:
+            nav.entrar_municipio(municipio, nome=nomes[municipio])
+
+    st.divider()
+
+    coluna_voltar, coluna_reset = st.columns(2)
+    coluna_voltar.button(
+        "Voltar",
+        use_container_width=True,
+        disabled=not nav.pode_voltar,
+        on_click=nav.voltar,
+    )
+    coluna_reset.button("Reset", use_container_width=True, on_click=nav.reset)
+
+    st.caption(f"Escopo: {nav.trilha()}")
+    st.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
+
+
+# --- KPIs ------------------------------------------------------------------
+def selecionar_metrica(chave: str) -> None:
+    nav.metrica = chave
+
+
+escopo = nav.escopo
+atual = _kpis(pack.DOENCA, escopo.ano, escopo.nivel, escopo.uf, escopo.mun)
+anterior = (
+    _kpis(pack.DOENCA, escopo.ano - 1, escopo.nivel, escopo.uf, escopo.mun)
+    if escopo.ano - 1 >= anos[0]
+    else None
+)
 
 for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
-    linha = pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]
     colunas = st.columns(POR_LINHA, gap="small")
-    for coluna, chave in zip(colunas, linha):
+    for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
         valor = getattr(atual, chave)
         taxa = chave in pack.TAXAS
         with coluna:
@@ -78,7 +151,7 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
                 pack.rotulo(chave),
                 ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
                 cor=pack.cor(chave),
-                selecionado=(chave == st.session_state.metrica),
+                selecionado=(chave == nav.metrica),
                 badge_delta=ui.delta(
                     valor,
                     getattr(anterior, chave) if anterior else None,

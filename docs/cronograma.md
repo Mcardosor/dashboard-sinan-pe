@@ -61,10 +61,15 @@
 - [ ] Faixa de intro (bandeira · título · logo)
 
 ### 2.2 Estado de navegação
-- [ ] `session_state`: `nivel`, `uf`, `mun`, `ano`, `metrica`, `region_view`, `selected_macro`, `selected_micro`
-- [ ] Breadcrumb de escopo
-- [ ] Botões Voltar/Reset — replicar o *step-back* do original (MUN→detalhe→UF→micro→macro→BR)
-- [ ] Slider de ano com *snap* para os anos existentes em disco
+- [x] `session_state`: uma `Navegacao` viva em `src/estado.py`, com nível, UF,
+      município, detalhe, recorte, macro e micro
+- [x] Breadcrumb de escopo
+- [x] Botões Voltar/Reset — *step-back* do original em cinco regras encadeadas
+- [x] Slider de ano com *snap* para os anos existentes em disco
+
+A máquina de estados não depende do Streamlit e é testada sozinha; o teste que
+importa percorre o desvio de PE inteiro (UF → macro → micro → município →
+detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 
 ### 2.3 KPIs
 - [ ] Os 11 cards ligados à camada de dados — 6 renderizados (o layout da TB);

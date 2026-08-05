@@ -11,8 +11,8 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 - [ ] Slider de ano 2010–2025, com *snap* para os anos existentes em disco
 - [ ] Filtro de grau de incapacidade (TB e Hanseníase), opções descobertas em runtime
 - [ ] Badge da métrica ativa
-- [ ] Botões Voltar / Reset
-- [ ] Breadcrumb de escopo — ex.: `Escopo: UF PE • Macrorregiões • Ano: 2024`
+- [x] Botões Voltar / Reset
+- [x] Breadcrumb de escopo — ex.: `Escopo: UF PE • Macrorregiões • Ano: 2024`
 
 ## Faixa de intro
 
