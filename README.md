@@ -58,10 +58,13 @@ Coloque os dados em `data/parquet/dashboard/` na raiz do projeto, ou aponte a
 variável de ambiente `SINAN_DATA_DIR` para onde eles estiverem.
 
 Em `data/support/` ficam os arquivos de apoio de PE — os shapefiles de
-macrorregião e região de saúde, o `municipios.csv` e as marcas da faixa de
-identificação (`cenarios_logo_full.jpeg` e `Bandeira_de_Pernambuco.jpeg`).
-Também não são versionados. Sem as marcas a faixa mostra só o título, e a
-barra lateral avisa o que falta.
+macrorregião e região de saúde e o `municipios.csv`. Também não são
+versionados, e são a única fonte dos recortes de saúde.
+
+As marcas da faixa de identificação ficam em **`assets/`** e **são
+versionadas**: são identidade visual, não dado, não mudam quando o SINAN
+atualiza, e somam 77 KB. Sem elas a faixa mostra só o título e a barra
+lateral avisa o que falta.
 
 ## Documentação
 
@@ -73,6 +76,7 @@ barra lateral avisa o que falta.
 ## Estrutura
 
 ```
+assets/         marcas da faixa de identificação (versionadas)
 src/
   data/         camada DuckDB: conexão, readers por dataset, KPIs
   theme/        tokens de design, gerador de rampa de cor, componentes visuais

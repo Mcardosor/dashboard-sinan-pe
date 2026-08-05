@@ -1,12 +1,16 @@
 """Bandeira e logotipo da faixa de intro.
 
-Os dois arquivos **não vieram** na entrega do projeto em R: o código de lá os
-procura dois níveis acima da pasta de dados e, não achando, renderiza a faixa
-sem imagem nenhuma — em silêncio.
+Ficam em ``assets/``, versionados — e não em ``data/``, que é ignorado pelo
+git. São identidade visual, não dado: não mudam quando o SINAN atualiza, e sem
+eles o dashboard fica descaracterizado em qualquer máquina nova. São 77 KB.
 
-Aqui o comportamento é o mesmo, mas explícito: :func:`disponiveis` diz o que
-falta, para a aplicação poder avisar em vez de só omitir. Basta soltar os
-arquivos em ``data/support/`` e a faixa passa a exibi-los, sem tocar em código.
+``data/support/`` continua sendo consultado depois, porque é onde o projeto em
+R os procurava e é para onde alguém tenderia a copiá-los.
+
+Os dois **não vieram** na entrega do projeto em R — o código de lá, não
+achando, renderizava a faixa sem imagem nenhuma, em silêncio. Aqui
+:func:`disponiveis` diz o que falta, para a aplicação avisar em vez de só
+omitir.
 """
 
 from __future__ import annotations
@@ -20,16 +24,21 @@ from ..data import config
 
 #: Nomes procurados, na ordem de preferência. Os dois primeiros são os do
 #: original; os demais são variações razoáveis de quem for repor os arquivos.
-BANDEIRA = ("Bandeira_de_Pernambuco.jpeg", "bandeira_pe.jpeg", "bandeira_pe.png")
+BANDEIRA = ("bandeira_pe.png", "Bandeira_de_Pernambuco.jpeg", "bandeira_pe.jpeg")
 LOGO = ("cenarios_logo_full.jpeg", "cenarios_logo.png", "logo.png")
 
 
+def diretorios() -> tuple[Path, ...]:
+    """Onde procurar, em ordem: o repositório primeiro, os dados depois."""
+    return (config.PROJECT_ROOT / "assets", config.support_dir())
+
+
 def _achar(nomes: tuple[str, ...]) -> Path | None:
-    base = config.support_dir()
-    for nome in nomes:
-        caminho = base / nome
-        if caminho.is_file():
-            return caminho
+    for base in diretorios():
+        for nome in nomes:
+            caminho = base / nome
+            if caminho.is_file():
+                return caminho
     return None
 
 
@@ -64,3 +73,8 @@ def faltando() -> list[str]:
     if logo() is None:
         ausentes.append(LOGO[0])
     return ausentes
+
+
+def onde(nomes: tuple[str, ...]) -> Path | None:
+    """Caminho do arquivo encontrado, para diagnóstico."""
+    return _achar(nomes)

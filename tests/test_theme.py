@@ -472,3 +472,27 @@ def test_config_do_streamlit_define_claro_como_padrao() -> None:
     assert tema["base"] == "light"
     assert tema["backgroundColor"].upper() == "#FFFFFF"
     assert "dark" in tema, "o escuro precisa continuar disponível como alternativa"
+
+
+def test_marcas_vem_do_repositorio() -> None:
+    """As marcas são versionadas em `assets/`, não em `data/`.
+
+    São identidade visual, não dado: não mudam quando o SINAN atualiza, e sem
+    elas o dashboard fica descaracterizado em qualquer clone novo. `data/` é
+    ignorado pelo git de propósito, por causa dos 888 MB.
+    """
+    from src.theme import marcas
+
+    caminhos = [marcas.onde(marcas.BANDEIRA), marcas.onde(marcas.LOGO)]
+    assert all(caminhos), f"marca ausente: {caminhos}"
+    for caminho in caminhos:
+        assert caminho.parent.name == "assets", f"{caminho} fora de assets/"
+
+
+def test_data_support_continua_valendo_como_alternativa() -> None:
+    """É onde o projeto em R procurava, e para onde alguém copiaria."""
+    from src.theme import marcas
+
+    nomes = [d.name for d in marcas.diretorios()]
+    assert nomes.index("assets") < nomes.index("support"), "assets tem precedência"
+    assert "support" in nomes
