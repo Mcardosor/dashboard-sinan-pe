@@ -55,16 +55,27 @@ def _geojson(nivel: str, uf: str | None) -> tuple[dict, list]:
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _camada(nivel: str, uf: str | None):
-    return geo.municipios(uf) if nivel != "BR" else geo.ufs()
+def _camada(nivel: str, uf: str | None, recorte: str = "MUN"):
+    """Geometria a desenhar. Em PE, o recorte pode ser macro ou região de saúde."""
+    if nivel == "BR":
+        return geo.ufs()
+    if recorte == "MACRO":
+        return geo.regioes_pe("macro")
+    if recorte == "MICRO":
+        return geo.regioes_pe("micro")
+    return geo.municipios(uf)
 
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)
-def _valores_mapa(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str):
-    return leitura.valores_por_geografia(
-        Escopo(doenca, ano, nivel, uf=uf, mun="261160" if nivel == "MUN" else None),
-        metrica,
-    )
+def _valores_mapa(
+    doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, recorte: str
+):
+    escopo = Escopo(doenca, ano, "UF" if nivel != "BR" else "BR", uf=uf)
+    if recorte in ("MACRO", "MICRO") and nivel != "BR":
+        return leitura.valores_por_regiao(
+            escopo, metrica, "macro" if recorte == "MACRO" else "micro"
+        )
+    return leitura.valores_por_geografia(escopo, metrica)
 
 
 @st.cache_data(ttl=3600)
@@ -206,8 +217,12 @@ esquerda, direita = st.columns(2, gap="small")
 
 with esquerda:
     # O nível do escopo diz o que está selecionado; o mapa desenha um abaixo.
-    nivel_mapa = "UF" if nav.nivel == "BR" else "MUN"
-    valores = _valores_mapa(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica)
+    # O que o mapa desenha depende do nível e, em PE, do recorte escolhido.
+    recorte = nav.recorte if nav.tem_recortes_de_saude else "MUN"
+    nivel_mapa = "UF" if nav.nivel == "BR" else recorte
+    valores = _valores_mapa(
+        pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, recorte
+    )
 
     if valores.empty:
         st.markdown(
@@ -219,15 +234,17 @@ with esquerda:
             unsafe_allow_html=True,
         )
     else:
-        camada = _camada(nav.nivel, nav.uf)
-        chave = "uf" if nivel_mapa == "UF" else "cod_mun6"
+        camada = _camada(nav.nivel, nav.uf, recorte)
+        chave = {"UF": "uf", "MACRO": "regiao", "MICRO": "regiao"}.get(
+            nivel_mapa, "cod_mun6"
+        )
         desenho, escala = mapa.deck(
             camada,
             valores,
             chave=chave,
             rampa=pack.rampa_mapa(nav.metrica),
             rotulo_metrica=pack.rotulo(nav.metrica),
-            coluna_nome="nome_mun" if chave == "cod_mun6" else "uf",
+            coluna_nome="nome_mun" if chave == "cod_mun6" else chave,
             decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
         )
 
@@ -239,7 +256,7 @@ with esquerda:
             desenho,
             use_container_width=True,
             height=mapa.ALTURA,
-            key=f"mapa-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}",
+            key=f"mapa-{nav.nivel}-{nav.uf or 'BR'}-{recorte}-{nav.ano}-{nav.metrica}",
             on_select="rerun",
             selection_mode="single-object",
         )
@@ -251,6 +268,14 @@ with esquerda:
         if alvo := mapa.alvo_do_clique_deck(evento):
             if nivel_mapa == "UF" and alvo != nav.uf:
                 nav.entrar_uf(alvo)
+                st.rerun()
+            elif nivel_mapa == "MACRO" and alvo != nav.macro:
+                # Clicar numa macrorregião abre as regiões de saúde dela.
+                nav.entrar_macro(alvo)
+                st.rerun()
+            elif nivel_mapa == "MICRO" and alvo != nav.micro:
+                # Clicar numa região de saúde abre os municípios dela.
+                nav.entrar_micro(alvo)
                 st.rerun()
             elif nivel_mapa == "MUN" and alvo != nav.mun:
                 nomes = _municipios(nav.uf)

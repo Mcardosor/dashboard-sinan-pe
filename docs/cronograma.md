@@ -125,10 +125,12 @@ de clique, nem na versão maplibre nem na SVG. Ver `docs/mapa-clique.md`.
 - [x] Rampa vinda do `disease_pack`, com fallback gerado
 
 ### 3.4 Recortes de PE
-- [ ] Lookup `municipios.csv` → município ↔ macrorregião ↔ região de saúde
-- [ ] Agregação de métricas por macro e por micro
-- [ ] Toggle Município / Macrorregião / Região de saúde
-- [ ] Drill macro → micro → município
+- [x] Lookup `municipios.csv` → município ↔ macrorregião ↔ região de saúde
+- [x] Agregação por macro e por micro, **somando componentes e recalculando a
+      taxa** — média de taxas municipais pesaria Recife igual a um município
+      de dois mil habitantes
+- [x] Toggle Município / Macrorregião / Região de saúde
+- [x] Drill macro → micro → município, por clique no mapa
 
 ### 3.5 Interação
 - [ ] Busca de município (rótulo `"Nome - Região de Saúde"`)

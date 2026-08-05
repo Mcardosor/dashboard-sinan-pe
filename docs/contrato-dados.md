@@ -181,3 +181,17 @@ Para óbitos, `cache_ts_sim_obitos` (6.376 no BR/2024) e `obitos_sim_faixa`
 
 **Nenhuma fonte é exatamente igual a outra.** Os limites medidos estão fixados
 em `tests/paridade/test_consistencia.py`.
+
+### 10. O código de município no `municipios.csv` tem erro de ponto flutuante
+
+O arquivo de apoio de PE grava o código IBGE como número decimal, e **oito dos
+185 municípios** aparecem com erro de representação: São Vicente Férrer é
+`2613799.9999999995`, Tabira é `2614599.9999999995`.
+
+Truncar (`int`) dá `261379` em vez de `261380`. Em dois dos oito casos isso
+cruza a fronteira dos 6 dígitos, o município deixa de casar com os dados e some
+da agregação por região — sem erro nenhum, só um total 10 casos menor que o da
+UF. É preciso **arredondar**, não truncar.
+
+Municípios afetados: Afogados da Ingazeira, Flores, Gravatá, Ipojuca,
+Itapissuma, Jataúba, São Vicente Férrer e Tabira.
