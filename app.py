@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import streamlit as st
 
+import json
+
+from src import mapa
 from src.data import config, geo
 from src.data import kpis as calc
 from src.data import leitura
@@ -42,6 +45,26 @@ def _anos() -> list[int]:
 @st.cache_data(ttl=600, max_entries=256)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
     return calc.calcular(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _geojson(nivel: str, uf: str | None) -> tuple[dict, list]:
+    """GeoJSON e limites da camada. Serializar custa mais que desenhar."""
+    camada = geo.municipios(uf) if nivel != "BR" else geo.ufs()
+    return json.loads(camada.to_json()), list(camada.total_bounds)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _camada(nivel: str, uf: str | None):
+    return geo.municipios(uf) if nivel != "BR" else geo.ufs()
+
+
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _valores_mapa(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str):
+    return leitura.valores_por_geografia(
+        Escopo(doenca, ano, nivel, uf=uf, mun="261160" if nivel == "MUN" else None),
+        metrica,
+    )
 
 
 @st.cache_data(ttl=3600)
@@ -180,9 +203,41 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
 # Os painéis são espaços reservados: o mapa entra na semana 3, os gráficos na
 # 4 e a composição na 5. Ficam aqui para o layout ser exercitado desde já.
 esquerda, direita = st.columns(2, gap="small")
-esquerda.markdown(
-    ui.painel_vazio("Mapa", "Entra na semana 3", mapa=True), unsafe_allow_html=True
-)
+
+with esquerda:
+    # O nível do escopo diz o que está selecionado; o mapa desenha um abaixo.
+    nivel_mapa = "UF" if nav.nivel == "BR" else "MUN"
+    valores = _valores_mapa(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica)
+
+    if valores.empty:
+        st.markdown(
+            ui.painel_vazio(
+                "Mapa",
+                f"{pack.rotulo(nav.metrica)} ainda não é pintável no mapa",
+                mapa=True,
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        camada = _camada(nav.nivel, nav.uf)
+        contorno, _ = _geojson(nav.nivel, nav.uf)
+        chave = "uf" if nivel_mapa == "UF" else "cod_mun6"
+        figura = mapa.figura(
+            camada,
+            contorno,
+            valores,
+            chave=chave,
+            rampa=pack.rampa_mapa(nav.metrica),
+            rotulo_metrica=pack.rotulo(nav.metrica),
+            coluna_nome="nome_mun" if chave == "cod_mun6" else "uf",
+            decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
+        )
+        st.plotly_chart(
+            figura,
+            use_container_width=True,
+            config={"displayModeBar": False, "scrollZoom": True},
+        )
+
 direita.markdown(
     ui.painel_vazio("Gráficos", "Entram na semana 4"), unsafe_allow_html=True
 )

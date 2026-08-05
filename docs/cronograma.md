@@ -100,8 +100,12 @@ detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 > o prazo, é aqui. A semana 8 existe como folga para isso.
 
 ### 3.1 Camada base
-- [ ] Escolher biblioteca (Folium vs Plotly choropleth) e provar com o nível BR
-- [ ] Carregar geometria pré-simplificada
+- [x] Biblioteca escolhida: **Plotly**. `st.plotly_chart` tem evento de clique
+      nativo (`on_select`), o que dispensa `streamlit-folium` como dependência
+      de terceiros; e o dashboard demográfico da casa já usa Plotly. Medido
+      com dado real: pior caso (MG, 853 municípios) 176 ms somando
+      serialização e figura, os dois cacheáveis
+- [x] Carregar geometria pré-simplificada (`src/data/geo.py`)
 
 ### 3.2 Drill-down
 - [ ] BR → UF por clique
@@ -110,10 +114,12 @@ detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 - [ ] `fitBounds` ao trocar de nível
 
 ### 3.3 Escala de cor
-- [ ] Quantil k=6 sobre a métrica ativa
-- [ ] Legenda
-- [ ] `#F3F4F6` para valor ausente
-- [ ] Rampa vinda do `disease_pack`, com fallback gerado
+- [x] Quantil k=6 sobre a métrica ativa, com quantis repetidos colapsados —
+      sem isso, um recorte com muitos municípios zerados gera classes
+      idênticas na legenda
+- [x] Legenda horizontal, dentro da figura
+- [x] `#F3F4F6` para valor ausente
+- [x] Rampa vinda do `disease_pack`, com fallback gerado
 
 ### 3.4 Recortes de PE
 - [ ] Lookup `municipios.csv` → município ↔ macrorregião ↔ região de saúde
