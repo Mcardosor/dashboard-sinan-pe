@@ -124,82 +124,6 @@ def test_bbox_degenerado_nao_quebra() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Figura
-# ---------------------------------------------------------------------------
-
-
-def _figura(nivel: str, uf: str | None):
-    import json
-
-    from src.data import geo, leitura
-    from src.data.escopo import Escopo
-
-    camada = geo.ufs() if nivel == "BR" else geo.municipios(uf)
-    chave = "uf" if nivel == "BR" else "cod_mun6"
-    valores = leitura.valores_por_geografia(Escopo("TB", 2024, nivel, uf=uf), "incid")
-    return mapa.figura(
-        camada,
-        json.loads(camada.to_json()),
-        valores,
-        chave=chave,
-        rampa=RAMPA,
-        rotulo_metrica="Incidência",
-        coluna_nome="uf" if nivel == "BR" else "nome_mun",
-    ), camada
-
-
-def test_figura_no_nivel_de_uf() -> None:
-    """No Brasil a chave e a coluna de nome são ambas `uf`.
-
-    Selecionar a mesma coluna duas vezes fazia `dados[chave]` devolver um
-    DataFrame, e `.map()` quebrava com "the first argument must be callable".
-    """
-    fig, camada = _figura("BR", None)
-    assert len(camada) == 27
-    assert len(fig.data) > 1, "a legenda precisa ter mais de uma classe"
-
-
-def test_figura_no_nivel_de_municipio() -> None:
-    fig, camada = _figura("UF", "PE")
-    assert len(camada) == 185
-    assert len(fig.data) > 1
-
-
-def test_figura_traz_nome_e_valor_no_hover() -> None:
-    fig, _ = _figura("UF", "PE")
-    modelo = fig.data[0].hovertemplate
-    assert "customdata[0]" in modelo, "falta o nome"
-    assert "customdata[1]" in modelo, "falta o valor formatado"
-    assert "Incidência" in modelo
-
-
-def test_figura_nao_pinta_fundo() -> None:
-    """O painel já tem superfície própria; fundo opaco brigaria com o tema."""
-    fig, _ = _figura("UF", "PE")
-    assert fig.layout.paper_bgcolor == "rgba(0,0,0,0)"
-    assert fig.layout.plot_bgcolor == "rgba(0,0,0,0)"
-
-
-def test_metrica_sem_suporte_devolve_serie_vazia() -> None:
-    """Melhor um mapa vazio e honesto do que colorido com a métrica errada."""
-    from src.data import leitura
-    from src.data.escopo import Escopo
-
-    vazio = leitura.valores_por_geografia(Escopo("TB", 2024, "BR"), "hiv_pos_pct")
-    assert vazio.empty
-
-
-@pytest.mark.parametrize("metrica", ["incid", "casos", "cura", "pop", "mortalidade", "letalidade"])
-def test_metricas_pintaveis_cobrem_todas_as_ufs(metrica: str) -> None:
-    from src.data import leitura
-    from src.data.escopo import Escopo
-
-    valores = leitura.valores_por_geografia(Escopo("TB", 2024, "BR"), metrica)
-    assert len(valores) == 27
-    assert valores.index.is_unique
-
-
-# ---------------------------------------------------------------------------
 # Clique no mapa (pydeck)
 # ---------------------------------------------------------------------------
 # O coroplético do Plotly não emite evento de clique — ver docs/mapa-clique.md.
@@ -217,22 +141,22 @@ def _evento_com(props: dict):
 
 
 def test_extrai_uf_do_clique() -> None:
-    assert mapa.alvo_do_clique_deck(_evento_com({"uf": "PE"})) == "PE"
+    assert mapa.alvo_do_clique(_evento_com({"uf": "PE"})) == "PE"
 
 
 def test_extrai_municipio_do_clique() -> None:
     props = {"cod_mun6": "261160", "nome_mun": "Recife", "uf": "PE"}
-    assert mapa.alvo_do_clique_deck(_evento_com(props)) == "261160"
+    assert mapa.alvo_do_clique(_evento_com(props)) == "261160"
 
 
 def test_municipio_tem_precedencia_sobre_a_uf() -> None:
     """A feição de município também carrega `uf`; a chave mais específica vence."""
     props = {"uf": "PE", "cod_mun6": "261160"}
-    assert mapa.alvo_do_clique_deck(_evento_com(props)) == "261160"
+    assert mapa.alvo_do_clique(_evento_com(props)) == "261160"
 
 
 def test_extrai_regiao_de_saude() -> None:
-    assert mapa.alvo_do_clique_deck(_evento_com({"regiao": "Sertão"})) == "Sertão"
+    assert mapa.alvo_do_clique(_evento_com({"regiao": "Sertão"})) == "Sertão"
 
 
 @pytest.mark.parametrize(
@@ -251,13 +175,13 @@ def test_extrai_regiao_de_saude() -> None:
 def test_evento_estranho_nao_derruba_a_pagina(evento) -> None:
     """O formato do evento é detalhe interno do Streamlit e já mudou entre
     versões. Se vier algo inesperado, o mapa apenas não navega."""
-    resultado = mapa.alvo_do_clique_deck(evento)
+    resultado = mapa.alvo_do_clique(evento)
     assert resultado is None or isinstance(resultado, str)
 
 
 def test_evento_em_dicionario_tambem_funciona() -> None:
     bruto = {"selection": {"objects": {"c": [{"properties": {"uf": "BA"}}]}}}
-    assert mapa.alvo_do_clique_deck(bruto) == "BA"
+    assert mapa.alvo_do_clique(bruto) == "BA"
 
 
 # ---------------------------------------------------------------------------

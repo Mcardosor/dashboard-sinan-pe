@@ -1,9 +1,11 @@
 """Mapa coroplético.
 
-Plotly, por duas razões: ``st.plotly_chart`` tem evento de clique nativo
-(``on_select``), o que dispensa um componente de terceiros para o drill-down;
-e o dashboard demográfico da casa já usa Plotly, o que mantém a mesma
-linguagem visual.
+Desenhado com **pydeck**. A escolha começou no Plotly, pelo evento de clique
+nativo do ``st.plotly_chart``, mas o coroplético do Plotly não dispara esse
+evento — nem na versão maplibre nem na SVG. O ``GeoJsonLayer`` do deck.gl faz
+*picking* por GPU e resolveu. O caminho descartado está registrado em
+docs/mapa-clique.md; o código dele foi removido para não dar a impressão de
+que há duas rotas mantidas.
 
 A escala é por **quantil**, como no original. Em dados epidemiológicos poucos
 municípios concentram o volume, e uma escala linear achata todo o resto numa
@@ -23,10 +25,8 @@ CLASSES = 6
 #: Cor de quem não tem dado. Precisa ser distinguível de qualquer tom da rampa.
 SEM_DADO = "#F3F4F6"
 
-#: Altura da figura, em pixels. O painel reserva `ALTURA_MIN_MAPA`; a legenda
-#: horizontal ocupa a faixa de baixo e precisa caber junto, senão é cortada.
+#: Altura do mapa, em pixels. O painel reserva `ALTURA_MIN_MAPA`.
 ALTURA = 520
-ALTURA_LEGENDA = 74
 
 ROTULO_SEM_DADO = "sem dado"
 
@@ -122,124 +122,6 @@ def enquadrar(limites: tuple[float, float, float, float]) -> dict:
     # geometria não encostar na borda do painel.
     zoom = float(np.log2(360 / extensao) - 0.4)
     return {"center": centro, "zoom": max(2.0, min(zoom, 11.0))}
-
-
-def figura(
-    camada,
-    geojson: dict,
-    valores: pd.Series,
-    *,
-    chave: str,
-    rampa: list[str],
-    rotulo_metrica: str,
-    coluna_nome: str = "nome_mun",
-    decimais: int = 1,
-    altura: int = ALTURA,
-):
-    """Coroplético de uma camada, colorido por classe de quantil.
-
-    ``valores`` é indexado pela mesma chave da camada. Quem não aparece nele
-    entra como "sem dado" — é o caso de municípios criados depois do último
-    ano com dado, por exemplo.
-    """
-    import plotly.express as px
-
-    # `dict.fromkeys` remove repetição preservando a ordem: no nível de UF a
-    # chave e a coluna de nome são ambas `uf`, e selecionar a mesma coluna
-    # duas vezes faria `dados[chave]` devolver um DataFrame em vez de Série.
-    colunas = list(dict.fromkeys([chave, coluna_nome if coluna_nome in camada else chave]))
-    dados = pd.DataFrame(camada[colunas]).copy()
-    dados["valor"] = dados[chave].map(valores)
-
-    escala = escala_quantil(dados["valor"], rampa, decimais=decimais)
-    dados["classe"] = classificar(dados["valor"], escala)
-    dados["exibicao"] = dados["valor"].map(
-        lambda v: "—" if pd.isna(v) else _formatar(float(v), decimais)
-    )
-
-    ordem = [*escala.rotulos, ROTULO_SEM_DADO]
-    nome = coluna_nome if coluna_nome in dados else chave
-
-    fig = px.choropleth_map(
-        dados,
-        geojson=geojson,
-        locations=chave,
-        featureidkey=f"properties.{chave}",
-        color="classe",
-        color_discrete_map=escala.cores,
-        category_orders={"classe": ordem},
-        custom_data=[nome, "exibicao"],
-        opacity=0.85,
-        **enquadrar(tuple(camada.total_bounds)),
-    )
-
-    fig.update_traces(
-        marker_line_width=0.4,
-        marker_line_color="rgba(255,255,255,.55)",
-        hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
-            + rotulo_metrica
-            + ": %{customdata[1]}<extra></extra>"
-        ),
-    )
-    fig.update_layout(
-        map_style="white-bg",
-        height=altura,
-        # A margem inferior reserva a faixa da legenda dentro da própria
-        # figura; ancorá-la em `y` negativo a jogaria para fora do recorte.
-        margin={"r": 0, "t": 0, "l": 0, "b": ALTURA_LEGENDA},
-        legend={
-            "title": {"text": rotulo_metrica, "font": {"size": 12}},
-            "orientation": "h",
-            "yanchor": "top",
-            "y": 0,
-            "yref": "paper",
-            "x": 0,
-            "font": {"size": 11},
-            "itemsizing": "constant",
-            "bgcolor": "rgba(0,0,0,0)",
-        },
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        # Sem isso, o Plotly herda a fonte dele e destoa do resto da página.
-        font={"family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"},
-    )
-    return fig
-
-
-def alvo_do_clique(evento) -> str | None:
-    """Extrai a geografia clicada do evento de seleção do ``st.plotly_chart``.
-
-    O ``on_select`` devolve os pontos selecionados, e como a figura usa
-    ``locations=chave``, o campo ``location`` já traz a chave da geografia —
-    sigla de UF ou código de município de 6 dígitos.
-
-    Tolerante de propósito: o formato do evento é detalhe interno do Streamlit
-    e já mudou entre versões. Se vier algo inesperado, devolve ``None`` e o
-    mapa apenas não navega, em vez de derrubar a página.
-    """
-    if not evento:
-        return None
-
-    selecao = getattr(evento, "selection", None)
-    if selecao is None and isinstance(evento, dict):
-        selecao = evento.get("selection")
-    if not selecao:
-        return None
-
-    pontos = selecao.get("points") if isinstance(selecao, dict) else None
-    if not pontos:
-        return None
-
-    primeiro = pontos[0]
-    if not isinstance(primeiro, dict):
-        return None
-
-    for campo in ("location", "hovertext", "label", "id"):
-        valor = primeiro.get(campo)
-        if valor not in (None, ""):
-            return str(valor)
-    return None
 
 
 def _rgb(cor: str) -> list[int]:
@@ -344,7 +226,7 @@ def legenda(escala: Escala, titulo: str) -> str:
     )
 
 
-def alvo_do_clique_deck(evento) -> str | None:
+def alvo_do_clique(evento) -> str | None:
     """Chave da geografia clicada no ``st.pydeck_chart``.
 
     O evento traz os objetos selecionados por camada; cada objeto é a feição

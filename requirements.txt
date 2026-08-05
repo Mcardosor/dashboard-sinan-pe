@@ -11,4 +11,3 @@ topojson>=1.9
 
 # Testes
 pytest>=8.0
-plotly>=6.0

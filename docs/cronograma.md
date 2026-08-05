@@ -100,11 +100,11 @@ detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 > o prazo, é aqui. A semana 8 existe como folga para isso.
 
 ### 3.1 Camada base
-- [x] Biblioteca escolhida: **Plotly**. `st.plotly_chart` tem evento de clique
-      nativo (`on_select`), o que dispensa `streamlit-folium` como dependência
-      de terceiros; e o dashboard demográfico da casa já usa Plotly. Medido
-      com dado real: pior caso (MG, 853 municípios) 176 ms somando
-      serialização e figura, os dois cacheáveis
+- [x] Biblioteca: **pydeck**. A escolha começou no Plotly, por ele ter evento
+      de clique nativo na assinatura — mas ter e disparar são coisas
+      diferentes, e o coroplético do Plotly não dispara. O `GeoJsonLayer` do
+      deck.gl faz *picking* por GPU e resolveu, sem dependência nova.
+      Ver `docs/mapa-clique.md`
 - [x] Carregar geometria pré-simplificada (`src/data/geo.py`)
 
 ### 3.2 Drill-down
@@ -138,6 +138,11 @@ de clique, nem na versão maplibre nem na SVG. Ver `docs/mapa-clique.md`.
 - [x] Botão de voltar dentro do mapa
 
 **Pronto quando:** os três níveis e os três recortes navegam sem estado inconsistente.
+
+Verificado em `tests/test_navegacao_mapa.py`, que percorre todas as
+combinações de nível, recorte e métrica pintável, e três percursos completos
+do Brasil até o detalhe — conferindo que cada passo tem geometria e valores, e
+que o `voltar` devolve ao ponto de partida sem estado preso.
 
 ---
 

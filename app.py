@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-import json
-
 from src import mapa
 from src.data import config, geo, pernambuco
 from src.data import kpis as calc
@@ -45,13 +43,6 @@ def _anos() -> list[int]:
 @st.cache_data(ttl=600, max_entries=256)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
     return calc.calcular(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
-
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def _geojson(nivel: str, uf: str | None) -> tuple[dict, list]:
-    """GeoJSON e limites da camada. Serializar custa mais que desenhar."""
-    camada = geo.municipios(uf) if nivel != "BR" else geo.ufs()
-    return json.loads(camada.to_json()), list(camada.total_bounds)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -326,7 +317,7 @@ with esquerda:
         elif nav.detalhe:
             st.caption(f"Detalhe de {nav.nome_mun or nav.mun}.")
 
-        if alvo := mapa.alvo_do_clique_deck(evento):
+        if alvo := mapa.alvo_do_clique(evento):
             if nivel_mapa == "UF" and alvo != nav.uf:
                 nav.entrar_uf(alvo)
                 st.rerun()
