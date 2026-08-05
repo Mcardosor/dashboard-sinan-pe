@@ -38,3 +38,41 @@ cima, o custo por interação tende a zero em recortes já visitados.
 
 O alvo de tempo de resposta por interação será fixado na semana 6, quando
 mapa e gráficos existirem.
+
+## Geometria (semana 2.4)
+
+Pré-processada uma vez por `scripts/preparar_geometria.py`, de GeoJSON gzipado
+para GeoParquet simplificado. O dashboard em R simplificava **a cada
+redesenho**; aqui é uma vez só, em disco.
+
+| | Antes | Depois |
+|---|---:|---:|
+| Tamanho total | 133,7 MB | 3,7 MB |
+| Carregar a malha de PE | 267 ms | 16 ms |
+| Idem, já em cache | — | < 1 ms |
+
+Dois ganhos independentes: **formato** (GeoParquet contra GeoJSON gzipado) e
+**simplificação** (tolerância relativa à largura do bbox, como no original).
+
+### Por que topológica
+
+O `simplify` do shapely trata cada polígono isoladamente, então vizinhos
+simplificam a divisa comum de formas diferentes e o mosaico se rompe. Medido
+no ES com a tolerância do original: 1,97% da área do estado virava fresta e
+163 pares de municípios passavam a se sobrepor — fiapos brancos e bordas
+dobradas no coroplético. O dashboard em R tem esse defeito.
+
+Com simplificação topológica, as arestas compartilhadas são simplificadas uma
+única vez:
+
+| | Por polígono | Topológica |
+|---|---:|---:|
+| Frestas (ES) | 1,97% | 0,41% |
+| Erro de área (ES) | 0,470% | 0,088% |
+| UFs sem nenhuma sobreposição | — | 15 de 27 |
+| Pior sobreposição do país | — | 1,74 km² (MT) |
+
+A pior sobreposição restante equivale a **0,06 pixel²** num mapa do Brasil de
+800px de largura. Custa cerca de 1,5 s por UF na geração, uma vez só.
+
+Limites monitorados em `tests/test_geo.py`.

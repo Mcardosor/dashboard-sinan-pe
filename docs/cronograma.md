@@ -73,9 +73,11 @@
 - [ ] `KPI_LAYOUT` controlando quais aparecem e em que ordem
 
 ### 2.4 Pré-processamento de geometria (`scripts/`)
-- [ ] Script one-shot: simplificar os GeoJSON por UF com tolerância relativa (`bbox_x / 900`)
-- [ ] Exportar topojson + `municipios_centroids`
-- [ ] Medir e registrar o ganho (baseline: 652 MB simplificados a cada redesenho no original)
+- [x] Script one-shot: simplificar os GeoJSON por UF com tolerância relativa (`bbox_x / 900`)
+- [x] Exportar para GeoParquet + carregador em `src/data/geo.py`
+- [x] Medir e registrar o ganho: 133,7 MB → 3,7 MB; carregar PE de 274 ms → 15 ms (18x)
+- [x] Simplificação **topológica**, não por polígono — a do original rompe o
+      mosaico (1,97% de fresta e 163 pares sobrepostos só no ES)
 
 **Pronto quando:** navegação e KPIs funcionam ponta a ponta, sem mapa e sem gráficos.
 
