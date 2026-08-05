@@ -316,6 +316,31 @@ def test_faixa_de_intro_com_imagens() -> None:
     assert "sinan-intro-logo" in html
 
 
+def test_bandeira_tem_contorno() -> None:
+    """A metade inferior da bandeira de PE é branca pura.
+
+    Sem contorno ela se funde com a placa e a bandeira parece cortada pela
+    metade — o defeito só aparece quando a imagem entra no contexto, não ao
+    olhar o arquivo sozinho.
+    """
+    import re
+
+    css = c.css_layout()
+    bloco = re.search(r"\.sinan-intro-bandeira\s*\{([^}]*)\}", css)
+    assert bloco, "não achei a regra da bandeira"
+    assert "border:" in bloco.group(1)
+
+
+def test_placa_encolhe_ao_conteudo() -> None:
+    """A célula do grid estica por padrão e sobrava branco ao lado da imagem."""
+    import re
+
+    bloco = re.search(r"\.sinan-intro-marca\s*\{([^}]*)\}", c.css_layout())
+    assert bloco
+    assert "justify-self: start" in bloco.group(1)
+    assert "width: fit-content" in bloco.group(1)
+
+
 def test_marca_sem_alfa_ganha_placa_branca() -> None:
     """Os arquivos são JPEG; no tema escuro o fundo branco viraria um bloco."""
     html = c.faixa_intro("T", logo="data:image/jpeg;base64,AAA")

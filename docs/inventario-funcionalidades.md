@@ -16,7 +16,7 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 
 ## Faixa de intro
 
-- [x] Grid de 3 colunas: bandeira · título · logo — sem as imagens, que não vieram na entrega, o título ocupa a faixa toda
+- [x] Grid de 3 colunas: bandeira · título · logo. O arranjo acompanha quantas marcas existem; sem nenhuma, o título ocupa a faixa toda
 - [x] Título com `clamp(18px, 2.1vw, 30px)`
 
 ## KPIs

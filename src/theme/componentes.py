@@ -391,7 +391,14 @@ section[data-testid="stSidebar"] {{
   width: auto;
   object-fit: contain;
 }}
-.sinan-intro-bandeira {{ max-height: 54px; max-width: min(18vw, 140px); }}
+.sinan-intro-bandeira {{
+  max-height: 54px;
+  max-width: min(18vw, 140px);
+  /* A metade inferior da bandeira de PE é branca pura. Sem contorno, ela
+     se funde com a placa e a bandeira parece cortada pela metade. */
+  border: 1px solid rgba(15,23,42,.22);
+  border-radius: 3px;
+}}
 .sinan-intro-logo {{ max-height: 66px; max-width: min(33vw, 290px); }}
 
 /* Os arquivos de marca são JPEG, sem canal alfa: no tema escuro o fundo
@@ -402,6 +409,11 @@ section[data-testid="stSidebar"] {{
 .sinan-intro-marca {{
   display: inline-flex;
   align-items: center;
+  /* Sem isto a célula do grid estica a placa e sobra branco ao lado da
+     imagem — `inline-flex` encolhe ao conteúdo, mas o `stretch` padrão do
+     grid vence. A da direita já encolhia por causa do `justify-self: end`. */
+  justify-self: start;
+  width: fit-content;
   padding: 6px 10px;
   border-radius: 10px;
   background: #FFFFFF;
