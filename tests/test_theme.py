@@ -330,3 +330,68 @@ def test_marcas_ausentes_sao_reportadas() -> None:
         assert isinstance(presente, bool)
     # `faltando` tem de ser coerente com `disponiveis`
     assert len(marcas.faltando()) == sum(1 for v in disponiveis.values() if not v)
+
+
+# ---------------------------------------------------------------------------
+# Tema
+# ---------------------------------------------------------------------------
+# Claro é o padrão (.streamlit/config.toml); escuro é a alternativa, pelo menu
+# do Streamlit. Os componentes próprios não sabem qual está ativo: derivam a
+# superfície de `currentColor`, que o Streamlit já inverte.
+
+
+def _sem_comentarios(css: str) -> str:
+    """Remove blocos `/* ... */` — as regras é que importam, não a prosa."""
+    import re
+
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+
+
+def test_css_nao_tenta_detectar_o_tema() -> None:
+    """`prefers-color-scheme` segue o sistema operacional, não o Streamlit.
+
+    Com o tema forçado para claro e o sistema em escuro, uma regra dessas
+    pintaria os cards de escuro sobre uma página clara. A única media query de
+    esquema de cor permitida é a de movimento reduzido, que não é sobre cor.
+    """
+    regras = _sem_comentarios(c.css_base() + c.css_layout())
+    esquemas = [
+        linha.strip()
+        for linha in regras.splitlines()
+        if "prefers-color-scheme" in linha
+    ]
+    assert not esquemas, f"regra que segue o sistema, não o Streamlit: {esquemas}"
+
+
+def test_superficies_derivam_da_cor_do_texto() -> None:
+    """É o que faz o card acompanhar o tema sem detectá-lo."""
+    css = c.css_base()
+    assert "--superficie:" in css
+    assert "currentColor" in css
+    assert "color: inherit" in css
+
+
+def test_css_nao_fixa_fundo_claro_nem_escuro() -> None:
+    """Qualquer cor opaca de superfície quebraria um dos dois temas."""
+    import re
+
+    css = c.css_base() + c.css_layout()
+    corpo = "\n".join(
+        linha for linha in css.splitlines() if not linha.strip().startswith(("*", "/*"))
+    )
+    opacos = re.findall(r"background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8}|rgb\([^)]*\))", corpo)
+    assert not opacos, f"superfície opaca encontrada: {opacos}"
+
+
+def test_config_do_streamlit_define_claro_como_padrao() -> None:
+    import tomllib
+    from pathlib import Path
+
+    caminho = Path(__file__).resolve().parents[1] / ".streamlit" / "config.toml"
+    assert caminho.exists(), "falta .streamlit/config.toml"
+
+    cfg = tomllib.loads(caminho.read_text(encoding="utf-8"))
+    tema = cfg["theme"]
+    assert tema["base"] == "light"
+    assert tema["backgroundColor"].upper() == "#FFFFFF"
+    assert "dark" in tema, "o escuro precisa continuar disponível como alternativa"

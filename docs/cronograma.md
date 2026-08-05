@@ -248,8 +248,8 @@ detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 ## Semana 8 — Polimento + deploy (21–25/set)
 
 ### 8.1 Acabamento visual
-- [ ] Responsivo — remover as alturas fixas de 760px e 520px do original
-- [ ] Tema escuro
+- [x] Responsivo — remover as alturas fixas de 760px e 520px do original *(feito em 2.1)*
+- [x] Tema claro como padrão, escuro como alternativa *(antecipado da semana 8)*
 - [ ] Escala tipográfica consistente
 - [ ] Aumentar os tooltips (10,5px no original é pequeno demais)
 

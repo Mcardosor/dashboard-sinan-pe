@@ -15,15 +15,24 @@ RAIO_CARD = "18px"
 RAIO_PAINEL = "14px"
 RAIO_PILL = "999px"
 
-BORDA = "1px solid rgba(15,23,42,.10)"
-BORDA_HOVER = "1px solid rgba(15,23,42,.16)"
+BORDA = "1px solid color-mix(in srgb, currentColor 14%, transparent)"
+BORDA_HOVER = "1px solid color-mix(in srgb, currentColor 24%, transparent)"
 
 SOMBRA_REPOUSO = "0 10px 26px rgba(2,6,23,.08)"
 SOMBRA_HOVER = "0 18px 44px rgba(2,6,23,.12)"
 SOMBRA_ATIVO = "0 22px 56px rgba(2,6,23,.14)"
 
-FUNDO_CARD = "linear-gradient(180deg, rgba(255,255,255,.97), rgba(255,255,255,.88))"
-FUNDO_CARD_ESCURO = "linear-gradient(180deg, rgba(30,41,59,.96), rgba(15,23,42,.92))"
+#: A superfície do card é derivada de `currentColor`, não declarada.
+#:
+#: Declarar "branco no claro, escuro no escuro" obriga o CSS a saber qual tema
+#: está ativo — e não há como saber com segurança: `prefers-color-scheme` segue
+#: o sistema operacional, não o Streamlit, e `st.context.theme` erra no
+#: primeiro quadro e ao trocar de tema (issue #11920 do Streamlit). Misturando
+#: a cor do texto com o fundo, a superfície acompanha o tema sozinha, porque
+#: `currentColor` já vem invertido.
+MISTURA_CARD = "4%"
+MISTURA_CARD_TOPO = "7%"
+MISTURA_BORDA = "14%"
 
 # --- Tipografia ------------------------------------------------------------
 FONTE = (
@@ -44,6 +53,7 @@ BOM = "#16A34A"
 RUIM = "#B42318"
 NEUTRO_OPACIDADE = ".74"
 
+#: Usados só onde a cor precisa ser absoluta (favicon, exportações).
 TEXTO_CLARO = "#0B1220"
 TEXTO_ESCURO = "#E5E7EB"
 

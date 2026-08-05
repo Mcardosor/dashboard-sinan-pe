@@ -22,21 +22,26 @@ def css_base() -> str:
     )
     return f"""
 <style>
+/* As superfícies são derivadas de `currentColor`, nunca declaradas.
+ *
+ * Um tema claro e um escuro exigiriam saber qual está ativo, e não há como
+ * saber com segurança: `prefers-color-scheme` segue o sistema operacional, e
+ * não o Streamlit — com o tema forçado para claro em `.streamlit/config.toml`
+ * e o sistema em escuro, os cards ficariam escuros sobre uma página clara.
+ * `st.context.theme` também não serve: erra no primeiro quadro e ao trocar de
+ * tema (issue #11920 do Streamlit).
+ *
+ * Misturando a cor do texto com o fundo, a superfície acompanha o tema
+ * sozinha — `currentColor` já vem invertido pelo Streamlit. Um só bloco de
+ * CSS serve os dois temas, sem detecção nenhuma. */
 :root {{
   --fonte: {tokens.FONTE};
-  --texto: {tokens.TEXTO_CLARO};
-  --fundo-card: {tokens.FUNDO_CARD};
   --borda: {tokens.BORDA};
   --sombra: {tokens.SOMBRA_REPOUSO};
   --sombra-hover: {tokens.SOMBRA_HOVER};
   --sombra-ativo: {tokens.SOMBRA_ATIVO};
-}}
-@media (prefers-color-scheme: dark) {{
-  :root {{
-    --texto: {tokens.TEXTO_ESCURO};
-    --fundo-card: {tokens.FUNDO_CARD_ESCURO};
-    --borda: 1px solid rgba(148,163,184,.18);
-  }}
+  --superficie: color-mix(in srgb, currentColor {tokens.MISTURA_CARD}, transparent);
+  --superficie-topo: color-mix(in srgb, currentColor {tokens.MISTURA_CARD_TOPO}, transparent);
 }}
 
 .kpi-grid {{
@@ -55,9 +60,9 @@ def css_base() -> str:
   overflow: hidden;
   border-radius: {tokens.RAIO_CARD};
   border: var(--borda);
-  background: var(--fundo-card);
+  background: linear-gradient(180deg, var(--superficie-topo), var(--superficie));
   box-shadow: var(--sombra);
-  color: var(--texto);
+  color: inherit;
   font-family: var(--fonte);
   transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
 }}
@@ -72,19 +77,23 @@ def css_base() -> str:
   background:
     radial-gradient(220px 120px at 15% 10%,
       color-mix(in srgb, var(--kpi-accent) 22%, transparent), transparent 65%),
-    radial-gradient(220px 120px at 85% 0%, rgba(255,255,255,.35), transparent 55%);
+    radial-gradient(220px 120px at 85% 0%,
+      color-mix(in srgb, var(--kpi-accent) 8%, transparent), transparent 55%);
 }}
-.kpi-card:hover {{ border-color: rgba(15,23,42,.16); box-shadow: var(--sombra-hover); }}
+.kpi-card:hover {{
+  border-color: color-mix(in srgb, currentColor 24%, transparent);
+  box-shadow: var(--sombra-hover);
+}}
 .kpi-card:hover::after {{ opacity: 1; }}
 .kpi-card.is-selected {{
-  border-color: color-mix(in srgb, var(--kpi-accent) 60%, rgba(15,23,42,.18));
+  border-color: color-mix(in srgb, var(--kpi-accent) 60%, transparent);
   box-shadow: var(--sombra-ativo),
               0 0 0 2px color-mix(in srgb, var(--kpi-accent) 28%, transparent);
 }}
 .kpi-card.is-selected::after {{ opacity: 1; }}
 .kpi-card:focus-visible {{
   outline: none;
-  border-color: color-mix(in srgb, var(--kpi-accent) 55%, rgba(15,23,42,.18));
+  border-color: color-mix(in srgb, var(--kpi-accent) 55%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent) 35%, transparent),
               var(--sombra-hover);
 }}
@@ -176,12 +185,12 @@ def css_base() -> str:
 /* O foco aparece no card, não no botão invisível. */
 [class*="st-key-kpi-"] .stButton > button:focus-visible {{ outline: none; }}
 [class*="st-key-kpi-"]:has(.stButton > button:focus-visible) .kpi-card {{
-  border-color: color-mix(in srgb, var(--kpi-accent) 55%, rgba(15,23,42,.18));
+  border-color: color-mix(in srgb, var(--kpi-accent) 55%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent) 35%, transparent),
               var(--sombra-hover);
 }}
 [class*="st-key-kpi-"]:hover .kpi-card {{
-  border-color: rgba(15,23,42,.16);
+  border-color: color-mix(in srgb, currentColor 24%, transparent);
   box-shadow: var(--sombra-hover);
 }}
 [class*="st-key-kpi-"]:hover .kpi-card::after {{ opacity: 1; }}
@@ -362,7 +371,7 @@ section[data-testid="stSidebar"] {{
   margin-bottom: {tokens.GAP};
   border-radius: {tokens.RAIO_PAINEL};
   border: var(--borda);
-  background: var(--fundo-card);
+  background: linear-gradient(180deg, var(--superficie-topo), var(--superficie));
   box-shadow: {tokens.SOMBRA_REPOUSO};
 }}
 .sinan-intro-titulo {{
@@ -375,7 +384,7 @@ section[data-testid="stSidebar"] {{
   letter-spacing: .01em;
   text-align: center;
   text-wrap: balance;
-  color: var(--texto);
+  color: inherit;
 }}
 .sinan-intro-bandeira, .sinan-intro-logo {{
   display: block;
@@ -396,10 +405,10 @@ section[data-testid="stSidebar"] {{
 .sinan-painel {{
   border-radius: {tokens.RAIO_PAINEL};
   border: var(--borda);
-  background: var(--fundo-card);
+  background: linear-gradient(180deg, var(--superficie-topo), var(--superficie));
   box-shadow: {tokens.SOMBRA_REPOUSO};
   padding: {tokens.PADDING};
-  color: var(--texto);
+  color: inherit;
   font-family: var(--fonte);
 }}
 .sinan-painel-mapa {{ min-height: {tokens.ALTURA_MIN_MAPA}; }}

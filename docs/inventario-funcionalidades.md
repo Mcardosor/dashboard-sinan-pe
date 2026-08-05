@@ -117,6 +117,15 @@ Funcionalidade que o dashboard em R não tem. Ver `docs/analise-livre.md`.
 - [ ] Role Gamma para analistas
 - [ ] Auto-cadastro restrito por domínio de e-mail institucional
 
+## Além do original: tema
+
+O dashboard em R não tem tema escuro. Aqui o **claro é o padrão** e o escuro é
+a alternativa, pelo menu do Streamlit (⋮ → Settings → Appearance).
+
+- [x] Claro por padrão, mesmo com o sistema operacional em escuro
+- [x] Escuro disponível como alternativa
+- [x] Componentes próprios acompanham o tema sem detectá-lo
+
 ## Deliberadamente fora
 
 O original despeja um arquivo `.Rmd` de debug a cada render — havia ~90 acumulados
