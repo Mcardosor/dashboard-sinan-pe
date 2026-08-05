@@ -67,10 +67,12 @@
 - [ ] Slider de ano com *snap* para os anos existentes em disco
 
 ### 2.3 KPIs
-- [ ] Os 11 cards ligados à camada de dados
-- [ ] Delta vs ano anterior, com semântica **invertida para cura** (queda = ruim)
-- [ ] Clique no card troca a métrica ativa e repinta o resto
-- [ ] `KPI_LAYOUT` controlando quais aparecem e em que ordem
+- [ ] Os 11 cards ligados à camada de dados — 6 renderizados (o layout da TB);
+      os outros 5 estão calculados mas nunca foram desenhados
+- [x] Delta vs ano anterior, com semântica **invertida para cura** (queda = ruim)
+- [x] Clique no card troca a métrica ativa e repinta o resto — `st.button`
+      transparente sobre o card, dentro de `st.container(key=...)`
+- [x] `KPI_LAYOUT` controlando quais aparecem e em que ordem
 
 ### 2.4 Pré-processamento de geometria (`scripts/`)
 - [x] Script one-shot: simplificar os GeoJSON por UF com tolerância relativa (`bbox_x / 900`)

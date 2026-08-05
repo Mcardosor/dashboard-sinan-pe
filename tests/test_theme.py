@@ -68,16 +68,120 @@ def test_card_escapa_html() -> None:
     assert "&lt;script&gt;" in html
 
 
-def test_card_marca_acessibilidade() -> None:
+def test_card_e_apenas_apresentacao() -> None:
+    """O card não finge ser um controle.
+
+    No original era um `div` com `role="button"` e um handler de JS — uma
+    parada de tabulação que o teclado não acionava. Aqui quem recebe o clique
+    é um `<button>` de verdade (ver `kpi_clicavel`), e o card fica marcado
+    como `aria-hidden` para o leitor de tela não anunciar o conteúdo duas
+    vezes.
+    """
     html = c.kpi_card("Casos novos", "5.246", cor="#C1440A", selecionado=True)
-    assert 'role="button"' in html
-    assert 'tabindex="0"' in html
-    assert 'aria-pressed="true"' in html
+    assert 'aria-hidden="true"' in html
+    assert "role=" not in html
+    assert "tabindex" not in html
     assert "--kpi-accent:#C1440A" in html
     assert "is-selected" in html
+
+
+def test_css_posiciona_o_botao_sobre_o_card() -> None:
+    """Sem essa regra o botão aparece abaixo do card, e o clique não cobre."""
+    css = c.css_base()
+    assert '[class*="st-key-kpi-"]' in css
+    assert "position: absolute" in css
 
 
 def test_layout_kpi_so_referencia_metricas_conhecidas() -> None:
     for metrica in tb.LAYOUT_KPI:
         assert metrica in tb.CORES, f"{metrica} sem cor declarada"
         assert metrica in tb.ROTULOS, f"{metrica} sem rótulo declarado"
+
+
+# ---------------------------------------------------------------------------
+# Card clicável
+# ---------------------------------------------------------------------------
+# `kpi_clicavel` recebe o módulo `streamlit` por parâmetro justamente para
+# poder ser exercitado com um dublê, sem subir a aplicação.
+
+
+class _ContainerFalso:
+    def __init__(self, registro, chave):
+        registro.append(chave)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+
+class _StreamlitFalso:
+    """Dublê mínimo: registra o que foi chamado e devolve o clique programado."""
+
+    def __init__(self, clicado: bool = False):
+        self.containers: list[str] = []
+        self.markdown_html: list[str] = []
+        self.botoes: list[dict] = []
+        self._clicado = clicado
+
+    def container(self, key=None):
+        return _ContainerFalso(self.containers, key)
+
+    def markdown(self, corpo, unsafe_allow_html=False):
+        self.markdown_html.append(corpo)
+
+    def button(self, rotulo, **kwargs):
+        self.botoes.append({"rotulo": rotulo, **kwargs})
+        return self._clicado
+
+
+def _render(clicado=False, **kwargs):
+    falso = _StreamlitFalso(clicado)
+    resultado = c.kpi_clicavel(
+        falso, "incid", "Incidência", "40,42", cor="#92400E", **kwargs
+    )
+    return falso, resultado
+
+
+def test_container_usa_chave_que_o_css_alcanca() -> None:
+    falso, _ = _render()
+    assert falso.containers == ["kpi-incid"]
+
+
+def test_chave_do_botao_nao_colide_com_a_do_container() -> None:
+    """`st-key-kpi-` casaria com `st-key-kpi-btn-`, e o botão se ancoraria
+    no próprio contêiner em vez de cobrir o card."""
+    falso, _ = _render()
+    chave = falso.botoes[0]["key"]
+    assert not chave.startswith("kpi-")
+    assert chave == "selkpi-incid"
+
+
+def test_botao_recebe_a_metrica_no_callback() -> None:
+    registrado = []
+    falso, _ = _render(ao_clicar=registrado.append)
+    botao = falso.botoes[0]
+    assert botao["args"] == ("incid",)
+    botao["on_click"](*botao["args"])
+    assert registrado == ["incid"]
+
+
+def test_botao_tem_rotulo_acessivel() -> None:
+    """O card é aria-hidden; o nome acessível tem de vir do botão."""
+    falso, _ = _render()
+    assert "Incidência" in falso.botoes[0]["rotulo"]
+
+
+def test_devolve_true_quando_clicado() -> None:
+    _, resultado = _render(clicado=True)
+    assert resultado is True
+    _, resultado = _render(clicado=False)
+    assert resultado is False
+
+
+def test_estado_selecionado_chega_no_html() -> None:
+    falso, _ = _render(selecionado=True)
+    assert "is-selected" in falso.markdown_html[0]
+    falso, _ = _render(selecionado=False)
+    assert "is-selected" not in falso.markdown_html[0]

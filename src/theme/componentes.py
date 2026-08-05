@@ -138,6 +138,54 @@ def css_base() -> str:
 .kpi-ruim {{ color: {tokens.RUIM}; }}
 .kpi-igual {{ opacity: {tokens.NEUTRO_OPACIDADE}; }}
 
+/* Slot clicável -----------------------------------------------------------
+   O card é HTML injetado e não consegue falar de volta com o Python. A
+   solução é um `st.button` real, transparente, esticado por cima do card
+   dentro de um `st.container(key=...)`.
+
+   Ganho sobre o original: lá o card era um `div` com `role="button"` e um
+   handler de JS — um controle falso. Aqui o controle é um `<button>` de
+   verdade, então foco, teclado e leitor de tela funcionam sem nada extra.
+
+   O botão usa a chave `selkpi-<metrica>`, e não `kpi-btn-<metrica>`, de
+   propósito: `[class*="st-key-kpi-"]` casaria também com o contêiner do
+   próprio botão, que viraria a âncora do posicionamento absoluto e prenderia
+   o botão a si mesmo em vez de esticá-lo sobre o card. */
+[class*="st-key-kpi-"] {{ position: relative; }}
+[class*="st-key-kpi-"] .stButton {{
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  z-index: 3;
+}}
+[class*="st-key-kpi-"] [data-testid="stElementContainer"]:has(.stButton) {{
+  position: static;
+}}
+[class*="st-key-kpi-"] .stButton > button {{
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: transparent;
+  box-shadow: none;
+  border-radius: {tokens.RAIO_CARD};
+  cursor: pointer;
+}}
+/* O foco aparece no card, não no botão invisível. */
+[class*="st-key-kpi-"] .stButton > button:focus-visible {{ outline: none; }}
+[class*="st-key-kpi-"]:has(.stButton > button:focus-visible) .kpi-card {{
+  border-color: color-mix(in srgb, var(--kpi-accent) 55%, rgba(15,23,42,.18));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent) 35%, transparent),
+              var(--sombra-hover);
+}}
+[class*="st-key-kpi-"]:hover .kpi-card {{
+  border-color: rgba(15,23,42,.16);
+  box-shadow: var(--sombra-hover);
+}}
+[class*="st-key-kpi-"]:hover .kpi-card::after {{ opacity: 1; }}
+
 @media (prefers-reduced-motion: reduce) {{
   .kpi-card {{ transition: none !important; transform: none !important; }}
 }}
@@ -194,10 +242,15 @@ def kpi_card(
     badge_delta: str = "",
     selecionado: bool = False,
 ) -> str:
-    """Card de KPI.
+    """Card de KPI — apenas apresentação.
 
     A cor entra como variável CSS inline (``--kpi-accent``), o que permite um
     único bloco de estilo servir todas as métricas.
+
+    Deliberadamente **sem** ``role="button"`` ou ``tabindex``: quem torna o
+    card clicável é :func:`kpi_clicavel`, com um ``<button>`` de verdade por
+    cima. Um `div` fingindo ser botão, como no original, engana o leitor de
+    tela e cria uma parada de tabulação que não funciona com o teclado.
     """
     classes = "kpi-card is-selected" if selecionado else "kpi-card"
     sub = (
@@ -206,10 +259,7 @@ def kpi_card(
         else ""
     )
     return (
-        f'<div class="{classes}" style="--kpi-accent:{escape(cor)};"'
-        f' role="button" tabindex="0"'
-        f' aria-pressed="{"true" if selecionado else "false"}"'
-        f' aria-label="Selecionar métrica: {escape(titulo)}">'
+        f'<div class="{classes}" style="--kpi-accent:{escape(cor)};" aria-hidden="true">'
         f'<div class="kpi-inner">'
         f'<div class="kpi-accent"></div>'
         f'<div class="kpi-text">'
@@ -222,3 +272,48 @@ def kpi_card(
 
 def grade_kpis(cards: list[str]) -> str:
     return f'<div class="kpi-grid">{"".join(cards)}</div>'
+
+
+def kpi_clicavel(
+    st,
+    chave: str,
+    titulo: str,
+    valor: str,
+    *,
+    cor: str,
+    subtitulo: str | None = None,
+    badge_delta: str = "",
+    selecionado: bool = False,
+    ao_clicar=None,
+) -> bool:
+    """Renderiza um card de KPI que seleciona a métrica ao ser clicado.
+
+    Recebe o módulo ``streamlit`` por parâmetro para este módulo continuar
+    testável sem subir a aplicação.
+
+    O card é HTML e não consegue devolver evento ao Python. Quem captura o
+    clique é um ``st.button`` transparente esticado por cima, dentro de um
+    ``st.container(key=...)`` — a chave vira uma classe no DOM
+    (``st-key-kpi-<chave>``) que o CSS usa para posicionar o botão.
+
+    Devolve ``True`` se foi clicado nesta execução.
+    """
+    with st.container(key=f"kpi-{chave}"):
+        st.markdown(
+            kpi_card(
+                titulo,
+                valor,
+                cor=cor,
+                subtitulo=subtitulo,
+                badge_delta=badge_delta,
+                selecionado=selecionado,
+            ),
+            unsafe_allow_html=True,
+        )
+        return st.button(
+            f"Selecionar {titulo}",
+            key=f"selkpi-{chave}",
+            on_click=ao_clicar,
+            args=(chave,) if ao_clicar else None,
+            use_container_width=True,
+        )

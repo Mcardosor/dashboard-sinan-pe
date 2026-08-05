@@ -39,12 +39,13 @@ Grid responsivo: `repeat(auto-fit, minmax(180px, 1fr))`, com quebras em 1240px,
 Comportamento:
 
 - [ ] `KPI_LAYOUT` do *disease pack* controla quais aparecem e em que ordem
-- [ ] Card clicável troca a métrica ativa, repintando mapa e gráficos
+- [x] Card clicável troca a métrica ativa, repintando mapa e gráficos
 - [ ] Delta vs ano anterior
 - [ ] Semântica de cor **invertida para cura** — queda é ruim; nas demais, queda é boa
 - [ ] Acento lateral na cor da métrica, via `--kpi-accent` inline
 - [ ] Estados de hover, foco e seleção
-- [ ] Navegação por teclado (Enter / Espaço)
+- [x] Navegação por teclado (Enter / Espaço) — via `<button>` nativo, e não
+      um `div` com `role="button"` como no original
 
 ## Mapa
 

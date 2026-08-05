@@ -35,6 +35,15 @@ def _ufs() -> list[str]:
 
 st.markdown(ui.css_base(), unsafe_allow_html=True)
 
+# A métrica ativa vive no estado da sessão; clicar num card a substitui.
+# Precisa existir antes da sidebar, que já a exibe.
+st.session_state.setdefault("metrica", pack.LAYOUT_KPI[0])
+
+
+def selecionar_metrica(chave: str) -> None:
+    st.session_state.metrica = chave
+
+
 with st.sidebar:
     st.title(pack.TITULO)
     anos = _anos()
@@ -44,35 +53,40 @@ with st.sidebar:
     uf = st.selectbox("UF", _ufs(), index=_ufs().index("PE")) if nivel in ("UF", "MUN") else None
     mun = st.text_input("Município (código IBGE)", "261160") if nivel == "MUN" else None
 
-    metrica = st.radio("Métrica ativa", list(pack.LAYOUT_KPI), format_func=pack.rotulo)
-
     escopo_txt = {"BR": "Brasil", "UF": f"UF {uf}", "MUN": f"Município {mun}"}[nivel]
     st.caption(f"Escopo: {escopo_txt} • Ano: {ano}")
+    st.caption(f"Métrica ativa: {pack.rotulo(st.session_state.metrica)}")
 
 atual = _kpis(pack.DOENCA, ano, nivel, uf, mun)
 anterior = _kpis(pack.DOENCA, ano - 1, nivel, uf, mun) if ano - 1 >= anos[0] else None
 
-cards = []
-for chave in pack.LAYOUT_KPI:
-    valor = getattr(atual, chave)
-    taxa = chave in pack.TAXAS
-    texto = ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor)
-    cards.append(
-        ui.kpi_card(
-            pack.rotulo(chave),
-            texto,
-            cor=pack.cor(chave),
-            selecionado=(chave == metrica),
-            badge_delta=ui.delta(
-                valor,
-                getattr(anterior, chave) if anterior else None,
-                taxa=taxa,
-                bom_se_cai=chave in pack.BOM_SE_CAI,
-            ),
-        )
-    )
+#: KPIs por linha. Um `st.columns` por linha, e não um único para todos: ao
+#: empilhar no mobile, o Streamlit renderiza coluna a coluna, e um grid único
+#: entregaria os cards fora da ordem do `LAYOUT_KPI`.
+POR_LINHA = 3
 
-st.markdown(ui.grade_kpis(cards), unsafe_allow_html=True)
+for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
+    linha = pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]
+    colunas = st.columns(POR_LINHA, gap="small")
+    for coluna, chave in zip(colunas, linha):
+        valor = getattr(atual, chave)
+        taxa = chave in pack.TAXAS
+        with coluna:
+            ui.kpi_clicavel(
+                st,
+                chave,
+                pack.rotulo(chave),
+                ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
+                cor=pack.cor(chave),
+                selecionado=(chave == st.session_state.metrica),
+                badge_delta=ui.delta(
+                    valor,
+                    getattr(anterior, chave) if anterior else None,
+                    taxa=taxa,
+                    bom_se_cai=chave in pack.BOM_SE_CAI,
+                ),
+                ao_clicar=selecionar_metrica,
+            )
 
 st.divider()
 st.caption(
