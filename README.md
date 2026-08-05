@@ -72,6 +72,7 @@ lateral avisa o que falta.
 - **[docs/inventario-funcionalidades.md](docs/inventario-funcionalidades.md)** — checklist de paridade com o original
 - **[docs/contrato-dados.md](docs/contrato-dados.md)** — datasets, esquemas, fórmulas dos KPIs e armadilhas
 - **[docs/analise-livre.md](docs/analise-livre.md)** — integração com Apache Superset
+- **[docs/perguntas-equipe-r.md](docs/perguntas-equipe-r.md)** — o que depende da equipe parceira
 
 ## Estrutura
 
