@@ -205,3 +205,38 @@ def figura(
         font={"family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"},
     )
     return fig
+
+
+def alvo_do_clique(evento) -> str | None:
+    """Extrai a geografia clicada do evento de seleção do ``st.plotly_chart``.
+
+    O ``on_select`` devolve os pontos selecionados, e como a figura usa
+    ``locations=chave``, o campo ``location`` já traz a chave da geografia —
+    sigla de UF ou código de município de 6 dígitos.
+
+    Tolerante de propósito: o formato do evento é detalhe interno do Streamlit
+    e já mudou entre versões. Se vier algo inesperado, devolve ``None`` e o
+    mapa apenas não navega, em vez de derrubar a página.
+    """
+    if not evento:
+        return None
+
+    selecao = getattr(evento, "selection", None)
+    if selecao is None and isinstance(evento, dict):
+        selecao = evento.get("selection")
+    if not selecao:
+        return None
+
+    pontos = selecao.get("points") if isinstance(selecao, dict) else None
+    if not pontos:
+        return None
+
+    primeiro = pontos[0]
+    if not isinstance(primeiro, dict):
+        return None
+
+    for campo in ("location", "hovertext", "label", "id"):
+        valor = primeiro.get(campo)
+        if valor not in (None, ""):
+            return str(valor)
+    return None

@@ -232,6 +232,11 @@ with esquerda:
             coluna_nome="nome_mun" if chave == "cod_mun6" else "uf",
             decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
         )
+        # Sem `on_select`: o coroplético do maplibre não emite `plotly_click`,
+        # verificado com clique real e sintético. O drill-down por clique está
+        # bloqueado nesta rota — ver docs/mapa-clique.md. Por ora a navegação
+        # é pelos seletores da barra lateral, que já operam a mesma máquina
+        # de estados que o mapa vai operar.
         st.plotly_chart(
             figura,
             use_container_width=True,
