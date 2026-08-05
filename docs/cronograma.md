@@ -19,37 +19,46 @@
 ## Semana 1 — Fundação (03–07/ago)
 
 ### 1.1 Ambiente e dados
-- [ ] Copiar `data/parquet/dashboard/` (888 MB, 2.814 arquivos) para o destino definitivo
-- [ ] Copiar os arquivos de apoio de PE para `data/support/` — hoje eles vivem fora de `data/`, 6 níveis acima, e são a única fonte de macro/microrregião:
+- [x] Copiar `data/parquet/dashboard/` (888 MB, 2.814 arquivos) para o destino definitivo
+- [x] Copiar os arquivos de apoio de PE para `data/support/` — hoje eles vivem fora de `data/`, 6 níveis acima, e são a única fonte de macro/microrregião:
       `municipios.csv`, `PE MODIF.*`, `PEMacSAUD MODIF.*`, `PERGSAUDE MODIF.*`
-- [ ] Criar venv e `requirements.txt`
-- [ ] Validar leitura dos 11 datasets e conferir contagem de linhas contra `docs/contrato-dados.md`
+- [x] Criar venv e `requirements.txt`
+- [x] Validar leitura dos 11 datasets e conferir contagem de linhas contra `docs/contrato-dados.md`
 
 ### 1.2 Camada de dados (`src/data/`)
-- [ ] Conexão DuckDB única em `st.cache_resource`
-- [ ] Mapa canônico de doenças — resolve `DENG`/`DENGUE`, `HANS`/`HANSENIASE` entre datasets
-- [ ] Normalizações: `trim()` no campo `valor`, padding de `cod_mun6`↔`cod_mun7`, sigla de UF
-- [ ] Readers por dataset: `incidence`, `incidence_0_14`, `_cache_ts`, `piramides`,
+- [x] Conexão DuckDB única em `st.cache_resource`
+- [x] Mapa canônico de doenças — resolve `DENG`/`DENGUE`, `HANS`/`HANSENIASE` entre datasets
+- [x] Normalizações: `trim()` no campo `valor`, padding de `cod_mun6`↔`cod_mun7`, sigla de UF
+- [x] Readers por dataset: `incidence`, `incidence_0_14`, `_cache_ts`, `piramides`,
       `sinan_landing`, `sinan_dict`, `cache_ts_sim_obitos`, `obitos_sim_faixa`,
       `cases_new`, `indicadores_tb_contatos`, `indicadores_tb_cultura_retratamento`
-- [ ] Funções de KPI: `incid`, `mortalidade`, `letalidade`, `taxa_det_0_14`,
+- [x] Funções de KPI: `incid`, `mortalidade`, `letalidade`, `taxa_det_0_14`,
       `hiv_pos_pct`, `interrupcao_trat_pct`
-- [ ] Ligar óbitos de TB ao SIM (`cache_ts_sim_obitos`) — `incidence.casos_obitos` é zero para TB em todos os anos
+- [x] Ligar óbitos de TB ao SIM (`cache_ts_sim_obitos`) — `incidence.casos_obitos` é zero para TB em todos os anos
 
 ### 1.3 Harness de paridade (`tests/paridade/`)
-- [ ] **Gate: decidir a metodologia do abandono** antes de fixar as referências.
-      Regra do R = 11,89% · padrão MS = 14,75% (TB/PE/2024). Conversar com a equipe de R.
-- [ ] Extrair ~30 valores de referência do dashboard em R (KPI × nível × ano × recorte)
-- [ ] Suite pytest comparando os números com tolerância declarada
-- [ ] `excecoes.md` — divergências intencionais, com justificativa
+- [ ] **Gate: decidir a metodologia do abandono** — Regra do R = 11,89% ·
+      padrão MS = 14,75% (TB/PE/2024). **Bloqueado na equipe de R.** As duas
+      regras estão implementadas e testadas; falta a decisão de qual vale.
+- [ ] Extrair valores de referência do dashboard em R **rodando** —
+      **bloqueado**: os pacotes de R não estão instalados nesta máquina e o
+      `renv.lock` fixa R 4.4 contra o 4.6 disponível. As referências atuais
+      saem dos parquets por caminho independente, o que valida fórmula e
+      pega regressão, mas não substitui conferir contra a tela do original.
+- [x] Suite pytest comparando os números com tolerância declarada
+- [x] `excecoes.md` — divergências intencionais, com justificativa
 
 ### 1.4 Sistema visual (`src/theme/`)
-- [ ] `tokens.py` — cores, raios, sombras, tipografia, breakpoints
-- [ ] Gerador de rampa a partir da cor base (mix com branco 35/55/72%, com preto 18/34/52%)
-- [ ] `kpi_card()` — acento lateral, `--kpi-accent` inline, hover, foco, teclado
-- [ ] `disease_pack` da Tuberculose
+- [x] `tokens.py` — cores, raios, sombras, tipografia, breakpoints
+- [x] Gerador de rampa a partir da cor base (mix com branco 35/55/72%, com preto 18/34/52%)
+- [x] `kpi_card()` — acento lateral, `--kpi-accent` inline, hover, foco, teclado
+- [x] `disease_pack` da Tuberculose
 
 **Pronto quando:** o harness roda verde contra as referências e `kpi_card()` renderiza isolado.
+
+Fechada, com duas pendências que não dependem de código — ambas na equipe de R.
+Os itens acima foram conferidos contra o código em 03/ago, não marcados de
+memória.
 
 ---
 
