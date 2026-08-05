@@ -1,14 +1,18 @@
 # Perguntas para a equipe de R
 
-Levantadas durante a reconstrução em Python, todas verificadas com query nos
-próprios parquets. Ordenadas por quanto travam o trabalho.
+Levantadas durante a reconstrução em Python. Ordenadas por quanto travam o
+trabalho.
+
+> **Atualização (05/ago).** Com acesso ao banco `cenarios_ai`, que tem o SINAN
+> bruto, **três das quatro foram respondidas na fonte** — ver as marcas
+> RESPONDIDA abaixo. Sobram uma pergunta e um pedido.
 
 Nenhuma é reclamação: são escolhas que precisam ser confirmadas por quem
 conhece o pipeline, e duas delas decidem qual número aparece na tela.
 
 ---
 
-## 1. Residência ou notificação? — a mais urgente
+## 1. Residência ou notificação? — RESPONDIDA na fonte
 
 Quatro datasets respondem "quantos casos" e não conciliam entre si:
 
@@ -26,8 +30,24 @@ residência** num dataset e **UF de notificação** no outro. Reforça a hipóte
 o fato de a coluna geográfica dos indicadores de TB se chamar
 `CO_MUNI_RESIDENCIA`.
 
-**O que precisamos saber:** qual dataset usa residência e qual usa notificação,
-e qual dos dois é a fonte autoritativa do total anual.
+**Resposta, medida no `silver.tuberculose`:**
+
+| Datasets | Critério |
+|---|---|
+| `_cache_ts` e `piramides` | **UF de notificação** |
+| `incidence` e `cases_new` | **UF de residência** |
+
+Comparando, para TB/2024 caso novo, a contagem por `estado_notificacao` contra
+`estado_residencia` nas 27 UFs, e o desvio `_cache_ts` contra `incidence` nos
+parquets: **correlação de 0,998**, com 26 dos 27 sinais concordando. No DF o
+bruto dá +7,31% por notificação e os parquets +7,73%; em Tocantins inverte nos
+dois (−5,05% e −5,99%).
+
+**O que ainda vale confirmar:** se a escolha de expor as duas bases foi
+deliberada, e qual vocês consideram autoritativa. Nossa leitura é que
+residência é o critério de vigilância — é onde a pessoa vive e onde a política
+age; notificação reflete a rede assistencial, e é por isso que o DF, que
+atende o Entorno, aparece inflado.
 
 **Por que trava:** o card de KPI lê de `incidence` e o gráfico de série
 temporal lê de `_cache_ts`. Os dois vão aparecer lado a lado mostrando números
@@ -36,7 +56,7 @@ hoje — a diferença é que agora ela está medida.
 
 ---
 
-## 2. A regra do abandono de tratamento
+## 2. A regra do abandono — CONFIRMADA na fonte, decisão pendente
 
 O `mod_kpis.R` calcula `interrupcao_trat_pct` contando apenas `SITUA_ENCE = 2`
 e usando **todos** os encerramentos no denominador, incluindo `5`
@@ -47,10 +67,18 @@ primário), e exclui os não avaliados do denominador.
 
 Para TB/PE/2024: **11,89% pela regra atual, 14,75% pelo padrão do MS.**
 
-**O que precisamos saber:** a regra atual é deliberada — por comparabilidade
-com alguma série histórica, por exemplo — ou é para seguir o padrão do MS?
+**O que a fonte mostra.** Em `silver.tuberculose`, "Abandono" e "Abandono
+primário" são categorias **distintas** — a regra atual, contando só o código 2,
+de fato deixa a segunda de fora. E o denominador atual inclui transferência,
+não informado, TB-DR e mudança de esquema, que somam **24% dos registros**.
 
-As duas estão implementadas e testadas do nosso lado; falta só a decisão.
+Recalculando em PE/2024 sobre a mesma população (caso novo, por residência):
+**10,87% pela regra atual, 14,70% pelo padrão do MS** — a regra atual
+subestima o abandono em cerca de um terço.
+
+**O que precisamos saber:** a regra atual é deliberada, por comparabilidade
+com alguma série histórica? As duas estão implementadas e testadas do nosso
+lado; falta só a decisão.
 
 ---
 
@@ -74,15 +102,17 @@ máquina tem só o R 4.6 sem nenhum deles.
 
 ---
 
-## 4. A pirâmide etária de tuberculose está vazia
+## 4. A pirâmide de tuberculose está vazia — RESPONDIDA: o dado existe
 
 O dataset `piramides` tem a partição `tipo` com CASOS, CURA e OBITOS. Para
 tuberculose, **CURA e OBITOS somam zero** em todos os 15 anos e nos três
 níveis geográficos. Só a dengue tem OBITOS preenchido; hanseníase e zika
 também estão zeradas.
 
-**O que precisamos saber:** é intencional — porque o dado não existe na fonte —
-ou é falha do pipeline?
+**O dado existe na fonte.** Em `silver.tuberculose`, ano 2024, caso novo:
+54.323 curas e 6.668 óbitos, **com sexo e idade preenchidos em mais de 99,9%**
+dos registros. Ou seja, não é ausência de dado — algo no pipeline zera essas
+duas partições.
 
 **Impacto:** a alternância CASOS/CURA/ÓBITOS da pirâmide não funciona na
 entrega de TB. Nossa alternativa é montar a pirâmide de óbitos a partir de

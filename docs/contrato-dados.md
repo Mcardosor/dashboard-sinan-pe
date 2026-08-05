@@ -124,17 +124,28 @@ UF o desvio é grande e sistemático:
 | DF | 7,7% (2024) a **36,8%** (2011) — o pior em todos os 15 anos |
 | Demais UFs | 4,5% a 13,9%, concentrado em PI, TO e AP |
 
-O padrão (DF ganhando enquanto GO e TO perdem) é compatível com **UF de
-residência** num dataset e **UF de notificação** no outro. A queda ao longo dos
-anos acompanha a melhora do preenchimento no SINAN.
+**Confirmado na fonte** (05/ago), com o SINAN bruto do banco `cenarios_ai`:
+
+| Datasets | Critério |
+|---|---|
+| `incidence`, `cases_new` | **UF de residência** |
+| `_cache_ts`, `piramides` | **UF de notificação** |
+
+Comparando a contagem por `estado_notificacao` contra `estado_residencia` nas
+27 UFs (TB/2024, caso novo) com o desvio observado nos parquets: correlação de
+**0,998**, 26 dos 27 sinais concordando.
 
 Consequência prática: no nível UF, o card de KPI e o gráfico de série temporal
 mostram totais diferentes para o mesmo recorte. O dashboard em R tem a mesma
 inconsistência, porque lê das mesmas duas fontes do mesmo jeito.
 
-**Pendência para a equipe de R:** confirmar qual dataset usa residência e qual
-usa notificação. Sem isso não dá para decidir qual é a fonte autoritativa do
-total anual. Limites monitorados em `tests/paridade/test_consistencia.py`.
+Para vigilância, **residência** é o critério usual: é onde a pessoa vive e
+onde a política age. Notificação reflete a rede assistencial — por isso o DF,
+que atende o Entorno, aparece inflado.
+
+Consequência: a série temporal de `_cache_ts` não pode ser exibida ao lado de
+um KPI de `incidence` sem ressalva, porque medem coisas diferentes. Limites
+monitorados em `tests/paridade/test_consistencia.py`.
 
 ### 8. Dois arquivos de esquemas diferentes no mesmo diretório
 

@@ -73,6 +73,7 @@ lateral avisa o que falta.
 - **[docs/contrato-dados.md](docs/contrato-dados.md)** — datasets, esquemas, fórmulas dos KPIs e armadilhas
 - **[docs/analise-livre.md](docs/analise-livre.md)** — integração com Apache Superset
 - **[docs/perguntas-equipe-r.md](docs/perguntas-equipe-r.md)** — o que depende da equipe parceira
+- **[docs/banco-cenarios.md](docs/banco-cenarios.md)** — o SINAN bruto, para investigação
 
 ## Estrutura
 
