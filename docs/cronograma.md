@@ -110,7 +110,7 @@ detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 ### 3.2 Drill-down
 - [x] BR → UF por clique
 - [x] UF → MUN por clique
-- [ ] Modo "detalhe" do município
+- [x] Modo "detalhe" do município — clicar de novo no município já selecionado
 - [x] Enquadramento ao trocar de nível
 
 Feito em **pydeck**, não em Plotly: o coroplético do Plotly não emite evento
@@ -133,9 +133,9 @@ de clique, nem na versão maplibre nem na SVG. Ver `docs/mapa-clique.md`.
 - [x] Drill macro → micro → município, por clique no mapa
 
 ### 3.5 Interação
-- [ ] Busca de município (rótulo `"Nome - Região de Saúde"`)
-- [ ] Hover box
-- [ ] Botão de voltar dentro do mapa
+- [x] Busca de município, com a região de saúde no rótulo em PE
+- [x] Hover box — tooltip do pydeck, com nome e valor formatado
+- [x] Botão de voltar dentro do mapa
 
 **Pronto quando:** os três níveis e os três recortes navegam sem estado inconsistente.
 

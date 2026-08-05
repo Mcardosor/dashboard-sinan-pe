@@ -124,3 +124,36 @@ def test_indice_da_agregacao_e_o_nome_da_regiao() -> None:
     """A geometria identifica a região pelo nome; o índice tem de bater."""
     valores = leitura.valores_por_regiao(ESCOPO, "casos", "macro")
     assert set(valores.index) == set(geo.regioes_pe("macro")["regiao"])
+
+
+# ---------------------------------------------------------------------------
+# Rótulo da busca
+# ---------------------------------------------------------------------------
+
+
+def test_regiao_desempata_municipios_de_nome_parecido() -> None:
+    """A busca mostra "Nome — Região de saúde", como no original.
+
+    PE tem municípios de nome próximo em regiões diferentes; sem o sufixo, a
+    lista fica ambígua.
+    """
+    tabela = pernambuco.lookup()
+    regiao = tabela.set_index("cod_mun6")["micro"]
+    assert regiao.notna().all()
+    assert not regiao.eq("").any()
+    # todo município tem exatamente uma região de saúde
+    assert len(regiao) == len(tabela)
+
+
+def test_toda_regiao_de_saude_tem_municipio() -> None:
+    for micro in pernambuco.micros():
+        assert pernambuco.municipios_de(micro=micro), f"{micro} sem município"
+
+
+def test_recorte_por_regiao_e_subconjunto_da_uf() -> None:
+    """O mapa filtra a malha pela região; o subconjunto tem de ser válido."""
+    todos = set(geo.municipios("PE")["cod_mun6"])
+    for micro in pernambuco.micros():
+        dentro = set(pernambuco.municipios_de(micro=micro))
+        assert dentro <= todos, f"{micro} tem município fora da malha de PE"
+        assert dentro, f"{micro} vazia"

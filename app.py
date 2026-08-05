@@ -11,7 +11,7 @@ import streamlit as st
 import json
 
 from src import mapa
-from src.data import config, geo
+from src.data import config, geo, pernambuco
 from src.data import kpis as calc
 from src.data import leitura
 from src.data.escopo import Escopo
@@ -55,15 +55,37 @@ def _geojson(nivel: str, uf: str | None) -> tuple[dict, list]:
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _camada(nivel: str, uf: str | None, recorte: str = "MUN"):
-    """Geometria a desenhar. Em PE, o recorte pode ser macro ou região de saúde."""
+def _camada(
+    nivel: str,
+    uf: str | None,
+    recorte: str = "MUN",
+    mun: str | None = None,
+    detalhe: bool = False,
+    micro: str | None = None,
+):
+    """Geometria a desenhar.
+
+    Em PE o recorte pode ser macro ou região de saúde; no modo detalhe a
+    camada encolhe para o município escolhido, que é o que o zoom acompanha.
+    """
     if nivel == "BR":
         return geo.ufs()
     if recorte == "MACRO":
         return geo.regioes_pe("macro")
     if recorte == "MICRO":
         return geo.regioes_pe("micro")
-    return geo.municipios(uf)
+
+    municipios = geo.municipios(uf)
+    if detalhe and mun:
+        return municipios[municipios["cod_mun6"] == mun]
+    # Fora do detalhe, entrar por uma região de saúde restringe o mapa a ela,
+    # senão o zoom volta para o estado inteiro e perde-se o contexto do drill.
+    if micro:
+        dentro = set(pernambuco.municipios_de(micro=micro))
+        recorte_geo = municipios[municipios["cod_mun6"].isin(dentro)]
+        if not recorte_geo.empty:
+            return recorte_geo
+    return municipios
 
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)
@@ -83,6 +105,24 @@ def _municipios(uf: str) -> dict[str, str]:
     """Código de 6 dígitos → nome, para o seletor e para a trilha."""
     camada = geo.municipios(uf)
     return dict(zip(camada["cod_mun6"], camada["nome_mun"]))
+
+
+@st.cache_data(ttl=3600)
+def _rotulos_busca(uf: str) -> dict[str, str]:
+    """Rótulo da busca. Em PE inclui a região de saúde, como no original.
+
+    Pernambuco tem municípios de nome parecido em regiões diferentes, e o
+    sufixo é o que desempata na lista.
+    """
+    nomes = _municipios(uf)
+    if uf != pernambuco.UF:
+        return dict(nomes)
+
+    regiao = pernambuco.lookup().set_index("cod_mun6")["micro"].to_dict()
+    return {
+        codigo: f"{nome} — {regiao[codigo]}" if codigo in regiao else nome
+        for codigo, nome in nomes.items()
+    }
 
 
 def _navegacao() -> Navegacao:
@@ -133,13 +173,14 @@ with st.sidebar:
                 nav.definir_recorte(recorte)
 
         nomes = _municipios(nav.uf)
-        opcoes = [TODA_A_UF, *sorted(nomes, key=lambda c: nomes[c])]
+        rotulos = _rotulos_busca(nav.uf)
+        opcoes = [TODA_A_UF, *sorted(nomes, key=lambda c: rotulos[c])]
         selecionado = nav.mun if nav.mun in nomes else None
         municipio = st.selectbox(
-            "Município",
+            "Buscar município",
             opcoes,
             index=0 if selecionado is None else opcoes.index(selecionado),
-            format_func=lambda c: c if c == TODA_A_UF else nomes[c],
+            format_func=lambda c: c if c == TODA_A_UF else rotulos[c],
         )
         if municipio == TODA_A_UF:
             if nav.nivel == "MUN":
@@ -234,7 +275,19 @@ with esquerda:
             unsafe_allow_html=True,
         )
     else:
-        camada = _camada(nav.nivel, nav.uf, recorte)
+        # Voltar dentro do mapa, como no original: quem navega clicando não
+        # deveria ter de procurar o controle na barra lateral.
+        if nav.pode_voltar:
+            st.button(
+                "◀ Voltar",
+                key="voltar-mapa",
+                on_click=nav.voltar,
+                help="Desfaz um passo da navegação no mapa",
+            )
+
+        camada = _camada(
+            nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro
+        )
         chave = {"UF": "uf", "MACRO": "regiao", "MICRO": "regiao"}.get(
             nivel_mapa, "cod_mun6"
         )
@@ -256,7 +309,10 @@ with esquerda:
             desenho,
             use_container_width=True,
             height=mapa.ALTURA,
-            key=f"mapa-{nav.nivel}-{nav.uf or 'BR'}-{recorte}-{nav.ano}-{nav.metrica}",
+            key=(
+                f"mapa-{nav.nivel}-{nav.uf or 'BR'}-{recorte}-{nav.mun or '-'}"
+                f"-{'det' if nav.detalhe else 'geral'}-{nav.ano}-{nav.metrica}"
+            ),
             on_select="rerun",
             selection_mode="single-object",
         )
@@ -264,6 +320,11 @@ with esquerda:
         st.markdown(
             mapa.legenda(escala, pack.rotulo(nav.metrica)), unsafe_allow_html=True
         )
+
+        if nav.nivel == "MUN" and not nav.detalhe:
+            st.caption("Clique de novo no município para abrir o detalhe.")
+        elif nav.detalhe:
+            st.caption(f"Detalhe de {nav.nome_mun or nav.mun}.")
 
         if alvo := mapa.alvo_do_clique_deck(evento):
             if nivel_mapa == "UF" and alvo != nav.uf:
@@ -277,9 +338,14 @@ with esquerda:
                 # Clicar numa região de saúde abre os municípios dela.
                 nav.entrar_micro(alvo)
                 st.rerun()
-            elif nivel_mapa == "MUN" and alvo != nav.mun:
+            elif nivel_mapa == "MUN":
                 nomes = _municipios(nav.uf)
-                if alvo in nomes:
+                if alvo == nav.mun and not nav.detalhe:
+                    # Clicar de novo no município já selecionado abre o
+                    # detalhe, que é como o original entra nesse modo.
+                    nav.abrir_detalhe()
+                    st.rerun()
+                elif alvo != nav.mun and alvo in nomes:
                     nav.entrar_municipio(alvo, nome=nomes[alvo])
                     st.rerun()
 
