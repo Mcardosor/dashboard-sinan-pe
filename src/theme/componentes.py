@@ -392,12 +392,34 @@ section[data-testid="stSidebar"] {{
   object-fit: contain;
 }}
 .sinan-intro-bandeira {{ max-height: 54px; max-width: min(18vw, 140px); }}
-.sinan-intro-logo {{ max-height: 66px; max-width: min(33vw, 290px); justify-self: end; }}
+.sinan-intro-logo {{ max-height: 66px; max-width: min(33vw, 290px); }}
 
-/* Sem as imagens, o título ocupa a faixa inteira em vez de ficar deslocado
-   para o meio de um grid vazio. */
-.sinan-intro.sem-marcas {{ grid-template-columns: 1fr; }}
-.sinan-intro.sem-marcas .sinan-intro-titulo {{ grid-column: 1; }}
+/* Os arquivos de marca são JPEG, sem canal alfa: no tema escuro o fundo
+   branco viraria um bloco. Em vez de recortar a transparência — que mexeria
+   na marca e deixaria halo nas bordas —, a imagem ganha uma placa branca
+   explícita, que é o tratamento padrão para logotipo sem alfa e fica igual
+   nos dois temas. */
+.sinan-intro-marca {{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(2,6,23,.10);
+}}
+.sinan-intro-marca-fim {{ justify-self: end; }}
+
+/* O grid acompanha quantas marcas existem. Manter três colunas com uma só
+   preenchida deixa um vazio de um terço e a faixa parece desalinhada. */
+.sinan-intro.marcas-0 {{ grid-template-columns: 1fr; }}
+.sinan-intro.marcas-0 .sinan-intro-titulo {{ grid-column: 1; }}
+
+/* Com uma marca só, vira cabeçalho: título de um lado, marca do outro. */
+.sinan-intro.marcas-1 {{ grid-template-columns: minmax(0, 1fr) auto; }}
+.sinan-intro.marcas-1 .sinan-intro-titulo {{
+  grid-column: 1;
+  text-align: left;
+}}
 
 /* Linha principal: mapa à esquerda, gráficos à direita.
    O original travava `height` em 520px e 760px, o que quebra em telas baixas;
@@ -453,30 +475,38 @@ section[data-testid="stSidebar"] {{
 
 
 def faixa_intro(titulo: str, bandeira: str | None = None, logo: str | None = None) -> str:
-    """Faixa de identificação: bandeira · título · logo.
+    """Faixa de identificação.
 
-    ``bandeira`` e ``logo`` são URIs de dados (``data:image/...``). Quando
-    faltam — que é o caso hoje, os arquivos não vieram na entrega do projeto
-    em R — a faixa mostra só o título, ocupando a largura toda.
+    O arranjo acompanha quantas marcas existem, porque manter três colunas com
+    uma só preenchida deixa um vazio de um terço e a faixa parece desalinhada:
+
+    - **duas**: bandeira · título centralizado · logotipo, como no original
+    - **uma**: cabeçalho, com o título à esquerda e a marca à direita
+    - **nenhuma**: só o título, ocupando a largura toda
+
+    ``bandeira`` e ``logo`` são URIs de dados (``data:image/...``).
     """
-    marcas = bool(bandeira or logo)
-    classe = "sinan-intro" if marcas else "sinan-intro sem-marcas"
+    presentes = [m for m in (bandeira, logo) if m]
+    classe = f"sinan-intro marcas-{len(presentes)}"
 
-    esquerda = (
-        f'<img class="sinan-intro-bandeira" src="{escape(bandeira)}" alt="">'
-        if bandeira
-        else "<span></span>" if marcas else ""
-    )
-    direita = (
-        f'<img class="sinan-intro-logo" src="{escape(logo)}" alt="">'
-        if logo
-        else "<span></span>" if marcas else ""
-    )
-    return (
-        f'<div class="{classe}">{esquerda}'
-        f'<h1 class="sinan-intro-titulo">{escape(titulo)}</h1>'
-        f"{direita}</div>"
-    )
+    def marca(fonte: str, tipo: str, ao_fim: bool) -> str:
+        fim = " sinan-intro-marca-fim" if ao_fim else ""
+        return (
+            f'<span class="sinan-intro-marca{fim}">'
+            f'<img class="sinan-intro-{tipo}" src="{escape(fonte)}" alt=""></span>'
+        )
+
+    titulo_html = f'<h1 class="sinan-intro-titulo">{escape(titulo)}</h1>'
+
+    if len(presentes) == 2:
+        return (
+            f'<div class="{classe}">{marca(bandeira, "bandeira", False)}'
+            f'{titulo_html}{marca(logo, "logo", True)}</div>'
+        )
+    if len(presentes) == 1:
+        tipo = "bandeira" if bandeira else "logo"
+        return f'<div class="{classe}">{titulo_html}{marca(presentes[0], tipo, True)}</div>'
+    return f'<div class="{classe}">{titulo_html}</div>'
 
 
 def painel_vazio(titulo: str, aviso: str, *, mapa: bool = False) -> str:

@@ -299,7 +299,7 @@ def test_paineis_usam_altura_minima_e_nao_fixa() -> None:
 
 def test_faixa_de_intro_sem_imagens_ocupa_a_largura_toda() -> None:
     html = c.faixa_intro("Tuberculose")
-    assert "sem-marcas" in html
+    assert "marcas-0" in html
     assert "<img" not in html
     assert "Tuberculose" in html
 
@@ -310,18 +310,46 @@ def test_faixa_de_intro_com_imagens() -> None:
         bandeira="data:image/jpeg;base64,AAA",
         logo="data:image/jpeg;base64,BBB",
     )
-    assert "sem-marcas" not in html
+    assert "marcas-2" in html
     assert html.count("<img") == 2
     assert "sinan-intro-bandeira" in html
     assert "sinan-intro-logo" in html
 
 
-def test_faixa_de_intro_com_apenas_uma_imagem_mantem_o_grid() -> None:
-    """Com uma marca só, o título tem de continuar centralizado."""
+def test_marca_sem_alfa_ganha_placa_branca() -> None:
+    """Os arquivos são JPEG; no tema escuro o fundo branco viraria um bloco."""
+    html = c.faixa_intro("T", logo="data:image/jpeg;base64,AAA")
+    assert "sinan-intro-marca" in html
+    assert "background: #FFFFFF" in c.css_layout()
+
+
+@pytest.mark.parametrize(
+    "kwargs,esperado,imagens",
+    [
+        ({"bandeira": "data:b", "logo": "data:l"}, "marcas-2", 2),
+        ({"logo": "data:l"}, "marcas-1", 1),
+        ({"bandeira": "data:b"}, "marcas-1", 1),
+        ({}, "marcas-0", 0),
+    ],
+)
+def test_faixa_se_adapta_ao_numero_de_marcas(kwargs, esperado, imagens) -> None:
+    """Três colunas com uma só preenchida deixam um vazio de um terço."""
+    html = c.faixa_intro("Tuberculose", **kwargs)
+    assert esperado in html
+    assert html.count("<img") == imagens
+    assert "Tuberculose" in html
+
+
+def test_faixa_de_intro_com_uma_marca_vira_cabecalho() -> None:
+    """Com uma marca só, três colunas deixariam um vazio de um terço.
+
+    O arranjo passa a ser cabeçalho — título à esquerda, marca à direita — em
+    vez de manter a célula vazia só para preservar a centralização.
+    """
     html = c.faixa_intro("Tuberculose", logo="data:image/png;base64,BBB")
-    assert "sem-marcas" not in html
+    assert "marcas-1" in html
     assert html.count("<img") == 1
-    assert "<span></span>" in html, "o lado vazio precisa ocupar a célula do grid"
+    assert "<span></span>" not in html, "não deve sobrar célula vazia"
 
 
 def test_faixa_de_intro_escapa_o_titulo() -> None:
@@ -379,16 +407,32 @@ def test_superficies_derivam_da_cor_do_texto() -> None:
     assert "color: inherit" in css
 
 
+#: Seletores que podem ter cor opaca, com o motivo.
+#: A placa da marca é branca de propósito: os arquivos de logotipo são JPEG,
+#: sem canal alfa, e no tema escuro o fundo branco da própria imagem viraria
+#: um bloco. Uma placa explícita é o tratamento padrão para logotipo sem alfa
+#: e fica igual nos dois temas.
+OPACOS_PERMITIDOS = (".sinan-intro-marca",)
+
+
 def test_css_nao_fixa_fundo_claro_nem_escuro() -> None:
-    """Qualquer cor opaca de superfície quebraria um dos dois temas."""
+    """Qualquer cor opaca de superfície quebraria um dos dois temas.
+
+    A checagem identifica **a qual seletor** a cor pertence, em vez de tentar
+    recortar blocos por regex: assim uma exceção nova aparece nomeada na
+    mensagem de falha, e não como um `#FFFFFF` solto sem contexto.
+    """
     import re
 
-    css = c.css_base() + c.css_layout()
-    corpo = "\n".join(
-        linha for linha in css.splitlines() if not linha.strip().startswith(("*", "/*"))
-    )
-    opacos = re.findall(r"background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8}|rgb\([^)]*\))", corpo)
-    assert not opacos, f"superfície opaca encontrada: {opacos}"
+    regras = _sem_comentarios(c.css_base() + c.css_layout())
+    infratores = []
+    for bloco in re.finditer(r"([^{}]+)\{([^}]*)\}", regras):
+        seletor, corpo = bloco.group(1).strip(), bloco.group(2)
+        if not re.search(r"background(?:-color)?\s*:\s*(#|rgb\()", corpo):
+            continue
+        if not any(p in seletor for p in OPACOS_PERMITIDOS):
+            infratores.append(seletor[:60])
+    assert not infratores, f"superfície opaca sem justificativa: {infratores}"
 
 
 def test_config_do_streamlit_define_claro_como_padrao() -> None:

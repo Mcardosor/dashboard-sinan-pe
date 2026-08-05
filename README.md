@@ -57,6 +57,12 @@ armadilhas conhecidas estão em **[docs/contrato-dados.md](docs/contrato-dados.m
 Coloque os dados em `data/parquet/dashboard/` na raiz do projeto, ou aponte a
 variável de ambiente `SINAN_DATA_DIR` para onde eles estiverem.
 
+Em `data/support/` ficam os arquivos de apoio de PE — os shapefiles de
+macrorregião e região de saúde, o `municipios.csv` e as marcas da faixa de
+identificação (`cenarios_logo_full.jpeg` e `Bandeira_de_Pernambuco.jpeg`).
+Também não são versionados. Sem as marcas a faixa mostra só o título, e a
+barra lateral avisa o que falta.
+
 ## Documentação
 
 - **[docs/cronograma.md](docs/cronograma.md)** — plano de 8 semanas com marcos e riscos
