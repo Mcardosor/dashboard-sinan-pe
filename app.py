@@ -15,6 +15,7 @@ from src.data.escopo import Escopo
 from src.doencas import tuberculose as pack
 from src.estado import RECORTES, Navegacao
 from src.theme import componentes as ui
+from src.theme import marcas
 
 st.set_page_config(page_title=f"SINAN — {pack.TITULO}", layout="wide")
 
@@ -57,6 +58,7 @@ def _navegacao() -> Navegacao:
 
 
 st.markdown(ui.css_base(), unsafe_allow_html=True)
+st.markdown(ui.css_layout(), unsafe_allow_html=True)
 
 nav = _navegacao()
 anos = _anos()
@@ -125,11 +127,24 @@ with st.sidebar:
     st.caption(f"Escopo: {nav.trilha()}")
     st.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
 
+    if ausentes := marcas.faltando():
+        st.caption(
+            "Faixa de identificação sem imagem: "
+            + ", ".join(f"`{nome}`" for nome in ausentes)
+            + " não vieram na entrega do projeto em R. "
+            "Basta colocá-los em `data/support/`."
+        )
+
 
 # --- KPIs ------------------------------------------------------------------
 def selecionar_metrica(chave: str) -> None:
     nav.metrica = chave
 
+
+st.markdown(
+    ui.faixa_intro(pack.TITULO, bandeira=marcas.bandeira(), logo=marcas.logo()),
+    unsafe_allow_html=True,
+)
 
 escopo = nav.escopo
 atual = _kpis(pack.DOENCA, escopo.ano, escopo.nivel, escopo.uf, escopo.mun)
@@ -161,8 +176,22 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
                 ao_clicar=selecionar_metrica,
             )
 
-st.divider()
+# --- Linha principal e composição -----------------------------------------
+# Os painéis são espaços reservados: o mapa entra na semana 3, os gráficos na
+# 4 e a composição na 5. Ficam aqui para o layout ser exercitado desde já.
+esquerda, direita = st.columns(2, gap="small")
+esquerda.markdown(
+    ui.painel_vazio("Mapa", "Entra na semana 3", mapa=True), unsafe_allow_html=True
+)
+direita.markdown(
+    ui.painel_vazio("Gráficos", "Entram na semana 4"), unsafe_allow_html=True
+)
+
+st.markdown(
+    ui.painel_vazio("Composição por variável do SINAN", "Entra na semana 5"),
+    unsafe_allow_html=True,
+)
+
 st.caption(
-    "Mapa e gráficos entram nas semanas 3 e 4. "
-    "Divergências conhecidas entre fontes: ver docs/contrato-dados.md."
+    "Divergências conhecidas entre fontes de dados: ver docs/contrato-dados.md."
 )

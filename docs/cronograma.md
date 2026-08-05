@@ -56,9 +56,12 @@
 ## Semana 2 — Esqueleto + KPIs (10–14/ago)
 
 ### 2.1 Shell da aplicação
-- [ ] Layout: sidebar 380px + faixa de intro + linha de KPIs + linha principal + faixa de composição
-- [ ] CSS base injetado uma única vez
-- [ ] Faixa de intro (bandeira · título · logo)
+- [x] Layout: sidebar 380px + faixa de intro + linha de KPIs + linha principal + faixa de composição
+- [x] CSS base injetado uma única vez
+- [x] Faixa de intro (bandeira · título · logo) — com degradação graciosa: os
+      dois arquivos **não vieram** na entrega do projeto em R, então hoje ela
+      mostra só o título e a barra lateral avisa o que falta. Soltar os
+      arquivos em `data/support/` passa a exibi-los, sem tocar em código.
 
 ### 2.2 Estado de navegação
 - [x] `session_state`: uma `Navegacao` viva em `src/estado.py`, com nível, UF,
@@ -72,8 +75,9 @@ importa percorre o desvio de PE inteiro (UF → macro → micro → município �
 detalhe) e desfaz passo a passo, conferindo que se volta ao ponto de partida.
 
 ### 2.3 KPIs
-- [ ] Os 11 cards ligados à camada de dados — 6 renderizados (o layout da TB);
-      os outros 5 estão calculados mas nunca foram desenhados
+- [x] Os 11 cards ligados à camada de dados. A TB exibe 6, que é a paridade
+      com o original; os outros 5 servem às demais doenças e têm teste de
+      renderização para o defeito não aparecer só quando a próxima entrar
 - [x] Delta vs ano anterior, com semântica **invertida para cura** (queda = ruim)
 - [x] Clique no card troca a métrica ativa e repinta o resto — `st.button`
       transparente sobre o card, dentro de `st.container(key=...)`

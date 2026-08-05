@@ -7,7 +7,7 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 
 ## Sidebar (380px)
 
-- [ ] Título da doença
+- [x] Título da doença
 - [ ] Slider de ano 2010–2025, com *snap* para os anos existentes em disco
 - [ ] Filtro de grau de incapacidade (TB e Hanseníase), opções descobertas em runtime
 - [ ] Badge da métrica ativa
@@ -16,8 +16,8 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 
 ## Faixa de intro
 
-- [ ] Grid de 3 colunas: bandeira · título · logo
-- [ ] Título com `clamp(18px, 2.1vw, 30px)`
+- [x] Grid de 3 colunas: bandeira · título · logo — sem as imagens, que não vieram na entrega, o título ocupa a faixa toda
+- [x] Título com `clamp(18px, 2.1vw, 30px)`
 
 ## KPIs
 
@@ -38,12 +38,12 @@ Grid responsivo: `repeat(auto-fit, minmax(180px, 1fr))`, com quebras em 1240px,
 
 Comportamento:
 
-- [ ] `KPI_LAYOUT` do *disease pack* controla quais aparecem e em que ordem
+- [x] `KPI_LAYOUT` do *disease pack* controla quais aparecem e em que ordem
 - [x] Card clicável troca a métrica ativa, repintando mapa e gráficos
-- [ ] Delta vs ano anterior
-- [ ] Semântica de cor **invertida para cura** — queda é ruim; nas demais, queda é boa
-- [ ] Acento lateral na cor da métrica, via `--kpi-accent` inline
-- [ ] Estados de hover, foco e seleção
+- [x] Delta vs ano anterior
+- [x] Semântica de cor **invertida para cura** — queda é ruim; nas demais, queda é boa
+- [x] Acento lateral na cor da métrica, via `--kpi-accent` inline
+- [x] Estados de hover, foco e seleção
 - [x] Navegação por teclado (Enter / Espaço) — via `<button>` nativo, e não
       um `div` com `role="button"` como no original
 

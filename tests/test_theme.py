@@ -185,3 +185,148 @@ def test_estado_selecionado_chega_no_html() -> None:
     assert "is-selected" in falso.markdown_html[0]
     falso, _ = _render(selecionado=False)
     assert "is-selected" not in falso.markdown_html[0]
+
+
+# ---------------------------------------------------------------------------
+# Os 11 KPIs
+# ---------------------------------------------------------------------------
+# `LAYOUT_KPI` da tuberculose exibe 6, que é a paridade com o original. Os
+# outros 5 existem para as demais doenças (hanseníase usa 0-14, por exemplo) e
+# precisam renderizar mesmo sem estar no layout de hoje — senão o defeito só
+# aparece quando a próxima doença entrar.
+
+TODOS_OS_KPIS = (
+    "casos",
+    "obitos",
+    "cura",
+    "pop",
+    "incid",
+    "mortalidade",
+    "letalidade",
+    "casos_0_14",
+    "taxa_det_0_14",
+    "hiv_pos_pct",
+    "interrupcao_trat_pct",
+)
+
+
+def test_pack_cobre_os_onze_kpis() -> None:
+    from src.data.kpis import Kpis
+
+    campos = {c for c in Kpis.__dataclass_fields__ if not c.startswith("_")}
+    assert set(TODOS_OS_KPIS) <= campos, "métrica listada aqui não existe em Kpis"
+
+    for metrica in TODOS_OS_KPIS:
+        assert metrica in tb.CORES, f"{metrica} sem cor"
+        assert metrica in tb.ROTULOS, f"{metrica} sem rótulo"
+
+
+@pytest.mark.parametrize("metrica", TODOS_OS_KPIS)
+def test_todos_os_kpis_renderizam(metrica: str) -> None:
+    falso = _StreamlitFalso()
+    valor = 12.345 if metrica in tb.TAXAS else 12345
+    texto = (
+        c.formatar_decimal(valor) if metrica in tb.TAXAS else c.formatar_inteiro(valor)
+    )
+    c.kpi_clicavel(
+        falso,
+        metrica,
+        tb.rotulo(metrica),
+        texto,
+        cor=tb.cor(metrica),
+        badge_delta=c.delta(valor, valor * 0.9, taxa=metrica in tb.TAXAS),
+    )
+    html = falso.markdown_html[0]
+    assert tb.rotulo(metrica) in html
+    assert texto in html
+    assert tb.cor(metrica) in html
+
+
+@pytest.mark.parametrize("metrica", TODOS_OS_KPIS)
+def test_rampa_de_mapa_existe_para_todo_kpi(metrica: str) -> None:
+    """O mapa da semana 3 pinta pela métrica ativa, qualquer que seja."""
+    rampa = tb.rampa_mapa(metrica)
+    assert len(rampa) == 7
+    assert all(t.startswith("#") for t in rampa)
+
+
+def test_taxas_e_contagens_formatam_diferente() -> None:
+    assert c.formatar_decimal(1234.5) == "1.234,50"
+    assert c.formatar_inteiro(1234.5) == "1.234"
+    for metrica in TODOS_OS_KPIS:
+        e_taxa = metrica in tb.TAXAS
+        assert e_taxa == ("%" in tb.rotulo(metrica) or "por 100 mil" in tb.rotulo(metrica)), (
+            f"{metrica}: rótulo e formatação discordam"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Layout e faixa de intro
+# ---------------------------------------------------------------------------
+
+
+def test_css_de_layout_fixa_a_largura_da_sidebar() -> None:
+    from src.theme import tokens
+
+    css = c.css_layout()
+    assert tokens.LARGURA_SIDEBAR in css
+    assert 'section[data-testid="stSidebar"]' in css
+
+
+def test_paineis_usam_altura_minima_e_nao_fixa() -> None:
+    """O original travava `height`, o que quebra em telas baixas.
+
+    Procurar a substring `height: 520px` não serve: ela casa dentro de
+    `min-height: 520px`, que é exatamente o que queremos. A checagem precisa
+    exigir que nenhum `height` apareça sem um prefixo `min-`/`max-`/`line-`.
+    """
+    import re
+
+    css = c.css_layout()
+    assert "min-height" in css
+
+    nus = re.findall(r"(?<![-\w])height\s*:\s*[^;]+;", css)
+    assert not nus, f"altura fixa encontrada: {nus}"
+
+
+def test_faixa_de_intro_sem_imagens_ocupa_a_largura_toda() -> None:
+    html = c.faixa_intro("Tuberculose")
+    assert "sem-marcas" in html
+    assert "<img" not in html
+    assert "Tuberculose" in html
+
+
+def test_faixa_de_intro_com_imagens() -> None:
+    html = c.faixa_intro(
+        "Tuberculose",
+        bandeira="data:image/jpeg;base64,AAA",
+        logo="data:image/jpeg;base64,BBB",
+    )
+    assert "sem-marcas" not in html
+    assert html.count("<img") == 2
+    assert "sinan-intro-bandeira" in html
+    assert "sinan-intro-logo" in html
+
+
+def test_faixa_de_intro_com_apenas_uma_imagem_mantem_o_grid() -> None:
+    """Com uma marca só, o título tem de continuar centralizado."""
+    html = c.faixa_intro("Tuberculose", logo="data:image/png;base64,BBB")
+    assert "sem-marcas" not in html
+    assert html.count("<img") == 1
+    assert "<span></span>" in html, "o lado vazio precisa ocupar a célula do grid"
+
+
+def test_faixa_de_intro_escapa_o_titulo() -> None:
+    assert "<script>" not in c.faixa_intro("<script>alert(1)</script>")
+
+
+def test_marcas_ausentes_sao_reportadas() -> None:
+    """Hoje os dois arquivos não vieram na entrega; o app avisa em vez de omitir."""
+    from src.theme import marcas
+
+    disponiveis = marcas.disponiveis()
+    assert set(disponiveis) == {"bandeira", "logo"}
+    for nome, presente in disponiveis.items():
+        assert isinstance(presente, bool)
+    # `faltando` tem de ser coerente com `disponiveis`
+    assert len(marcas.faltando()) == sum(1 for v in disponiveis.values() if not v)
