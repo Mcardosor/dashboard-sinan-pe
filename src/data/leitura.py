@@ -438,3 +438,40 @@ def serie_anual(esc: Escopo, metrica: str = "casos") -> pd.DataFrame:
         sql += f" WHERE {onde}"
         params += p
     return conectar().execute(sql + " ORDER BY ano", params).fetchdf()
+
+
+def ranking(esc: Escopo, metrica: str, top_n: int = 15) -> pd.DataFrame:
+    """As ``top_n`` maiores geografias do nível abaixo do escopo.
+
+    Mesma fonte que o mapa usa — os dois mostram o mesmo recorte, e ler de
+    lugares diferentes seria como o card e a série, que divergem por isso.
+
+    Colunas: ``chave`` (sigla de UF ou código de 6 dígitos), ``nome`` e
+    ``valor``. Empates são desempatados pelo nome, para a ordem não variar
+    entre execuções.
+    """
+    from . import geo
+
+    valores = valores_por_geografia(esc, metrica)
+    if valores.empty:
+        return pd.DataFrame(columns=["chave", "nome", "valor"])
+
+    if esc.nivel == "BR":
+        nomes = {sigla: sigla for sigla in valores.index}
+    else:
+        camada = geo.municipios(esc.uf)
+        nomes = dict(zip(camada["cod_mun6"], camada["nome_mun"]))
+
+    tabela = pd.DataFrame(
+        {
+            "chave": valores.index,
+            "nome": [nomes.get(k, str(k)) for k in valores.index],
+            "valor": pd.to_numeric(valores.to_numpy(), errors="coerce"),
+        }
+    ).dropna(subset=["valor"])
+
+    return (
+        tabela.sort_values(["valor", "nome"], ascending=[False, True])
+        .head(int(top_n))
+        .reset_index(drop=True)
+    )

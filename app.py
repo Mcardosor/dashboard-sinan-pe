@@ -99,6 +99,11 @@ def _serie(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None, h
     return leitura.serie_anual(escopo, "casos")
 
 
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, top_n: int):
+    return leitura.ranking(Escopo(doenca, ano, nivel, uf=uf), metrica, top_n)
+
+
 @st.cache_data(ttl=3600)
 def _municipios(uf: str) -> dict[str, str]:
     """Código de 6 dígitos → nome, para o seletor e para a trilha."""
@@ -376,8 +381,45 @@ with direita:
     if horizonte == "meses":
         st.caption(graficos.AVISO_NOTIFICACAO)
 
+    st.divider()
+
+    # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
+    # UFs, numa UF os municípios dela.
+    alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
+    st.caption(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}")
+
+    top_n = st.slider("Quantos exibir", 5, 30, 15, step=5, key="top_n")
+    tabela = _ranking(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n)
+
+    import altair as alt
+
+    escolha = alt.selection_point(name="barra", fields=["chave"], on="click")
+    evento_rank = st.altair_chart(
+        graficos.ranking(
+            tabela,
+            rotulo=pack.rotulo(nav.metrica),
+            cor=pack.cor(nav.metrica),
+            selecao=escolha,
+        ),
+        use_container_width=True,
+        on_select="rerun",
+        key=f"rank-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}-{top_n}",
+    )
+
+    if clicado := graficos.alvo_do_clique(evento_rank, "barra"):
+        # Clicar numa barra navega o mapa — o ranking responde a mesma
+        # máquina de estados, não tem navegação própria.
+        if nav.nivel == "BR" and clicado != nav.uf:
+            nav.entrar_uf(clicado)
+            st.rerun()
+        elif nav.nivel != "BR" and clicado != nav.mun:
+            nomes = _municipios(nav.uf)
+            if clicado in nomes:
+                nav.entrar_municipio(clicado, nome=nomes[clicado])
+                st.rerun()
+
     st.markdown(
-        ui.painel_vazio("Ranking e pirâmide", "Entram ainda esta semana"),
+        ui.painel_vazio("Pirâmide etária", "Entra ainda esta semana"),
         unsafe_allow_html=True,
     )
 

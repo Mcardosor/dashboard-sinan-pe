@@ -94,3 +94,114 @@ def test_tema_herda_a_cor_do_texto() -> None:
 def test_aviso_de_notificacao_existe_e_explica() -> None:
     assert "notificação" in graficos.AVISO_NOTIFICACAO
     assert "residência" in graficos.AVISO_NOTIFICACAO
+
+
+# ---------------------------------------------------------------------------
+# Ranking
+# ---------------------------------------------------------------------------
+
+
+def _ranking(nivel="BR", uf=None, metrica="incid", top_n=15):
+    return leitura.ranking(Escopo("TUBERCULOSE", 2024, nivel, uf=uf), metrica, top_n)
+
+
+def test_ranking_no_brasil_lista_ufs() -> None:
+    r = _ranking()
+    assert len(r) == 15
+    assert r["chave"].str.len().eq(2).all(), "no Brasil a chave é a sigla da UF"
+
+
+def test_ranking_numa_uf_lista_municipios_com_nome() -> None:
+    r = _ranking("UF", "PE")
+    assert r["chave"].str.len().eq(6).all()
+    assert (r["nome"] != r["chave"]).all(), "o nome deve ser resolvido, não o código"
+
+
+def test_ranking_vem_ordenado_do_maior() -> None:
+    valores = _ranking("UF", "PE")["valor"]
+    assert valores.is_monotonic_decreasing
+
+
+def test_empate_e_desempatado_pelo_nome() -> None:
+    """Sem critério estável, a ordem varia entre execuções e confunde."""
+    r1 = _ranking("UF", "PE", "casos", 30)
+    r2 = _ranking("UF", "PE", "casos", 30)
+    assert r1["chave"].tolist() == r2["chave"].tolist()
+
+
+@pytest.mark.parametrize("top_n", [5, 15, 30])
+def test_top_n_e_respeitado(top_n: int) -> None:
+    assert len(_ranking("UF", "PE", top_n=top_n)) == top_n
+
+
+def test_ranking_usa_a_mesma_fonte_do_mapa() -> None:
+    """Ler de lugares diferentes é como o card e a série, que divergem."""
+    escopo = Escopo("TUBERCULOSE", 2024, "UF", uf="PE")
+    do_mapa = leitura.valores_por_geografia(escopo, "incid")
+    do_ranking = _ranking("UF", "PE", "incid", 5)
+    for linha in do_ranking.itertuples():
+        assert do_mapa[linha.chave] == pytest.approx(linha.valor)
+
+
+def test_metrica_sem_suporte_devolve_ranking_vazio() -> None:
+    r = _ranking("BR", metrica="hiv_pos_pct")
+    assert r.empty
+    assert list(r.columns) == ["chave", "nome", "valor"]
+
+
+def test_grafico_de_ranking_vazio_mostra_recado() -> None:
+    import altair as alt
+
+    g = graficos.ranking(
+        pd.DataFrame(columns=["chave", "nome", "valor"]),
+        rotulo="Casos",
+        cor=COR,
+        selecao=alt.selection_point(name="barra"),
+    )
+    assert g.mark["type"] == "text"
+
+
+def test_grafico_de_ranking_cresce_com_o_numero_de_barras() -> None:
+    """Altura fixa espremeria 30 municípios num espaço de 5."""
+    import altair as alt
+
+    def altura(n):
+        return graficos.ranking(
+            _ranking("UF", "PE", top_n=n),
+            rotulo="Casos",
+            cor=COR,
+            selecao=alt.selection_point(name="barra"),
+        ).height
+
+    assert altura(30) > altura(5)
+
+
+# --- clique na barra --------------------------------------------------------
+
+
+class _Evento:
+    def __init__(self, selection):
+        self.selection = selection
+
+
+def test_extrai_a_chave_da_barra_clicada() -> None:
+    ev = _Evento({"barra": [{"chave": "AM", "nome": "AM", "valor": 94.5}]})
+    assert graficos.alvo_do_clique(ev, "barra") == "AM"
+
+
+@pytest.mark.parametrize(
+    "evento",
+    [
+        None,
+        _Evento(None),
+        _Evento({}),
+        _Evento({"barra": []}),
+        _Evento({"barra": [{}]}),
+        _Evento({"barra": ["texto solto"]}),
+        _Evento({"outra": [{"chave": "AM"}]}),
+        {"selection": {"barra": [{"chave": "BA"}]}},
+    ],
+)
+def test_evento_estranho_nao_derruba_a_pagina(evento) -> None:
+    resultado = graficos.alvo_do_clique(evento, "barra")
+    assert resultado is None or isinstance(resultado, str)

@@ -65,15 +65,15 @@ Comportamento:
 ## Gráficos
 
 ### Evolução temporal
-- [ ] Toggle *Meses do ano* / *Todos os anos*
+- [x] Toggle *Meses do ano* / *Todos os anos*
 - [ ] Série dupla casos + incidência (TB)
 - [ ] Quebra por grau (Hanseníase)
 - [ ] Reage à métrica ativa
 
 ### Ranking de municípios
-- [ ] Top N configurável
-- [ ] Alternância UF / MUN
-- [ ] Clique na barra navega o mapa
+- [x] Top N configurável
+- [x] Alternância UF / MUN
+- [x] Clique na barra navega o mapa
 
 ### Pirâmide etária
 - [ ] População como fundo + casos sobrepostos (estilo IBGE)

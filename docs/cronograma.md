@@ -178,9 +178,14 @@ mensal avisa que os totais não fecham, em vez de deixar o usuário descobrir
 somando as barras.
 
 ### 4.3 Ranking de municípios
-- [ ] Top N configurável
-- [ ] Alternância UF / MUN
-- [ ] Clique na barra navega o mapa
+- [x] Top N configurável (5 a 30)
+- [x] Alternância UF / MUN — segue o nível do escopo, como o mapa: no Brasil
+      ranqueia UFs, numa UF ranqueia os municípios dela
+- [x] Clique na barra navega o mapa
+
+Lê da **mesma fonte do mapa**, com teste que confere valor a valor. Ler de
+lugares diferentes é como o card e a série temporal, que divergem justamente
+por isso.
 
 ### 4.4 Pirâmide etária
 - [ ] População como fundo + casos sobrepostos (estilo IBGE)

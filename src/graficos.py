@@ -123,3 +123,60 @@ def evolucao_anual(dados: pd.DataFrame, *, rotulo: str, cor: str, ano: int) -> a
             ],
         )
     )
+
+
+def ranking(dados: pd.DataFrame, *, rotulo: str, cor: str, selecao: alt.Parameter) -> alt.Chart:
+    """Barras horizontais das maiores geografias, clicáveis.
+
+    Horizontal e não vertical: nome de município não cabe num eixo x sem
+    rotacionar, e rótulo rotacionado é mais difícil de ler que uma barra a
+    mais de altura.
+    """
+    if dados.empty:
+        return sem_dado("Sem dados para ranquear neste recorte")
+
+    return tema(
+        alt.Chart(dados)
+        .mark_bar(cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
+        .encode(
+            y=alt.Y("nome:N", sort="-x", title=None),
+            x=alt.X("valor:Q", title=rotulo),
+            color=alt.value(cor),
+            # O item sob o cursor destaca; os demais recuam. Dá retorno de
+            # que a barra é clicável sem precisar de instrução escrita.
+            opacity=alt.condition(selecao, alt.value(1.0), alt.value(0.55)),
+            tooltip=[
+                alt.Tooltip("nome:N", title="Local"),
+                alt.Tooltip("valor:Q", title=rotulo, format=",.1f"),
+            ],
+        )
+        .add_params(selecao),
+        altura=max(180, 22 * len(dados)),
+    )
+
+
+def alvo_do_clique(evento, nome_selecao: str = "barra") -> str | None:
+    """Chave da barra clicada no ``st.altair_chart``.
+
+    Tolerante ao formato, pelo mesmo motivo do mapa: o payload é detalhe
+    interno do Streamlit e já mudou entre versões. Vindo algo inesperado, o
+    gráfico apenas não navega, em vez de derrubar a página.
+    """
+    if not evento:
+        return None
+
+    selecao = getattr(evento, "selection", None)
+    if selecao is None and isinstance(evento, dict):
+        selecao = evento.get("selection")
+    if not isinstance(selecao, dict):
+        return None
+
+    itens = selecao.get(nome_selecao)
+    if not itens:
+        return None
+
+    primeiro = itens[0]
+    if not isinstance(primeiro, dict):
+        return None
+    valor = primeiro.get("chave")
+    return str(valor) if valor not in (None, "") else None
