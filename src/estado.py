@@ -23,6 +23,18 @@ RECORTES = ("MUN", "MACRO", "MICRO")
 UF_COM_RECORTES = recortes.UF
 
 
+def nivel_agregado(nivel: str) -> str:
+    """Nível de quem é *listado* sob o escopo — no Brasil as UFs, senão os
+    municípios da UF.
+
+    Município não entra: dentro de um município, mapa e ranking continuam
+    mostrando os municípios da UF, para o usuário ver onde ele se situa. Sem
+    esta redução, montar um ``Escopo`` de nível ``MUN`` sem ``mun`` estoura —
+    foi assim que o ranking derrubou a página ao entrar num município.
+    """
+    return "BR" if str(nivel).strip().upper() == "BR" else "UF"
+
+
 @dataclass
 class Navegacao:
     """Recorte corrente. Mutável — a aplicação guarda uma instância viva."""

@@ -14,7 +14,7 @@ from src.data import kpis as calc
 from src.data import leitura
 from src.data.escopo import Escopo
 from src.doencas import tuberculose as pack
-from src.estado import RECORTES, Navegacao
+from src.estado import RECORTES, Navegacao, nivel_agregado
 from src.theme import componentes as ui
 from src.theme import marcas
 
@@ -83,7 +83,7 @@ def _camada(
 def _valores_mapa(
     doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, recorte: str
 ):
-    escopo = Escopo(doenca, ano, "UF" if nivel != "BR" else "BR", uf=uf)
+    escopo = Escopo(doenca, ano, nivel_agregado(nivel), uf=uf)
     if recorte in ("MACRO", "MICRO") and nivel != "BR":
         return leitura.valores_por_regiao(
             escopo, metrica, "macro" if recorte == "MACRO" else "micro"
@@ -106,7 +106,7 @@ def _serie_dupla(doenca, ano, nivel, uf, mun, horizonte):
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)
 def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, top_n: int):
-    return leitura.ranking(Escopo(doenca, ano, nivel, uf=uf), metrica, top_n)
+    return leitura.ranking(Escopo(doenca, ano, nivel_agregado(nivel), uf=uf), metrica, top_n)
 
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)

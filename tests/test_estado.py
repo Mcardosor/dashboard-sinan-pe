@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import pytest
 
+from src import estado
+from src.data.escopo import Escopo
 from src.estado import Navegacao
 
 
@@ -244,3 +246,33 @@ def test_voltar_de_macro_pula_a_visao_de_municipios() -> None:
     nav.definir_recorte("MACRO")
     nav.voltar()
     assert nav.nivel == "BR"
+
+
+# ---------------------------------------------------------------------------
+# Nível agregado — regressão de queda em produção
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "nivel,esperado", [("BR", "BR"), ("UF", "UF"), ("MUN", "UF"), ("mun", "UF")]
+)
+def test_nivel_agregado_nunca_devolve_mun(nivel: str, esperado: str) -> None:
+    """Mapa e ranking listam o nível *abaixo* do escopo, e MUN não é um deles.
+
+    Sem esta redução o ranking montava ``Escopo(nivel="MUN")`` sem ``mun`` e
+    derrubava a página inteira ao entrar num município — o mapa já reduzia,
+    o ranking não, e a regra duplicada divergiu.
+    """
+    assert estado.nivel_agregado(nivel) == esperado
+
+
+def test_escopo_do_ranking_e_valido_em_toda_a_navegacao() -> None:
+    """Percorre o caminho de ida e monta o escopo do ranking em cada parada."""
+    nav = estado.Navegacao()
+    paradas = [lambda: None, lambda: nav.entrar_uf("PE"),
+               lambda: nav.entrar_municipio("261160", "Recife"),
+               lambda: nav.abrir_detalhe()]
+    for passo in paradas:
+        passo()
+        # Não pode levantar — era exatamente aqui que estourava.
+        Escopo(nav.doenca, nav.ano, estado.nivel_agregado(nav.nivel), uf=nav.uf)
