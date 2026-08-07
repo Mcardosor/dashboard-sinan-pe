@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src import mapa
+from src import graficos, mapa
 from src.data import config, geo, pernambuco
 from src.data import kpis as calc
 from src.data import leitura
@@ -89,6 +89,14 @@ def _valores_mapa(
             escopo, metrica, "macro" if recorte == "MACRO" else "micro"
         )
     return leitura.valores_por_geografia(escopo, metrica)
+
+
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _serie(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None, horizonte: str):
+    escopo = Escopo(doenca, ano, nivel, uf=uf, mun=mun)
+    if horizonte == "meses":
+        return leitura.serie_mensal(escopo).rename(columns={"casos": "valor"})
+    return leitura.serie_anual(escopo, "casos")
 
 
 @st.cache_data(ttl=3600)
@@ -340,9 +348,38 @@ with esquerda:
                     nav.entrar_municipio(alvo, nome=nomes[alvo])
                     st.rerun()
 
-direita.markdown(
-    ui.painel_vazio("Gráficos", "Entram na semana 4"), unsafe_allow_html=True
-)
+with direita:
+    horizonte = st.radio(
+        "Evolução temporal",
+        ["meses", "anos"],
+        format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
+        horizontal=True,
+        key="horizonte",
+    )
+
+    serie = _serie(
+        pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte
+    )
+    if horizonte == "meses":
+        figura_serie = graficos.evolucao_mensal(
+            serie, rotulo="Casos novos", cor=pack.cor("casos")
+        )
+    else:
+        figura_serie = graficos.evolucao_anual(
+            serie, rotulo="Casos novos", cor=pack.cor("casos"), ano=nav.ano
+        )
+    st.altair_chart(figura_serie, use_container_width=True)
+
+    # A série mensal vem por notificação e os KPIs por residência — ver
+    # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
+    # usuário descobrir somando as barras.
+    if horizonte == "meses":
+        st.caption(graficos.AVISO_NOTIFICACAO)
+
+    st.markdown(
+        ui.painel_vazio("Ranking e pirâmide", "Entram ainda esta semana"),
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
     ui.painel_vazio("Composição por variável do SINAN", "Entra na semana 5"),

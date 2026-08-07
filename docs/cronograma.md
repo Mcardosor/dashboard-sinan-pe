@@ -157,15 +157,25 @@ que o `voltar` devolve ao ponto de partida sem estado preso.
 ## Semana 4 — Gráficos (24–28/ago)
 
 ### 4.1 Configuração visual comum
-- [ ] Tooltip escuro `rgba(17,24,39,.96)`, raio 10px, `confine`
-- [ ] Grid `left 52 / right 16 / top 26 / bottom 56` com `containLabel`
-- [ ] Legenda scroll + duplo-clique para isolar série
-- [ ] Paleta do `disease_pack` (barras e linhas separadas)
+- [x] Biblioteca: **Altair**, não ECharts. `st.altair_chart` tem evento de
+      clique nativo — verificado com clique real antes de escolher, não só
+      pela assinatura — e vem com o Streamlit, sem componente de terceiros.
+      O ranking (4.3) precisa desse evento
+- [x] `tema()` aplicado a todo gráfico, para a linguagem não divergir entre
+      eles como divergia no original
+- [x] Cor herdada de `currentColor`, mesmo mecanismo dos cards
+- [x] Estado vazio com recado, no lugar de painel em branco
 
 ### 4.2 Evolução temporal
-- [ ] Toggle *Meses do ano* / *Todos os anos*
+- [x] Toggle *Meses do ano* / *Todos os anos*
 - [ ] Série dupla casos + incidência (específico de TB)
 - [ ] Reagir à métrica ativa
+
+O toggle troca de **fonte**, não só de agregação: a série mensal vem de
+`_cache_ts`, por notificação, e a anual de `incidence`, por residência — que é
+o critério dos KPIs. Enquanto não houver série mensal por residência, o modo
+mensal avisa que os totais não fecham, em vez de deixar o usuário descobrir
+somando as barras.
 
 ### 4.3 Ranking de municípios
 - [ ] Top N configurável
