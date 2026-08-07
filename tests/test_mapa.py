@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 
 from src import mapa
+from src.data import geo
 from src.doencas import tuberculose as tb
 
 RAMPA = tb.rampa_mapa("casos")
@@ -215,3 +216,59 @@ def test_deck_pinta_cada_feicao() -> None:
     )
     assert len(desenho.layers) == 1
     assert escala.classes == mapa.CLASSES
+
+
+# ---------------------------------------------------------------------------
+# Payload
+# ---------------------------------------------------------------------------
+
+#: Teto do JSON que o mapa manda ao navegador, em MB, no pior recorte que
+#: temos — Minas Gerais, com 853 municípios.
+#:
+#: Medido em 0,71 MB depois de tirar a indentação. O teto de 1,0 MB dá folga
+#: para a malha mudar sem alarme falso, e ainda assim pega uma regressão do
+#: tamanho da que existia: com `indent=2` do pydeck eram 2,76 MB.
+TETO_PAYLOAD_MB = 1.0
+
+
+def _payload(uf: str) -> str:
+    from src.data import leitura
+    from src.data.escopo import Escopo
+    from src.doencas import tuberculose as pack
+
+    camada = geo.municipios(uf)
+    valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf=uf), "incid")
+    figura, _ = mapa.deck(
+        camada,
+        valores,
+        chave="cod_mun6",
+        rampa=pack.rampa_mapa("incid"),
+        rotulo_metrica="Incidência",
+        coluna_nome="nome_mun",
+    )
+    return figura.to_json()
+
+
+def test_payload_do_mapa_cabe_no_teto() -> None:
+    """O mosaico volta pela rede a cada navegação e a cada troca de métrica.
+
+    As cores fazem parte do mesmo spec, então não é custo de primeira carga.
+    Em localhost isso é invisível; sobre rede real dominava tudo.
+    """
+    tamanho = len(_payload("MG").encode("utf-8")) / 1e6
+    assert tamanho < TETO_PAYLOAD_MB, (
+        f"payload de MG em {tamanho:.2f} MB, teto {TETO_PAYLOAD_MB} MB. "
+        f"A compactação de `mapa._compactar` provavelmente parou de valer."
+    )
+
+
+def test_payload_sai_sem_indentacao() -> None:
+    """Regressão direta: `pydeck.serialize` usa `indent=2` por padrão.
+
+    `_compactar` engole exceções de propósito, para uma mudança de API interna
+    do pydeck não derrubar o mapa — o preço é que a falha seria silenciosa.
+    Este teste é quem faz barulho.
+    """
+    texto = _payload("PE")
+    assert '\n  "' not in texto, "voltou a indentar"
+    assert ", " not in texto[:200], "separadores não estão compactos"

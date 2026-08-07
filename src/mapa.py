@@ -130,6 +130,41 @@ def _rgb(cor: str) -> list[int]:
     return [int(texto[i : i + 2], 16) for i in (0, 2, 4)]
 
 
+def _compactar(mapa_deck) -> None:
+    """Faz o deck serializar sem indentação.
+
+    O `pydeck.serialize` chama ``json.dumps(..., indent=2)``, e o
+    ``st.pydeck_chart`` envia ao navegador exatamente o que ``to_json()``
+    devolver. Com a geometria aninhada em listas de coordenadas, essa
+    indentação é a maior parte do que trafega: em Minas Gerais, com 853
+    municípios, são 2,76 MB dos quais 2,0 MB são espaço em branco.
+
+    E não é custo só da primeira carga — as cores fazem parte do mesmo spec,
+    então o mosaico inteiro volta pela rede a cada navegação e a cada troca
+    de métrica.
+
+    Substituir o método na instância é feio, mas é o único ponto de entrada:
+    o Streamlit não expõe opção de serialização e o `pydeck` não parametriza
+    o `indent`. Se a API interna do pydeck mudar, o `except` devolve o
+    comportamento padrão — payload grande, nunca página quebrada.
+    """
+    try:
+        import json
+
+        from pydeck.bindings.json_tools import default_serialize
+
+        compacto = json.dumps(
+            mapa_deck,
+            sort_keys=True,
+            default=default_serialize,
+            separators=(",", ":"),
+        )
+    except Exception:  # noqa: BLE001 — otimização não pode derrubar o mapa
+        return
+
+    mapa_deck.to_json = lambda: compacto
+
+
 def deck(
     camada,
     valores: pd.Series,
@@ -206,6 +241,8 @@ def deck(
             },
         },
     )
+
+    _compactar(mapa_deck)
 
     # Declara o mapa travado nos dois lugares do spec — mas saiba que **isto
     # sozinho não funciona no Streamlit**. O `DeckGlJsonChart` renderiza

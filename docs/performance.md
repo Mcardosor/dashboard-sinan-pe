@@ -79,7 +79,7 @@ Limites monitorados em `tests/test_geo.py`.
 
 ---
 
-## O payload do mapa — risco aberto, medido em 07/ago/2026
+## O payload do mapa — medido e corrigido em 07/ago/2026
 
 O `GeoJsonLayer` do deck.gl recebe a geometria **embutida no JSON do
 componente**. Cada renderização do mapa reenvia o mosaico inteiro ao
@@ -102,14 +102,41 @@ mapa do que o round-trip inteiro que medimos no painel deles. A meta de
 performance pode evaporar exatamente no recorte mais pesado, e nenhum teste
 local mostraria isso.
 
-**Caminhos, do mais barato ao mais caro:**
+**Resolvido em 07/ago/2026 — era indentação.**
+
+O `pydeck.serialize` chama `json.dumps(..., indent=2)`, e o
+`st.pydeck_chart` envia ao navegador exatamente o que `to_json()` devolver.
+Com a geometria aninhada em listas de coordenadas, cada número ganhava sua
+linha e seu recuo. **Três quartos do que trafegava era espaço em branco.**
+
+| Recorte | Antes | Depois | |
+|---|---:|---:|---:|
+| Brasil (27 UFs) | 0,85 MB | 0,19 MB | −78% |
+| PE (185 municípios) | 0,53 MB | 0,14 MB | −73% |
+| MG (853 municípios) | 2,76 MB | 0,71 MB | −74% |
+
+Sem mudar um pixel: mesma malha, mesma precisão, mesmas cores. O ajuste está
+em `mapa._compactar`, e `tests/test_mapa.py` prende o teto em 1 MB para MG.
+
+Vale registrar como quase passou batido. Medi o payload achando que ia
+justificar simplificar mais a malha; o GeoJSON cru de MG tinha 0,63 MB contra
+2,76 MB do payload, e foi essa diferença de 4,4× que denunciou o problema.
+Se eu tivesse ido direto simplificar geometria, teria degradado o mapa para
+ganhar uma fração do que a formatação estava custando.
+
+**Medido e descartado:** reduzir a precisão das coordenadas. Hoje são 7 casas
+decimais, cerca de 1 cm. A 5 casas o payload de MG cai para 0,66 MB e a 4
+casas para 0,62 MB — 7% e 13%. Não compensa o custo de processar a cada
+renderização nem o de regerar a malha, e o teto de 1 MB já tem folga.
+
+**Caminhos que restam, se o teto apertar:**
 
 1. Simplificar mais a malha nos níveis com muitos polígonos — hoje a
    tolerância é a mesma para 27 UFs e para 853 municípios.
 2. Servir a geometria uma vez e mandar só as cores nas renderizações
    seguintes. É o ganho grande e a mudança maior: exige separar geometria de
    dado no componente.
-3. Aceitar e medir. Se a rede do servidor for rápida, 2,76 MB pode custar
-   pouco — mas isso é uma medição, não uma suposição.
 
-Só a opção 3 depende de servidor. As outras duas dão para atacar antes.
+Nenhuma das duas é necessária hoje. O que continua valendo é medir pela rede
+depois do deploy: 0,71 MB por navegação ainda é o maior item isolado do que
+trafega, e localhost não cobra por isso.
