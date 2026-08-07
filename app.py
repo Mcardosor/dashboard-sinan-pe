@@ -293,6 +293,7 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
                     taxa=taxa,
                     bom_se_cai=chave in pack.BOM_SE_CAI,
                 ),
+                ajuda=pack.descricao(chave),
                 ao_clicar=selecionar_metrica,
             )
 
@@ -403,6 +404,10 @@ with direita:
             format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
             horizontal=True,
             key="horizonte",
+            help=(
+                "Meses do ano mostra o ano selecionado mês a mês; Todos os anos "
+                "mostra a série histórica completa."
+            ),
         )
         # Casos e incidência juntos é o gráfico que o original mostra para
         # tuberculose. Fica como opção, não como padrão, porque só faz sentido
@@ -451,7 +456,10 @@ with direita:
         alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
         st.caption(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}")
 
-        top_n = st.slider("Quantos exibir", 5, 30, 15, step=5, key="top_n")
+        top_n = st.slider(
+        "Quantos exibir", 5, 30, 15, step=5, key="top_n",
+        help="Quantas posições do ranking aparecem, da maior para a menor.",
+    )
         tabela = _ranking(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n)
 
         import altair as alt
@@ -493,6 +501,10 @@ with direita:
             format_func=lambda t: {"CASOS": "Casos novos", "OBITOS": "Óbitos"}[t],
             horizontal=True,
             key="tipo_piramide",
+            help=(
+                "Casos vêm do SINAN; óbitos, do SIM. Cura por faixa etária não "
+                "existe em nenhuma das fontes disponíveis."
+            ),
         )
 
         dados_pir = _piramide(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, tipo)

@@ -475,3 +475,56 @@ def test_data_support_continua_valendo_como_alternativa() -> None:
     nomes = [d.name for d in marcas.diretorios()]
     assert nomes.index("assets") < nomes.index("support"), "assets tem precedência"
     assert "support" in nomes
+
+
+def test_kpi_clicavel_repassa_a_ajuda_para_o_botao() -> None:
+    """A ajuda vai no botão, não no card.
+
+    O botão transparente fica esticado por cima do card, então é ele que
+    recebe o cursor — um `title` no card nunca dispararia.
+    """
+    capturado: dict = {}
+
+    class BotaoFalso:
+        def container(self, key=None):
+            from contextlib import nullcontext
+
+            return nullcontext()
+
+        def markdown(self, *a, **k):
+            pass
+
+        def button(self, rotulo, **k):
+            capturado.update(k)
+            return False
+
+    c.kpi_clicavel(
+        BotaoFalso(), "incid", "Incidência", "40,42",
+        cor="#B4442E", ajuda="explicação do denominador",
+    )
+    assert capturado["help"] == "explicação do denominador"
+
+
+def test_toda_metrica_exibida_tem_descricao() -> None:
+    """KPI sem explicação é onde o visitante trava — sobretudo o denominador."""
+    from src.doencas import tuberculose as pack
+
+    faltando = [m for m in pack.LAYOUT_KPI if not pack.descricao(m)]
+    assert not faltando, f"KPIs na tela sem descrição: {faltando}"
+
+
+def test_css_do_kpi_atravessa_os_invólucros_de_tooltip() -> None:
+    """Regressão: `help=` fez o rótulo do botão aparecer sobre o card.
+
+    Ao receber ajuda, o Streamlit embrulha o botão em `stTooltipIcon` >
+    `stTooltipHoverTarget`. O seletor era `.stButton > button`, de filho
+    direto, e deixou de casar — o botão voltou a ter cor de texto e o
+    "Selecionar Incidência..." cobriu o título do card.
+    """
+    import re
+
+    css = c.css_base()   # o bloco do KPI vive aqui, não em `css_layout`
+    assert ".stButton > button" not in css, "seletor de filho direto voltou"
+    assert re.search(r'\.stButton button\s*\{', css), "faltou o seletor descendente"
+    # Os invólucros precisam esticar, senão o botão encolhe ao ícone.
+    assert "stTooltipHoverTarget" in css

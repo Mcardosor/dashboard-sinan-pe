@@ -109,10 +109,10 @@ Comportamento:
 
 ## Transversal
 
-- [ ] Tooltips de ajuda (badge "i")
+- [x] Tooltips de ajuda — nos 6 KPIs e nos controles ambíguos. Explicam sobretudo o **denominador**, que é onde mora a dúvida
 - [ ] Overlay de carregamento
-- [ ] Tratamento de erro por componente — um gráfico quebrado não derruba a página
-- [ ] Estados vazios (ano sem dado, município sem caso)
+- [x] Tratamento de erro por componente — `src/resiliencia.py`; verificado injetando falha
+- [x] Estados vazios (ano sem SIM, município sem caso) + aviso de ano incompleto, que o original também tem
 
 ## Além do original
 

@@ -173,3 +173,44 @@ def grupo_da(codigo: str) -> str:
         if codigo in itens:
             return grupo
     return "Outras"
+
+
+#: Explicação de cada KPI, mostrada ao passar o cursor.
+#:
+#: O que se explica aqui é sobretudo o **denominador**, que é onde mora a
+#: ambiguidade: "Interrupção de tratamento (%)" não diz percentual sobre o
+#: quê, e a resposta muda o número em quase quatro pontos. Os textos saem das
+#: fórmulas em `src/data/kpis.py` — mudou lá, muda aqui.
+DESCRICOES = {
+    "incid": (
+        "Casos novos por 100 mil habitantes, por UF de residência. "
+        "Permite comparar lugares de tamanhos diferentes."
+    ),
+    "casos": "Total de casos novos notificados no ano, por UF de residência.",
+    "obitos": "Óbitos com a doença como causa básica, vindos do SIM.",
+    "cura": "Encerramentos por cura no ano.",
+    "pop": "População estimada do recorte.",
+    "mortalidade": (
+        "Óbitos por 100 mil habitantes. A fonte é o SIM, não o SINAN — "
+        "`casos_obitos` do dataset de incidência é zero para tuberculose."
+    ),
+    "letalidade": "Óbitos como percentual dos casos: dos que adoeceram, quantos morreram.",
+    "casos_0_14": "Casos novos em menores de 15 anos.",
+    "taxa_det_0_14": "Casos de 0 a 14 anos por 100 mil habitantes dessa faixa.",
+    "hiv_pos_pct": (
+        "Percentual de HIV positivo entre os **testados** — o denominador é "
+        "positivos mais negativos. Quem não fez o teste ou está em andamento "
+        "fica de fora, então isto mede positividade, não cobertura de testagem."
+    ),
+    "interrupcao_trat_pct": (
+        "Percentual de abandono sobre **todos os encerramentos**, incluindo os "
+        "não avaliados. Reproduz a regra do painel em R. Pelo critério do "
+        "Ministério da Saúde — somando abandono primário e tirando os não "
+        "avaliados do denominador — o valor sobe cerca de 4 pontos. "
+        "Ver docs/contrato-dados.md."
+    ),
+}
+
+
+def descricao(metrica: str) -> str | None:
+    return DESCRICOES.get(metrica)

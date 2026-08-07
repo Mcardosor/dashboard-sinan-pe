@@ -170,7 +170,19 @@ def css_base() -> str:
 [class*="st-key-kpi-"] [data-testid="stElementContainer"]:has(.stButton) {{
   position: static;
 }}
-[class*="st-key-kpi-"] .stButton > button {{
+/* Ao receber `help`, o Streamlit embrulha o botão em dois `span` de tooltip
+   (`stTooltipIcon` > `stTooltipHoverTarget`). São `inline` e quebram tanto o
+   seletor de filho direto quanto o esticamento — o rótulo do botão, que era
+   invisível, reaparecia por cima do título do card. Daí o seletor descendente
+   e o `display:block` nos invólucros. */
+[class*="st-key-kpi-"] .stButton [data-testid="stTooltipIcon"],
+[class*="st-key-kpi-"] .stButton [data-testid="stTooltipHoverTarget"],
+[class*="st-key-kpi-"] .stButton > div {{
+  display: block;
+  width: 100%;
+  height: 100%;
+}}
+[class*="st-key-kpi-"] .stButton button {{
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -183,8 +195,8 @@ def css_base() -> str:
   cursor: pointer;
 }}
 /* O foco aparece no card, não no botão invisível. */
-[class*="st-key-kpi-"] .stButton > button:focus-visible {{ outline: none; }}
-[class*="st-key-kpi-"]:has(.stButton > button:focus-visible) .kpi-card {{
+[class*="st-key-kpi-"] .stButton button:focus-visible {{ outline: none; }}
+[class*="st-key-kpi-"]:has(.stButton button:focus-visible) .kpi-card {{
   border-color: color-mix(in srgb, var(--kpi-accent) 55%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent) 35%, transparent),
               var(--sombra-hover);
@@ -293,6 +305,7 @@ def kpi_clicavel(
     subtitulo: str | None = None,
     badge_delta: str = "",
     selecionado: bool = False,
+    ajuda: str | None = None,
     ao_clicar=None,
 ) -> bool:
     """Renderiza um card de KPI que seleciona a métrica ao ser clicado.
@@ -319,9 +332,13 @@ def kpi_clicavel(
             ),
             unsafe_allow_html=True,
         )
+        # A ajuda vai no botão, não no card: o botão transparente fica por
+        # cima, então é ele que recebe o cursor — `title` no card nunca
+        # dispararia.
         return st.button(
             f"Selecionar {titulo}",
             key=f"selkpi-{chave}",
+            help=ajuda,
             on_click=ao_clicar,
             args=(chave,) if ao_clicar else None,
             use_container_width=True,
