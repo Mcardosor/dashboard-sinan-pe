@@ -84,6 +84,7 @@ recorte geográfico em vez de emissor.
 - **[docs/analise-livre.md](docs/analise-livre.md)** — integração com Apache Superset
 - **[docs/perguntas-equipe-r.md](docs/perguntas-equipe-r.md)** — o que depende da equipe parceira
 - **[docs/banco-cenarios.md](docs/banco-cenarios.md)** — o SINAN bruto, para investigação
+- **[docs/deploy.md](docs/deploy.md)** — publicação: moldes de systemd e nginx, e o pacote de 209 MB
 
 ## Estrutura
 
