@@ -180,3 +180,44 @@ def alvo_do_clique(evento, nome_selecao: str = "barra") -> str | None:
         return None
     valor = primeiro.get("chave")
     return str(valor) if valor not in (None, "") else None
+
+
+def evolucao_dupla(
+    dados: pd.DataFrame, *, cor_barra: str, cor_linha: str, eixo_x: str, titulo_x: str | None = None
+) -> alt.Chart:
+    """Contagem em barras e taxa em linha, com eixos independentes.
+
+    O original da tuberculose mostra casos e incidência no mesmo gráfico. Duas
+    grandezas de ordem diferente — milhares contra dezenas — precisam de eixos
+    próprios: num eixo só, a linha da taxa vira uma reta colada no zero.
+
+    O eixo da taxa fica à direita e na cor da linha, para não haver dúvida de
+    qual escala pertence a qual série.
+    """
+    if dados.empty:
+        return sem_dado("Sem série para este recorte")
+
+    base = alt.Chart(dados).encode(
+        x=alt.X(eixo_x, sort=list(dados[eixo_x.split(":")[0]]), title=titulo_x)
+    )
+
+    barras = base.mark_bar(
+        cornerRadiusTopLeft=3, cornerRadiusTopRight=3, color=cor_barra, opacity=0.85
+    ).encode(
+        y=alt.Y("casos:Q", title="Casos novos", axis=alt.Axis(titleColor=cor_barra)),
+        tooltip=[
+            alt.Tooltip(eixo_x, title="Período"),
+            alt.Tooltip("casos:Q", title="Casos novos", format=",.0f"),
+            alt.Tooltip("incid:Q", title="Incidência", format=",.1f"),
+        ],
+    )
+
+    linha = base.mark_line(color=cor_linha, strokeWidth=2, point=True).encode(
+        y=alt.Y(
+            "incid:Q",
+            title="Incidência (por 100 mil hab.)",
+            axis=alt.Axis(titleColor=cor_linha),
+        )
+    )
+
+    return tema(alt.layer(barras, linha).resolve_scale(y="independent"))

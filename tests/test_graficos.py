@@ -205,3 +205,74 @@ def test_extrai_a_chave_da_barra_clicada() -> None:
 def test_evento_estranho_nao_derruba_a_pagina(evento) -> None:
     resultado = graficos.alvo_do_clique(evento, "barra")
     assert resultado is None or isinstance(resultado, str)
+
+
+# ---------------------------------------------------------------------------
+# Série seguindo a métrica ativa
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("metrica", ["casos", "cura", "obitos", "pop", "incid"])
+def test_serie_mensal_cobre_as_metricas_diretas(metrica: str) -> None:
+    serie = leitura.serie_mensal_metrica(ESCOPO, metrica)
+    assert len(serie) == 12
+    assert list(serie.columns) == ["mes", "mes_nome", "valor"]
+
+
+@pytest.mark.parametrize("metrica", ["mortalidade", "letalidade"])
+def test_taxas_sao_recalculadas_mes_a_mes(metrica: str) -> None:
+    """Repetir a taxa anual nos meses esconderia a sazonalidade.
+
+    Como o gráfico existe justamente para mostrar sazonalidade, a taxa precisa
+    variar entre os meses — se todos os valores fossem iguais, seria sinal de
+    que a taxa veio do total anual.
+    """
+    serie = leitura.serie_mensal_metrica(ESCOPO, metrica)
+    assert len(serie) == 12
+    assert serie["valor"].nunique() > 1, "a taxa não variou entre os meses"
+
+
+@pytest.mark.parametrize("metrica", ["hiv_pos_pct", "interrupcao_trat_pct", "taxa_det_0_14"])
+def test_metrica_sem_serie_devolve_vazio(metrica: str) -> None:
+    """Melhor painel com recado que série da métrica errada."""
+    assert leitura.serie_mensal_metrica(ESCOPO, metrica).empty
+    assert leitura.serie_anual(ESCOPO, metrica).empty
+
+
+# ---------------------------------------------------------------------------
+# Série dupla: casos e incidência
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("horizonte", ["meses", "anos"])
+def test_serie_dupla_traz_as_duas_grandezas(horizonte: str) -> None:
+    d = leitura.serie_dupla(ESCOPO, horizonte)
+    assert {"casos", "incid"} <= set(d.columns)
+    assert len(d) == (12 if horizonte == "meses" else 16)
+
+
+def test_serie_dupla_bate_com_as_series_isoladas() -> None:
+    dupla = leitura.serie_dupla(ESCOPO, "meses")
+    casos = leitura.serie_mensal_metrica(ESCOPO, "casos")
+    assert dupla["casos"].to_numpy() == pytest.approx(casos["valor"].to_numpy())
+
+
+def test_grafico_duplo_usa_eixos_independentes() -> None:
+    """Casos em milhares e incidência em dezenas: num eixo só, a linha da
+    taxa vira uma reta colada no zero."""
+    d = leitura.serie_dupla(ESCOPO, "meses")
+    g = graficos.evolucao_dupla(
+        d, cor_barra=COR, cor_linha=tb.cor("incid"), eixo_x="mes_nome:N"
+    )
+    assert len(g.layer) == 2, "esperado barras + linha"
+    assert g.resolve.scale.y == "independent"
+
+
+def test_grafico_duplo_vazio_mostra_recado() -> None:
+    g = graficos.evolucao_dupla(
+        pd.DataFrame(columns=["mes_nome", "casos", "incid"]),
+        cor_barra=COR,
+        cor_linha=COR,
+        eixo_x="mes_nome:N",
+    )
+    assert g.mark["type"] == "text"

@@ -427,7 +427,9 @@ def serie_anual(esc: Escopo, metrica: str = "casos") -> pd.DataFrame:
     Diferente de :func:`serie_mensal`, esta é por **residência**, igual aos
     KPIs — `incidence` e `_cache_ts` usam critérios geográficos diferentes.
     """
-    coluna = _COLUNA_DIRETA.get(metrica, "casos_total")
+    if metrica not in _COLUNA_DIRETA:
+        return pd.DataFrame(columns=["ano", "valor"])
+    coluna = _COLUNA_DIRETA[metrica]
     fonte = caminho(
         "incidence", doenca=config.cod_agregado(esc.doenca), nivel=esc.nivel
     )
@@ -474,4 +476,58 @@ def ranking(esc: Escopo, metrica: str, top_n: int = 15) -> pd.DataFrame:
         tabela.sort_values(["valor", "nome"], ascending=[False, True])
         .head(int(top_n))
         .reset_index(drop=True)
+    )
+
+
+#: Métrica → coluna de ``_cache_ts``. As ausentes precisam de cálculo ou de
+#: outro dataset, e a série avisa em vez de mostrar a métrica errada.
+_COLUNA_MENSAL = {
+    "casos": "casos",
+    "cura": "casos_cura",
+    "obitos": "casos_obitos",
+    "pop": "pop_total",
+    "incid": "incid_100k",
+}
+
+
+def serie_mensal_metrica(esc: Escopo, metrica: str) -> pd.DataFrame:
+    """Série mensal da métrica pedida, com colunas ``mes``, ``mes_nome``, ``valor``.
+
+    Métricas derivadas são recalculadas mês a mês a partir dos componentes —
+    tirar a taxa do total anual e repeti-la nos meses esconderia a
+    sazonalidade, que é justamente o que este gráfico existe para mostrar.
+    """
+    bruto = serie_mensal(esc)
+    if bruto.empty:
+        return pd.DataFrame(columns=["mes", "mes_nome", "valor"])
+
+    if metrica in _COLUNA_MENSAL:
+        valor = bruto[_COLUNA_MENSAL[metrica]]
+    elif metrica == "mortalidade":
+        valor = bruto["casos_obitos"] / bruto["pop_total"].replace(0, pd.NA) * 100_000
+    elif metrica == "letalidade":
+        valor = bruto["casos_obitos"] / bruto["casos"].replace(0, pd.NA) * 100
+    else:
+        return pd.DataFrame(columns=["mes", "mes_nome", "valor"])
+
+    return bruto.assign(valor=valor)[["mes", "mes_nome", "valor"]]
+
+
+def serie_dupla(esc: Escopo, horizonte: str = "meses") -> pd.DataFrame:
+    """Casos e incidência lado a lado, para o gráfico duplo da tuberculose."""
+    if horizonte == "meses":
+        casos = serie_mensal_metrica(esc, "casos")
+        incid = serie_mensal_metrica(esc, "incid")
+        if casos.empty or incid.empty:
+            return pd.DataFrame(columns=["mes", "mes_nome", "casos", "incid"])
+        return casos.rename(columns={"valor": "casos"}).assign(
+            incid=incid["valor"].to_numpy()
+        )
+
+    casos = serie_anual(esc, "casos")
+    incid = serie_anual(esc, "incid")
+    if casos.empty or incid.empty:
+        return pd.DataFrame(columns=["ano", "casos", "incid"])
+    return casos.rename(columns={"valor": "casos"}).merge(
+        incid.rename(columns={"valor": "incid"}), on="ano"
     )

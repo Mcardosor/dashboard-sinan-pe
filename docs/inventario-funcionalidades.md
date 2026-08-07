@@ -66,9 +66,9 @@ Comportamento:
 
 ### Evolução temporal
 - [x] Toggle *Meses do ano* / *Todos os anos*
-- [ ] Série dupla casos + incidência (TB)
+- [x] Série dupla casos + incidência (TB)
 - [ ] Quebra por grau (Hanseníase)
-- [ ] Reage à métrica ativa
+- [x] Reage à métrica ativa
 
 ### Ranking de municípios
 - [x] Top N configurável

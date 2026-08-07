@@ -91,12 +91,17 @@ def _valores_mapa(
     return leitura.valores_por_geografia(escopo, metrica)
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
-def _serie(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None, horizonte: str):
+@st.cache_data(ttl=600, max_entries=256, show_spinner=False)
+def _serie(doenca, ano, nivel, uf, mun, horizonte, metrica):
     escopo = Escopo(doenca, ano, nivel, uf=uf, mun=mun)
     if horizonte == "meses":
-        return leitura.serie_mensal(escopo).rename(columns={"casos": "valor"})
-    return leitura.serie_anual(escopo, "casos")
+        return leitura.serie_mensal_metrica(escopo, metrica)
+    return leitura.serie_anual(escopo, metrica)
+
+
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _serie_dupla(doenca, ano, nivel, uf, mun, horizonte):
+    return leitura.serie_dupla(Escopo(doenca, ano, nivel, uf=uf, mun=mun), horizonte)
 
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)
@@ -354,25 +359,45 @@ with esquerda:
                     st.rerun()
 
 with direita:
-    horizonte = st.radio(
+    controle_h, controle_d = st.columns([2, 1])
+    horizonte = controle_h.radio(
         "Evolução temporal",
         ["meses", "anos"],
         format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
         horizontal=True,
         key="horizonte",
     )
+    # Casos e incidência juntos é o gráfico que o original mostra para
+    # tuberculose. Fica como opção, não como padrão, porque só faz sentido
+    # para essas duas métricas.
+    duplo = controle_d.toggle("Casos + incidência", key="serie_dupla")
 
-    serie = _serie(
-        pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte
-    )
-    if horizonte == "meses":
-        figura_serie = graficos.evolucao_mensal(
-            serie, rotulo="Casos novos", cor=pack.cor("casos")
+    if duplo:
+        serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
+        figura_serie = graficos.evolucao_dupla(
+            serie,
+            cor_barra=pack.cor("casos"),
+            cor_linha=pack.cor("incid"),
+            eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
         )
     else:
-        figura_serie = graficos.evolucao_anual(
-            serie, rotulo="Casos novos", cor=pack.cor("casos"), ano=nav.ano
+        serie = _serie(
+            pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
         )
+        rotulo = pack.rotulo(nav.metrica)
+        if serie.empty:
+            figura_serie = graficos.sem_dado(
+                f"{rotulo} ainda não tem série temporal"
+            )
+        elif horizonte == "meses":
+            figura_serie = graficos.evolucao_mensal(
+                serie, rotulo=rotulo, cor=pack.cor(nav.metrica)
+            )
+        else:
+            figura_serie = graficos.evolucao_anual(
+                serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano
+            )
+
     st.altair_chart(figura_serie, use_container_width=True)
 
     # A série mensal vem por notificação e os KPIs por residência — ver

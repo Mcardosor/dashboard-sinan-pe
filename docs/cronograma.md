@@ -168,8 +168,12 @@ que o `voltar` devolve ao ponto de partida sem estado preso.
 
 ### 4.2 Evolução temporal
 - [x] Toggle *Meses do ano* / *Todos os anos*
-- [ ] Série dupla casos + incidência (específico de TB)
-- [ ] Reagir à métrica ativa
+- [x] Série dupla casos + incidência (específico de TB) — eixos independentes,
+      cada um na cor da sua série. Num eixo só, a linha da taxa vira uma reta
+      colada no zero: casos estão em milhares e incidência em dezenas
+- [x] Reagir à métrica ativa, com as taxas recalculadas mês a mês. Repetir a
+      taxa anual nos meses esconderia a sazonalidade, que é o que o gráfico
+      existe para mostrar
 
 O toggle troca de **fonte**, não só de agregação: a série mensal vem de
 `_cache_ts`, por notificação, e a anual de `incidence`, por residência — que é
