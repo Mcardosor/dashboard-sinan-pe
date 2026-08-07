@@ -5,12 +5,22 @@ original (`app_shell.R`, `mod_state.R`, `mod_kpis.R`, `mod_map.R`, `mod_charts.R
 
 Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 
+> **Auditado em 2026-08-07** contra o código, item a item. A lista havia ficado
+> para trás — mapa, KPIs e recortes de saúde estavam implementados e
+> verificados em tela, mas seguiam desmarcados. Numa checklist de paridade
+> isso é pior que inútil: apaga a diferença entre "não fizemos" e "não
+> anotamos", e some com a lista curta do que falta de verdade.
+
+**Ainda aberto:** o mapa por clique tem um *zoom* travado de propósito (ver
+Transversal), a pirâmide não tem CURA por falta de fonte, e a decisão sobre a
+metodologia do abandono depende da equipe parceira.
+
 ## Sidebar (380px)
 
 - [x] Título da doença
-- [ ] Slider de ano 2010–2025, com *snap* para os anos existentes em disco
-- [ ] Filtro de grau de incapacidade (TB e Hanseníase), opções descobertas em runtime
-- [ ] Badge da métrica ativa
+- [x] Slider de ano com *snap* — `st.select_slider` sobre `anos_disponiveis`, que lê os anos de disco (2010–2025)
+- [ ] Filtro de grau de incapacidade — **é de Hanseníase**, não de TB; entra com o pack dela
+- [x] Métrica ativa na barra lateral. **Divergência:** é legenda de texto, não *badge*
 - [x] Botões Voltar / Reset
 - [x] Breadcrumb de escopo — ex.: `Escopo: UF PE • Macrorregiões • Ano: 2024`
 
@@ -27,17 +37,17 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 Grid responsivo: `repeat(auto-fit, minmax(180px, 1fr))`, com quebras em 1240px,
 860px e 460px.
 
-- [ ] `cases` — casos novos
-- [ ] `cases_0_14`
-- [ ] `taxa_det_0_14`
-- [ ] `incid` — incidência por 100 mil
-- [ ] `obitos`
-- [ ] `cura`
-- [ ] `pop`
-- [ ] `mortalidade`
-- [ ] `letalidade`
-- [ ] `hiv_pos_pct` (TB)
-- [ ] `interrupcao_trat_pct` (TB)
+- [x] `cases` — casos novos
+- [x] `cases_0_14`
+- [x] `taxa_det_0_14`
+- [x] `incid` — incidência por 100 mil
+- [x] `obitos` — do SIM, não do SINAN
+- [x] `cura`
+- [x] `pop`
+- [x] `mortalidade`
+- [x] `letalidade`
+- [x] `hiv_pos_pct` (TB)
+- [x] `interrupcao_trat_pct` (TB) — regra do R; ver armadilha 4
 
 Comportamento:
 
@@ -52,18 +62,18 @@ Comportamento:
 
 ## Mapa
 
-- [ ] Drill-down por clique: BR → UF → MUN
-- [ ] `fitBounds` ao trocar de nível
-- [ ] Modo "detalhe" do município
-- [ ] Escala por quantil k=6
-- [ ] Legenda
-- [ ] `#F3F4F6` para valor ausente
-- [ ] Rampa do *disease pack*, com fallback gerado a partir da cor base
-- [ ] Toggle Município / Macrorregião / Região de saúde (exclusivo de PE)
-- [ ] Drill macro → micro → município
-- [ ] Busca de município, rótulo `"Nome - Região de Saúde"`
-- [ ] Hover box
-- [ ] Botão de voltar dentro do mapa
+- [x] Drill-down por clique: BR → UF → MUN
+- [x] `fitBounds` ao trocar de nível — `mapa.enquadrar`
+- [x] Modo "detalhe" do município
+- [x] Escala por quantil k=6 — `mapa.escala_quantil`, com colapso de quantis repetidos
+- [x] Legenda — em HTML, porque o deck.gl não desenha uma
+- [x] `#F3F4F6` para valor ausente
+- [x] Rampa do *disease pack*, com fallback gerado a partir da cor base
+- [x] Toggle Município / Macrorregião / Região de saúde — genérico, hoje só PE tem malha
+- [x] Drill macro → micro → município
+- [x] Busca de município, rótulo `"Nome - Região de Saúde"` em PE
+- [x] Hover box — tooltip do deck.gl
+- [x] Botão de voltar dentro do mapa
 
 ## Gráficos
 
@@ -110,7 +120,11 @@ Comportamento:
 ## Transversal
 
 - [x] Tooltips de ajuda — nos 6 KPIs e nos controles ambíguos. Explicam sobretudo o **denominador**, que é onde mora a dúvida
-- [ ] Overlay de carregamento
+- [x] Indicador de carregamento — o do próprio Streamlit, no canto.
+      **Divergência intencional:** o original cobre a tela com "Carregando
+      dados...", que bloqueia por volta de 3 s na carga inicial. Copiar isso
+      seria anunciar uma lentidão que não temos; o indicador discreto do
+      Streamlit basta porque as leituras vêm de parquet pré-agregado com cache
 - [x] Tratamento de erro por componente — `src/resiliencia.py`; verificado injetando falha
 - [x] Estados vazios (ano sem SIM, município sem caso) + aviso de ano incompleto, que o original também tem
 
