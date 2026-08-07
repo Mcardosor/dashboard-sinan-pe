@@ -51,8 +51,10 @@ variáveis de composição).
 
 - **Dados:** DuckDB sobre parquet particionado (Hive), leitura direta sem ETL
 - **App:** Streamlit
-- **Gráficos:** a definir entre `streamlit-echarts` e Plotly
-- **Mapa:** a definir entre Folium e Plotly choropleth
+- **Gráficos:** Altair — `st.altair_chart` tem evento de clique nativo e já vem
+  com o Streamlit
+- **Mapa:** pydeck (deck.gl). O coroplético do Plotly não dispara evento de
+  clique, verificado com clique real; ver [docs/mapa-clique.md](docs/mapa-clique.md)
 - **Análise livre:** Apache Superset sobre DuckDB, embutido no mesmo domínio
 
 ## Dados
@@ -75,6 +77,56 @@ Sem ele a faixa mostra só o título e a barra lateral avisa o que falta.
 A bandeira de Pernambuco que o original exibe ao lado do título foi removida:
 os dados aqui são nacionais e, ao lado de um mapa do Brasil, ela lia como
 recorte geográfico em vez de emissor.
+
+## Como rodar
+
+```bash
+git clone https://github.com/Mcardosor/dashboard-sinan-pe.git
+cd dashboard-sinan-pe
+
+python -m venv .venv
+.venv\Scriptsctivate          # Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+
+streamlit run app.py
+```
+
+**Os dados não vêm no clone** — são 892 MB e o `.gitignore` os exclui de
+propósito. Sem eles a aplicação não sobe. Duas formas de resolver:
+
+1. Copiar a pasta `data/` inteira de uma máquina que já a tenha.
+2. Usar o pacote reduzido de 209 MB, que é o que a aplicação de fato lê:
+
+   ```bash
+   python -m scripts.preparar_publicacao --destino /caminho/do/pacote
+   ```
+
+   Rodado na máquina de origem, ele monta a árvore pronta para copiar. A
+   diferença para os 892 MB é quase toda `_geo_cache`, GeoJSON bruto do
+   pipeline que já convertemos para GeoParquet.
+
+O layout esperado é `data/parquet/dashboard/`, `data/geo/` e `data/support/`.
+Para manter os dados fora do projeto, aponte `SINAN_DATA_DIR` para a pasta que
+contém esses três diretórios.
+
+Se `data/geo/` não existir mas o `_geo_cache` sim, gere a geometria com
+`python -m scripts.preparar_geometria` — leva cerca de 40 s para as 27 UFs.
+
+### Testes
+
+```bash
+pytest
+```
+
+Rodam **sem os dados**: os módulos que dependem deles são ignorados e o
+cabeçalho avisa. Num clone limpo passam 101 dos 552 — tema, navegação e
+resiliência. Com os dados no lugar, os 552.
+
+### Banco (opcional)
+
+`docs/banco-cenarios.md` descreve o acesso somente-leitura ao SINAN bruto,
+usado para investigação e não pela aplicação. Precisa de VPN e de um `.env`
+com base em `.env.exemplo`.
 
 ## Documentação
 
