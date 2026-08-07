@@ -192,11 +192,13 @@ lugares diferentes é como o card e a série temporal, que divergem justamente
 por isso.
 
 ### 4.4 Pirâmide etária
-- [ ] População como fundo + casos sobrepostos (estilo IBGE)
-- [ ] `ratio` por faixa
-- [ ] Alternância entre `tipo` = CASOS / CURA / OBITOS
+- [x] Pirâmide por sexo e faixa, escala única e domínio simétrico
+- [x] Taxa por 100 mil habitantes, no lugar da população de fundo
+- [x] CASOS (`piramides`) e OBITOS (`obitos_sim_faixa`, do SIM)
+- [ ] CURA — sem fonte local, depende do banco
 
-**Pronto quando:** as três abas renderizam e respondem a ano, escopo e métrica.
+**Pronto quando:** os tipos disponíveis renderizam e respondem a ano e escopo.
+Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 
 ---
 

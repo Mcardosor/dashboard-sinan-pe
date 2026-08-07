@@ -76,10 +76,14 @@ Comportamento:
 - [x] Clique na barra navega o mapa
 
 ### Pirâmide etária
-- [ ] População como fundo + casos sobrepostos (estilo IBGE)
-- [ ] `ratio` por faixa
-- [ ] Alternância `tipo` = CASOS / CURA / OBITOS — **CURA e OBITOS estão vazios
-      para TB**; a pirâmide de óbitos tem de sair de `obitos_sim_faixa`.
+- [x] Pirâmide por sexo e faixa, com as onze faixas sempre presentes
+- [x] Taxa por 100 mil habitantes — substitui a população de fundo do original.
+      Sobrepor as duas exigiria dois eixos x, e aí o comprimento de uma barra
+      não diz nada sobre a outra. A taxa usa a mesma população e cabe num eixo.
+- [x] CASOS, de `piramides`
+- [x] OBITOS, de `obitos_sim_faixa` (SIM) — mistura de fontes sinalizada na tela
+- [ ] CURA — **sem fonte local.** `piramides` traz zerado para TB e nenhum outro
+      parquet quebra cura por idade. Depende do banco.
       Ver contrato-dados, armadilha 9
 
 ### Fora das abas

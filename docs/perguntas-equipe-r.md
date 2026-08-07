@@ -114,10 +114,18 @@ também estão zeradas.
 dos registros. Ou seja, não é ausência de dado — algo no pipeline zera essas
 duas partições.
 
-**Impacto:** a alternância CASOS/CURA/ÓBITOS da pirâmide não funciona na
-entrega de TB. Nossa alternativa é montar a pirâmide de óbitos a partir de
-`obitos_sim_faixa`, que tem o dado (6.354 óbitos no Brasil em 2024), mas isso
-mistura fontes e vale confirmar antes.
+**Impacto e o que já fizemos.** Óbitos foram resolvidos localmente: a
+pirâmide sai de `obitos_sim_faixa` (6.354 óbitos no Brasil em 2024). As oito
+faixas do SIM são um subconjunto das onze de `piramides` e os `faixa_ord`
+coincidem, então a reindexação é direta. Mistura SIM com SINAN, e isso está
+sinalizado na tela.
+
+**Cura continua sem saída.** Nenhum parquet quebra cura por idade —
+`incidence` só tem `cura_M`/`cura_F` e `incidence_0_14` cobre uma faixa. É o
+que ainda depende de vocês.
+
+**Pergunta:** o que zera CURA e OBITOS em `piramides`? E a pirâmide de óbitos
+do dashboard de vocês sai de onde — do SINAN ou do SIM?
 
 ---
 
