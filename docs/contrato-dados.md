@@ -9,10 +9,11 @@ nos parquets. Todos os números abaixo foram conferidos, não inferidos.
 Cobertura 2010–2025 (Zika a partir de 2016; 2025 parcial). Nacional: BR, 27 UFs,
 5.570 municípios.
 
-Os arquivos de apoio de Pernambuco (`municipios.csv`, `PE MODIF.*`,
-`PEMacSAUD MODIF.*`, `PERGSAUDE MODIF.*`) **não** ficam em `data/parquet/` no
-projeto original — vivem seis níveis acima na árvore de diretórios. São a única
-fonte de macrorregião e região de saúde. Copie para `data/support/`.
+Os dados são **nacionais**. Os arquivos de apoio de Pernambuco
+(`municipios.csv`, `PE MODIF.*`, `PEMacSAUD MODIF.*`, `PERGSAUDE MODIF.*`)
+**não** ficam em `data/parquet/` no projeto original — vivem seis níveis acima
+na árvore. São a única fonte de macrorregião e região de saúde, e por isso
+esse recorte só existe para PE. Copie para `data/support/`.
 
 ## Datasets
 

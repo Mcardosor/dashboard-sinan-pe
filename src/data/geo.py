@@ -53,17 +53,18 @@ def pais() -> gpd.GeoDataFrame:
     return _ler(geo_dir() / "pais.parquet")
 
 
-@lru_cache(maxsize=2)
-def regioes_pe(nivel: str = "macro") -> gpd.GeoDataFrame:
-    """Recortes de saúde de Pernambuco. Coluna ``regiao``.
+@lru_cache(maxsize=8)
+def regioes(uf: str = "PE", nivel: str = "macro") -> gpd.GeoDataFrame:
+    """Recortes de saúde de uma UF. Coluna ``regiao``.
 
-    ``macro`` são as macrorregiões; ``micro`` são as regiões de saúde.
-    Exclusivo de PE — vem dos shapefiles de apoio, não do pipeline.
+    ``macro`` são as macrorregiões; ``micro`` as regiões de saúde. Hoje só PE
+    tem a malha — ver `src/data/recortes.py` para acrescentar outra UF.
     """
+    sigla = str(uf or "PE").strip().upper()
     chave = str(nivel or "macro").strip().lower()
     if chave not in ("macro", "micro"):
         raise ValueError(f"Nível inválido: {nivel!r}. Esperado 'macro' ou 'micro'.")
-    return _ler(geo_dir() / f"pe_{chave}.parquet")
+    return _ler(geo_dir() / f"{sigla.lower()}_{chave}.parquet")
 
 
 @lru_cache(maxsize=1)
@@ -86,5 +87,5 @@ def centroides() -> gpd.GeoDataFrame:
 
 def limpar_cache() -> None:
     """Descarta a geometria em memória. Útil após regerar as camadas."""
-    for fn in (municipios, ufs, pais, regioes_pe, centroides):
+    for fn in (municipios, ufs, pais, regioes, centroides):
         fn.cache_clear()

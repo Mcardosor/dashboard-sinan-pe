@@ -1,8 +1,14 @@
-"""Recortes de saúde de Pernambuco.
+"""Recortes administrativos de saúde, por UF.
 
-PE é a única UF com malha de macrorregião e região de saúde. A fonte é o
-``municipios.csv`` dos arquivos de apoio — não veio no pipeline de dados, e sim
-junto dos shapefiles.
+O dashboard é **nacional** — os 5.571 municípios navegam. Sobre isso há uma
+camada de recortes de saúde que hoje **só Pernambuco tem**, porque só para PE
+existem a malha e o lookup.
+
+O módulo é genérico de propósito. Acrescentar outro estado é registrar uma
+entrada em :data:`CONFIGURACOES` e soltar os arquivos em ``data/support/``,
+sem tocar em código. O projeto em R fixava "pe" no nome das funções e dos
+dados (``.read_pe_municipios_lookup``), o que faria de um segundo estado uma
+refatoração em vez de uma configuração.
 
 A agregação **soma os componentes e recalcula a taxa**, nunca tira média das
 taxas municipais: isso pesaria Recife igual a um município de dois mil
@@ -12,19 +18,66 @@ habitantes. É também o que o dashboard em R faz.
 from __future__ import annotations
 
 import unicodedata
+from dataclasses import dataclass
 from functools import lru_cache
 
 import pandas as pd
 
 from . import config
 
+@dataclass(frozen=True, slots=True)
+class Configuracao:
+    """Como ler os recortes de uma UF.
+
+    Os rótulos ficam aqui porque a nomenclatura varia: PE usa macrorregião e
+    região de saúde, mas outro estado pode nomear diferente, e a interface
+    deve mostrar o termo que o estado usa.
+    """
+
+    uf: str
+    arquivo: str
+    col_codigo: str
+    col_nome: str
+    col_macro: str
+    col_micro: str
+    rotulo_macro: str = "Macrorregiões"
+    rotulo_micro: str = "Regiões de saúde"
+
+
+#: UFs com recorte de saúde. Hoje só PE — ver o docstring para acrescentar.
+CONFIGURACOES: dict[str, Configuracao] = {
+    "PE": Configuracao(
+        uf="PE",
+        arquivo="municipios.csv",
+        # `City` traz o código IBGE de 7 dígitos, gravado como decimal.
+        col_codigo="City",
+        col_nome="Name",
+        col_macro="NomeMacro",
+        col_micro="NomeRegSau",
+    ),
+}
+
+#: UF padrão dos parâmetros. Enquanto só PE existe, evita repetir a sigla.
 UF = "PE"
 
-#: Colunas do CSV. `City` traz o código IBGE de 7 dígitos, gravado como float.
-_COL_CODIGO = "City"
-_COL_NOME = "Name"
-_COL_MACRO = "NomeMacro"
-_COL_MICRO = "NomeRegSau"
+
+def ufs_com_recorte() -> list[str]:
+    return sorted(CONFIGURACOES)
+
+
+def configurada(uf: str | None) -> bool:
+    """A UF tem recorte de saúde?"""
+    return str(uf or "").strip().upper() in CONFIGURACOES
+
+
+def config_de(uf: str) -> Configuracao:
+    chave = str(uf or "").strip().upper()
+    if chave not in CONFIGURACOES:
+        raise ValueError(
+            f"{chave} não tem recorte de saúde configurado. "
+            f"Disponíveis: {ufs_com_recorte()}."
+        )
+    return CONFIGURACOES[chave]
 
 
 def _chave(texto) -> str:
@@ -43,14 +96,15 @@ def _chave(texto) -> str:
     return " ".join(sem_acento.upper().split())
 
 
-@lru_cache(maxsize=1)
-def lookup() -> pd.DataFrame:
+@lru_cache(maxsize=8)
+def lookup(uf: str = UF) -> pd.DataFrame:
     """Município → macrorregião e região de saúde.
 
     Colunas: ``cod_mun6``, ``nome_mun``, ``macro``, ``micro`` e as chaves
     normalizadas ``macro_chave`` e ``micro_chave``.
     """
-    caminho = config.support_dir() / "municipios.csv"
+    cfg = config_de(uf)
+    caminho = config.support_dir() / cfg.arquivo
     if not caminho.is_file():
         raise FileNotFoundError(
             f"{caminho} não encontrado. É a única fonte de macrorregião e "
@@ -67,7 +121,7 @@ def lookup() -> pd.DataFrame:
     if bruto is None:
         raise ValueError(f"Não consegui decodificar {caminho}.")
 
-    faltando = {_COL_CODIGO, _COL_MACRO, _COL_MICRO} - set(bruto.columns)
+    faltando = {cfg.col_codigo, cfg.col_macro, cfg.col_micro} - set(bruto.columns)
     if faltando:
         raise ValueError(f"Colunas ausentes em {caminho.name}: {sorted(faltando)}")
 
@@ -79,12 +133,12 @@ def lookup() -> pd.DataFrame:
             # e truncar produziria 261379 em vez de 261380. Em dois casos isso
             # cruza a fronteira dos 6 dígitos e o município deixa de casar com
             # os dados, sumindo da agregação por região sem erro nenhum.
-            "cod_mun6": pd.to_numeric(bruto[_COL_CODIGO], errors="coerce")
+            "cod_mun6": pd.to_numeric(bruto[cfg.col_codigo], errors="coerce")
             .astype("Float64")
             .map(lambda v: "" if pd.isna(v) else str(round(v))[:6]),
-            "nome_mun": bruto.get(_COL_NOME, pd.Series(dtype=str)).astype(str).str.strip(),
-            "macro": bruto[_COL_MACRO].astype(str).str.strip(),
-            "micro": bruto[_COL_MICRO].astype(str).str.strip(),
+            "nome_mun": bruto.get(cfg.col_nome, pd.Series(dtype=str)).astype(str).str.strip(),
+            "macro": bruto[cfg.col_macro].astype(str).str.strip(),
+            "micro": bruto[cfg.col_micro].astype(str).str.strip(),
         }
     )
     tabela = tabela[tabela["cod_mun6"].str.fullmatch(r"\d{6}")]
@@ -93,21 +147,23 @@ def lookup() -> pd.DataFrame:
     return tabela.drop_duplicates("cod_mun6").reset_index(drop=True)
 
 
-def macros() -> list[str]:
-    return sorted(lookup()["macro"].unique())
+def macros(uf: str = UF) -> list[str]:
+    return sorted(lookup(uf)["macro"].unique())
 
 
-def micros(macro: str | None = None) -> list[str]:
+def micros(macro: str | None = None, uf: str = UF) -> list[str]:
     """Regiões de saúde, opcionalmente filtradas por macrorregião."""
-    tabela = lookup()
+    tabela = lookup(uf)
     if macro:
         tabela = tabela[tabela["macro_chave"] == _chave(macro)]
     return sorted(tabela["micro"].unique())
 
 
-def municipios_de(*, macro: str | None = None, micro: str | None = None) -> list[str]:
+def municipios_de(
+    *, macro: str | None = None, micro: str | None = None, uf: str = UF
+) -> list[str]:
     """Códigos de 6 dígitos dentro de um recorte."""
-    tabela = lookup()
+    tabela = lookup(uf)
     if macro:
         tabela = tabela[tabela["macro_chave"] == _chave(macro)]
     if micro:
@@ -121,7 +177,7 @@ COMPONENTES = ("casos", "cura", "pop", "obitos")
 
 
 def agregar(
-    componentes: pd.DataFrame, metrica: str, nivel: str = "macro"
+    componentes: pd.DataFrame, metrica: str, nivel: str = "macro", uf: str = UF
 ) -> pd.Series:
     """Agrega componentes municipais por região e recalcula a métrica.
 
@@ -134,7 +190,7 @@ def agregar(
     """
     coluna = "macro" if str(nivel).lower().startswith("mac") else "micro"
 
-    tabela = lookup().set_index("cod_mun6")[[coluna]]
+    tabela = lookup(uf).set_index("cod_mun6")[[coluna]]
     juncao = componentes.join(tabela, how="inner")
     if juncao.empty:
         return pd.Series(dtype=float)

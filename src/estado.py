@@ -12,15 +12,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .data import config
+from .data import config, recortes
 from .data.escopo import Escopo, mun6
 
 #: Recortes do mapa no nível UF. ``MUN`` é o padrão; os outros dois são
 #: exclusivos de Pernambuco e vêm dos shapefiles de apoio.
 RECORTES = ("MUN", "MACRO", "MICRO")
 
-#: A única UF com malha de macrorregião e região de saúde.
-UF_COM_RECORTES = "PE"
+#: Mantido para leitura; a verdade está no registro de `data/recortes.py`.
+UF_COM_RECORTES = recortes.UF
 
 
 @dataclass
@@ -60,8 +60,12 @@ class Navegacao:
 
     @property
     def tem_recortes_de_saude(self) -> bool:
-        """Só PE tem macrorregião e região de saúde."""
-        return self.uf == UF_COM_RECORTES
+        """A UF corrente tem macrorregião e região de saúde configuradas?
+
+        Hoje só PE, mas a resposta vem do registro — acrescentar um estado não
+        exige tocar aqui.
+        """
+        return recortes.configurada(self.uf)
 
     @property
     def pode_voltar(self) -> bool:
@@ -98,7 +102,8 @@ class Navegacao:
             raise ValueError(f"Recorte inválido: {recorte!r}. Esperado {RECORTES}.")
         if valor != "MUN" and not self.tem_recortes_de_saude:
             raise ValueError(
-                f"Macrorregião e região de saúde existem só em {UF_COM_RECORTES}."
+                f"{self.uf} não tem recorte de saúde. "
+                f"Configuradas: {recortes.ufs_com_recorte()}."
             )
         self.recorte = valor
         # Trocar de recorte descarta a seleção do recorte anterior.

@@ -9,7 +9,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src import graficos, mapa
-from src.data import config, geo, pernambuco
+from src.data import config, geo, recortes
 from src.data import kpis as calc
 from src.data import leitura
 from src.data.escopo import Escopo
@@ -62,9 +62,9 @@ def _camada(
     if nivel == "BR":
         return geo.ufs()
     if recorte == "MACRO":
-        return geo.regioes_pe("macro")
+        return geo.regioes(uf, "macro")
     if recorte == "MICRO":
-        return geo.regioes_pe("micro")
+        return geo.regioes(uf, "micro")
 
     municipios = geo.municipios(uf)
     if detalhe and mun:
@@ -72,7 +72,7 @@ def _camada(
     # Fora do detalhe, entrar por uma região de saúde restringe o mapa a ela,
     # senão o zoom volta para o estado inteiro e perde-se o contexto do drill.
     if micro:
-        dentro = set(pernambuco.municipios_de(micro=micro))
+        dentro = set(recortes.municipios_de(micro=micro, uf=uf))
         recorte_geo = municipios[municipios["cod_mun6"].isin(dentro)]
         if not recorte_geo.empty:
             return recorte_geo
@@ -114,10 +114,10 @@ def _rotulos_busca(uf: str) -> dict[str, str]:
     sufixo é o que desempata na lista.
     """
     nomes = _municipios(uf)
-    if uf != pernambuco.UF:
+    if not recortes.configurada(uf):
         return dict(nomes)
 
-    regiao = pernambuco.lookup().set_index("cod_mun6")["micro"].to_dict()
+    regiao = recortes.lookup(uf).set_index("cod_mun6")["micro"].to_dict()
     return {
         codigo: f"{nome} — {regiao[codigo]}" if codigo in regiao else nome
         for codigo, nome in nomes.items()

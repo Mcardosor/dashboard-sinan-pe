@@ -1,8 +1,15 @@
 # dashboard-sinan-pe
 
-Dashboard de vigilância epidemiológica SINAN em Streamlit/Python, com foco em
-Pernambuco. Reconstrução de um dashboard Shiny/R desenvolvido por outra equipe —
-mesmo escopo funcional, com ganhos de performance e de acabamento visual.
+Dashboard de vigilância epidemiológica SINAN em Streamlit/Python. Reconstrução
+de um dashboard Shiny/R desenvolvido por outra equipe — mesmo escopo funcional,
+com ganhos de performance e de acabamento visual.
+
+**Alcance:** os dados e a navegação são **nacionais** — 27 UFs, 5.571
+municípios. Sobre isso há uma camada de **recortes administrativos de saúde**
+(macrorregião e região de saúde) que hoje só Pernambuco tem, porque só para PE
+existem a malha e o lookup. Essa camada é genérica: acrescentar outro estado é
+registrar uma entrada em `src/data/recortes.py` e soltar os arquivos, sem
+tocar em código.
 
 **Status:** em construção. Primeira entrega: Tuberculose.
 

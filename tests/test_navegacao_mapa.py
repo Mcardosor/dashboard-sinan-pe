@@ -15,7 +15,7 @@ import itertools
 import pytest
 
 from src import mapa
-from src.data import geo, leitura, pernambuco
+from src.data import geo, leitura, recortes
 from src.doencas import tuberculose as tb
 from src.estado import RECORTES, Navegacao
 
@@ -30,9 +30,9 @@ def _camada_e_chave(nav: Navegacao):
     if nav.nivel == "BR":
         return geo.ufs(), "uf"
     if nav.recorte == "MACRO":
-        return geo.regioes_pe("macro"), "regiao"
+        return geo.regioes("PE", "macro"), "regiao"
     if nav.recorte == "MICRO":
-        return geo.regioes_pe("micro"), "regiao"
+        return geo.regioes("PE", "micro"), "regiao"
     return geo.municipios(nav.uf), "cod_mun6"
 
 
@@ -103,9 +103,9 @@ def test_uf_fora_de_pe_so_tem_o_recorte_de_municipio(uf: str) -> None:
 
 def _percursos():
     """Caminhos de ida que a aplicação permite, do Brasil ao detalhe."""
-    macro = pernambuco.macros()[0]
-    micro = pernambuco.micros(macro)[0]
-    municipio = pernambuco.municipios_de(micro=micro)[0]
+    macro = recortes.macros()[0]
+    micro = recortes.micros(macro)[0]
+    municipio = recortes.municipios_de(micro=micro)[0]
 
     yield "direto", [
         lambda n: n.entrar_uf("PE"),

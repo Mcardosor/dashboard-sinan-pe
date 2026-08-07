@@ -413,10 +413,12 @@ def componentes_municipais(esc: Escopo) -> pd.DataFrame:
 
 
 def valores_por_regiao(esc: Escopo, metrica: str, nivel: str) -> pd.Series:
-    """Valor da métrica por macrorregião ou região de saúde de PE."""
-    from . import pernambuco
+    """Valor da métrica por macrorregião ou região de saúde da UF do escopo."""
+    from . import recortes
 
-    return pernambuco.agregar(componentes_municipais(esc), metrica, nivel)
+    return recortes.agregar(
+        componentes_municipais(esc), metrica, nivel, uf=esc.uf or recortes.UF
+    )
 
 
 def serie_anual(esc: Escopo, metrica: str = "casos") -> pd.DataFrame:

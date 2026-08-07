@@ -1,4 +1,7 @@
-"""Recortes de saúde de Pernambuco.
+"""Recortes administrativos de saúde.
+
+Hoje só PE tem, mas a camada é genérica: acrescentar uma UF é registrar uma
+entrada em `CONFIGURACOES`, sem tocar em código.
 
 A junção é por **nome** de região entre duas fontes independentes — o
 `municipios.csv` e os shapefiles — e a agregação precisa recalcular taxas em
@@ -10,14 +13,14 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.data import geo, leitura, pernambuco
+from src.data import geo, leitura, recortes
 from src.data.escopo import Escopo
 
 ESCOPO = Escopo("TUBERCULOSE", 2024, "UF", uf="PE")
 
 
 def test_lookup_cobre_todos_os_municipios_de_pe() -> None:
-    tabela = pernambuco.lookup()
+    tabela = recortes.lookup()
     assert len(tabela) == 185
     assert tabela["cod_mun6"].is_unique
     assert tabela["cod_mun6"].str.fullmatch(r"\d{6}").all()
@@ -30,7 +33,7 @@ def test_codigo_e_arredondado_e_nao_truncado() -> None:
     261379 em vez de 261380, o município deixa de casar com os dados e some da
     agregação por região — sem erro nenhum, só um total menor.
     """
-    codigos = set(pernambuco.lookup()["cod_mun6"])
+    codigos = set(recortes.lookup()["cod_mun6"])
     assert "261380" in codigos, "São Vicente Férrer truncado"
     assert "261460" in codigos, "Tabira truncado"
     assert "261379" not in codigos
@@ -40,33 +43,33 @@ def test_codigo_e_arredondado_e_nao_truncado() -> None:
 def test_lookup_casa_com_os_dados_sem_sobra() -> None:
     """Qualquer município fora da junção seria caso desaparecendo do mapa."""
     componentes = leitura.componentes_municipais(ESCOPO)
-    codigos_lookup = set(pernambuco.lookup()["cod_mun6"])
+    codigos_lookup = set(recortes.lookup()["cod_mun6"])
     assert set(componentes.index) == codigos_lookup
 
 
 def test_nomes_de_regiao_batem_com_a_geometria() -> None:
     """Duas fontes independentes; um acento a mais quebraria a junção."""
     for nivel, coluna in (("macro", "macro"), ("micro", "micro")):
-        do_csv = {pernambuco._chave(v) for v in pernambuco.lookup()[coluna]}
-        da_malha = {pernambuco._chave(v) for v in geo.regioes_pe(nivel)["regiao"]}
+        do_csv = {recortes._chave(v) for v in recortes.lookup()[coluna]}
+        da_malha = {recortes._chave(v) for v in geo.regioes('PE', nivel)["regiao"]}
         assert do_csv == da_malha, f"{nivel}: {do_csv ^ da_malha}"
 
 
 def test_quatro_macros_e_doze_regioes_de_saude() -> None:
-    assert len(pernambuco.macros()) == 4
-    assert len(pernambuco.micros()) == 12
+    assert len(recortes.macros()) == 4
+    assert len(recortes.micros()) == 12
 
 
 def test_micros_filtradas_por_macro() -> None:
-    assert pernambuco.micros("Agreste") == ["Caruaru", "Garanhuns"]
-    todas = {m for macro in pernambuco.macros() for m in pernambuco.micros(macro)}
-    assert todas == set(pernambuco.micros())
+    assert recortes.micros("Agreste") == ["Caruaru", "Garanhuns"]
+    todas = {m for macro in recortes.macros() for m in recortes.micros(macro)}
+    assert todas == set(recortes.micros())
 
 
 def test_municipios_de_uma_regiao() -> None:
-    recife = pernambuco.municipios_de(micro="Recife")
+    recife = recortes.municipios_de(micro="Recife")
     assert "261160" in recife
-    soma = sum(len(pernambuco.municipios_de(macro=m)) for m in pernambuco.macros())
+    soma = sum(len(recortes.municipios_de(macro=m)) for m in recortes.macros())
     assert soma == 185, "todo município pertence a exatamente uma macro"
 
 
@@ -92,7 +95,7 @@ def test_taxa_e_recalculada_e_nao_promediada(nivel: str) -> None:
     """
     componentes = leitura.componentes_municipais(ESCOPO)
     coluna = "macro" if nivel == "macro" else "micro"
-    tabela = pernambuco.lookup().set_index("cod_mun6")[[coluna]]
+    tabela = recortes.lookup().set_index("cod_mun6")[[coluna]]
     juncao = componentes.join(tabela, how="inner")
 
     correto = leitura.valores_por_regiao(ESCOPO, "incid", nivel)
@@ -112,18 +115,18 @@ def test_taxa_e_recalculada_e_nao_promediada(nivel: str) -> None:
 
 def test_metrica_sem_componentes_devolve_vazio() -> None:
     componentes = leitura.componentes_municipais(ESCOPO)
-    assert pernambuco.agregar(componentes, "hiv_pos_pct", "macro").empty
+    assert recortes.agregar(componentes, "hiv_pos_pct", "macro").empty
 
 
 def test_agregacao_com_entrada_vazia_nao_quebra() -> None:
     vazio = pd.DataFrame(columns=["casos", "pop"], index=pd.Index([], name="cod_mun6"))
-    assert pernambuco.agregar(vazio, "casos", "macro").empty
+    assert recortes.agregar(vazio, "casos", "macro").empty
 
 
 def test_indice_da_agregacao_e_o_nome_da_regiao() -> None:
     """A geometria identifica a região pelo nome; o índice tem de bater."""
     valores = leitura.valores_por_regiao(ESCOPO, "casos", "macro")
-    assert set(valores.index) == set(geo.regioes_pe("macro")["regiao"])
+    assert set(valores.index) == set(geo.regioes("PE", "macro")["regiao"])
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +140,7 @@ def test_regiao_desempata_municipios_de_nome_parecido() -> None:
     PE tem municípios de nome próximo em regiões diferentes; sem o sufixo, a
     lista fica ambígua.
     """
-    tabela = pernambuco.lookup()
+    tabela = recortes.lookup()
     regiao = tabela.set_index("cod_mun6")["micro"]
     assert regiao.notna().all()
     assert not regiao.eq("").any()
@@ -146,14 +149,76 @@ def test_regiao_desempata_municipios_de_nome_parecido() -> None:
 
 
 def test_toda_regiao_de_saude_tem_municipio() -> None:
-    for micro in pernambuco.micros():
-        assert pernambuco.municipios_de(micro=micro), f"{micro} sem município"
+    for micro in recortes.micros():
+        assert recortes.municipios_de(micro=micro), f"{micro} sem município"
 
 
 def test_recorte_por_regiao_e_subconjunto_da_uf() -> None:
     """O mapa filtra a malha pela região; o subconjunto tem de ser válido."""
     todos = set(geo.municipios("PE")["cod_mun6"])
-    for micro in pernambuco.micros():
-        dentro = set(pernambuco.municipios_de(micro=micro))
+    for micro in recortes.micros():
+        dentro = set(recortes.municipios_de(micro=micro))
         assert dentro <= todos, f"{micro} tem município fora da malha de PE"
         assert dentro, f"{micro} vazia"
+
+
+# ---------------------------------------------------------------------------
+# A camada é genérica
+# ---------------------------------------------------------------------------
+# O projeto é nacional; o recorte de saúde é uma camada por cima, hoje só de
+# PE. O que importa nestes testes é que acrescentar um estado seja
+# configuração, não refatoração.
+
+
+def test_registro_expoe_as_ufs_configuradas() -> None:
+    assert "PE" in recortes.ufs_com_recorte()
+    assert recortes.configurada("pe"), "a sigla deve ser case-insensitive"
+    assert not recortes.configurada("BA")
+    assert not recortes.configurada(None)
+
+
+def test_uf_sem_recorte_falha_com_mensagem_util() -> None:
+    """A mensagem tem de dizer quais existem, não só que a pedida não existe."""
+    with pytest.raises(ValueError, match="BA"):
+        recortes.config_de("BA")
+    with pytest.raises(ValueError, match="PE"):
+        recortes.config_de("BA")
+
+
+def test_configuracao_carrega_os_rotulos() -> None:
+    """A nomenclatura varia entre estados; a interface mostra a do estado."""
+    cfg = recortes.config_de("PE")
+    assert cfg.rotulo_macro and cfg.rotulo_micro
+    assert cfg.arquivo == "municipios.csv"
+
+
+def test_funcoes_aceitam_a_uf_como_parametro() -> None:
+    """Sem isso, um segundo estado exigiria mexer em cada função."""
+    import inspect
+
+    for fn in (recortes.lookup, recortes.macros, recortes.micros,
+               recortes.municipios_de, recortes.agregar):
+        assert "uf" in inspect.signature(fn).parameters, f"{fn.__name__} sem `uf`"
+
+
+def test_geometria_e_enderecada_por_uf() -> None:
+    """`geo.regioes` monta o caminho pela sigla, não com 'pe' fixo."""
+    import inspect
+
+    from src.data import geo
+
+    assert "uf" in inspect.signature(geo.regioes).parameters
+    assert len(geo.regioes("PE", "macro")) == 4
+
+
+def test_navegacao_consulta_o_registro() -> None:
+    """A máquina de estados não compara com a string 'PE'."""
+    from src.estado import Navegacao
+
+    nav = Navegacao()
+    nav.entrar_uf("PE")
+    assert nav.tem_recortes_de_saude
+    nav.entrar_uf("BA")
+    assert not nav.tem_recortes_de_saude
+    with pytest.raises(ValueError, match="recorte de saúde"):
+        nav.definir_recorte("MACRO")

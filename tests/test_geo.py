@@ -124,7 +124,7 @@ def test_uf_e_pais_carregam() -> None:
 
 @pytest.mark.parametrize("nivel,esperado", [("macro", 4), ("micro", 12)])
 def test_recortes_de_pe(nivel: str, esperado: int) -> None:
-    camada = geo.regioes_pe(nivel)
+    camada = geo.regioes('PE', nivel)
     assert len(camada) == esperado
     assert "regiao" in camada.columns
     assert camada["regiao"].notna().all()
