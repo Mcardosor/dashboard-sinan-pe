@@ -14,6 +14,7 @@ from src.data import kpis as calc
 from src.data import leitura
 from src.data.escopo import Escopo
 from src.doencas import tuberculose as pack
+from src import resiliencia
 from src.estado import RECORTES, Navegacao, nivel_agregado
 from src.theme import componentes as ui
 from src.theme import marcas
@@ -120,6 +121,11 @@ def _piramide(doenca, ano, nivel, uf, mun, tipo):
 
 
 @st.cache_data(ttl=3600)
+def _meses_com_dado(doenca: str, ano: int) -> int:
+    return leitura.meses_com_dado(doenca, ano)
+
+
+@st.cache_data(ttl=3600)
 def _municipios(uf: str) -> dict[str, str]:
     """Código de 6 dígitos → nome, para o seletor e para a trilha."""
     camada = geo.municipios(uf)
@@ -150,6 +156,12 @@ def _navegacao() -> Navegacao:
     return st.session_state.nav
 
 
+#: Para nomear o último mês com dado no aviso de ano incompleto.
+MESES = (
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+)
+
 st.markdown(ui.css_base(), unsafe_allow_html=True)
 st.markdown(ui.css_layout(), unsafe_allow_html=True)
 
@@ -167,6 +179,16 @@ with st.sidebar:
     st.title(pack.TITULO)
 
     nav.ano = st.select_slider("Ano", options=anos, value=nav.ano)
+
+    # Ano em andamento precisa dizer que está em andamento. Sem isto o painel
+    # mente por omissão: em 2025 a incidência aparece como 0,83 contra 40,42
+    # em 2024, e a leitura natural é queda, não ano pela metade.
+    if (meses := _meses_com_dado(pack.DOENCA, nav.ano)) < 12:
+        st.warning(
+            f"**{nav.ano} está incompleto** — dado até {MESES[meses - 1] if meses else '—'}"
+            f" ({meses} de 12 meses). Não compare o total com anos fechados.",
+            icon=":material/schedule:",
+        )
 
     st.divider()
 
@@ -279,7 +301,7 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
 # 4 e a composição na 5. Ficam aqui para o layout ser exercitado desde já.
 esquerda, direita = st.columns(2, gap="small")
 
-with esquerda:
+with esquerda, resiliencia.painel("Mapa"):
     # O nível do escopo diz o que está selecionado; o mapa desenha um abaixo.
     # O que o mapa desenha depende do nível e, em PE, do recorte escolhido.
     recorte = nav.recorte if nav.tem_recortes_de_saude else "MUN"
@@ -373,148 +395,152 @@ with esquerda:
                     st.rerun()
 
 with direita:
-    controle_h, controle_d = st.columns([2, 1])
-    horizonte = controle_h.radio(
-        "Evolução temporal",
-        ["meses", "anos"],
-        format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
-        horizontal=True,
-        key="horizonte",
-    )
-    # Casos e incidência juntos é o gráfico que o original mostra para
-    # tuberculose. Fica como opção, não como padrão, porque só faz sentido
-    # para essas duas métricas.
-    duplo = controle_d.toggle("Casos + incidência", key="serie_dupla")
+    with resiliencia.painel("Evolução temporal"):
+        controle_h, controle_d = st.columns([2, 1])
+        horizonte = controle_h.radio(
+            "Evolução temporal",
+            ["meses", "anos"],
+            format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
+            horizontal=True,
+            key="horizonte",
+        )
+        # Casos e incidência juntos é o gráfico que o original mostra para
+        # tuberculose. Fica como opção, não como padrão, porque só faz sentido
+        # para essas duas métricas.
+        duplo = controle_d.toggle("Casos + incidência", key="serie_dupla")
 
-    if duplo:
-        serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
-        figura_serie = graficos.evolucao_dupla(
-            serie,
-            cor_barra=pack.cor("casos"),
-            cor_linha=pack.cor("incid"),
-            eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
-        )
-    else:
-        serie = _serie(
-            pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
-        )
-        rotulo = pack.rotulo(nav.metrica)
-        if serie.empty:
-            figura_serie = graficos.sem_dado(
-                f"{rotulo} ainda não tem série temporal"
-            )
-        elif horizonte == "meses":
-            figura_serie = graficos.evolucao_mensal(
-                serie, rotulo=rotulo, cor=pack.cor(nav.metrica)
+        if duplo:
+            serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
+            figura_serie = graficos.evolucao_dupla(
+                serie,
+                cor_barra=pack.cor("casos"),
+                cor_linha=pack.cor("incid"),
+                eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
             )
         else:
-            figura_serie = graficos.evolucao_anual(
-                serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano
+            serie = _serie(
+                pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
             )
+            rotulo = pack.rotulo(nav.metrica)
+            if serie.empty:
+                figura_serie = graficos.sem_dado(
+                    f"{rotulo} ainda não tem série temporal"
+                )
+            elif horizonte == "meses":
+                figura_serie = graficos.evolucao_mensal(
+                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica)
+                )
+            else:
+                figura_serie = graficos.evolucao_anual(
+                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano
+                )
 
-    st.altair_chart(figura_serie, use_container_width=True)
+        st.altair_chart(figura_serie, use_container_width=True)
 
-    # A série mensal vem por notificação e os KPIs por residência — ver
-    # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
-    # usuário descobrir somando as barras.
-    if horizonte == "meses":
-        st.caption(graficos.AVISO_NOTIFICACAO)
-
-    st.divider()
-
-    # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
-    # UFs, numa UF os municípios dela.
-    alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
-    st.caption(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}")
-
-    top_n = st.slider("Quantos exibir", 5, 30, 15, step=5, key="top_n")
-    tabela = _ranking(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n)
-
-    import altair as alt
-
-    escolha = alt.selection_point(name="barra", fields=["chave"], on="click")
-    evento_rank = st.altair_chart(
-        graficos.ranking(
-            tabela,
-            rotulo=pack.rotulo(nav.metrica),
-            cor=pack.cor(nav.metrica),
-            selecao=escolha,
-        ),
-        use_container_width=True,
-        on_select="rerun",
-        key=f"rank-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}-{top_n}",
-    )
-
-    if clicado := graficos.alvo_do_clique(evento_rank, "barra"):
-        # Clicar numa barra navega o mapa — o ranking responde a mesma
-        # máquina de estados, não tem navegação própria.
-        if nav.nivel == "BR" and clicado != nav.uf:
-            nav.entrar_uf(clicado)
-            st.rerun()
-        elif nav.nivel != "BR" and clicado != nav.mun:
-            nomes = _municipios(nav.uf)
-            if clicado in nomes:
-                nav.entrar_municipio(clicado, nome=nomes[clicado])
-                st.rerun()
+        # A série mensal vem por notificação e os KPIs por residência — ver
+        # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
+        # usuário descobrir somando as barras.
+        if horizonte == "meses":
+            st.caption(graficos.AVISO_NOTIFICACAO)
 
     st.divider()
+    with resiliencia.painel("Ranking"):
 
-    # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em
-    # nenhum parquet — a coluna existe só por sexo. Ver leitura.FONTE_PIRAMIDE.
-    st.caption("Pirâmide etária")
-    tipo = st.radio(
-        "O que exibir",
-        ["CASOS", "OBITOS"],
-        format_func=lambda t: {"CASOS": "Casos novos", "OBITOS": "Óbitos"}[t],
-        horizontal=True,
-        key="tipo_piramide",
-    )
+        # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
+        # UFs, numa UF os municípios dela.
+        alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
+        st.caption(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}")
 
-    dados_pir = _piramide(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, tipo)
+        top_n = st.slider("Quantos exibir", 5, 30, 15, step=5, key="top_n")
+        tabela = _ranking(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n)
 
-    # Só casos trazem população, então só eles podem virar taxa.
-    taxa = tipo == "CASOS" and st.toggle(
-        "Por 100 mil habitantes", key="piramide_taxa",
-        help="Desconta o tamanho de cada faixa etária na população.",
-    )
+        import altair as alt
 
-    st.altair_chart(
-        graficos.piramide(
-            dados_pir,
-            rotulo="Casos" if tipo == "CASOS" else "Óbitos",
-            por_100mil=bool(taxa),
-        ),
-        use_container_width=True,
-    )
-    if tipo == "OBITOS" and not dados_pir.empty:
-        st.caption(
-            "Óbitos por faixa etária vêm do SIM, não do SINAN — o total pode "
-            "divergir dos demais painéis."
+        escolha = alt.selection_point(name="barra", fields=["chave"], on="click")
+        evento_rank = st.altair_chart(
+            graficos.ranking(
+                tabela,
+                rotulo=pack.rotulo(nav.metrica),
+                cor=pack.cor(nav.metrica),
+                selecao=escolha,
+            ),
+            use_container_width=True,
+            on_select="rerun",
+            key=f"rank-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}-{top_n}",
         )
 
+        if clicado := graficos.alvo_do_clique(evento_rank, "barra"):
+            # Clicar numa barra navega o mapa — o ranking responde a mesma
+            # máquina de estados, não tem navegação própria.
+            if nav.nivel == "BR" and clicado != nav.uf:
+                nav.entrar_uf(clicado)
+                st.rerun()
+            elif nav.nivel != "BR" and clicado != nav.mun:
+                nomes = _municipios(nav.uf)
+                if clicado in nomes:
+                    nav.entrar_municipio(clicado, nome=nomes[clicado])
+                    st.rerun()
+
+    st.divider()
+    with resiliencia.painel("Pirâmide etária"):
+
+        # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em
+        # nenhum parquet — a coluna existe só por sexo. Ver leitura.FONTE_PIRAMIDE.
+        st.caption("Pirâmide etária")
+        tipo = st.radio(
+            "O que exibir",
+            ["CASOS", "OBITOS"],
+            format_func=lambda t: {"CASOS": "Casos novos", "OBITOS": "Óbitos"}[t],
+            horizontal=True,
+            key="tipo_piramide",
+        )
+
+        dados_pir = _piramide(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, tipo)
+
+        # Só casos trazem população, então só eles podem virar taxa.
+        taxa = tipo == "CASOS" and st.toggle(
+            "Por 100 mil habitantes", key="piramide_taxa",
+            help="Desconta o tamanho de cada faixa etária na população.",
+        )
+
+        st.altair_chart(
+            graficos.piramide(
+                dados_pir,
+                rotulo="Casos" if tipo == "CASOS" else "Óbitos",
+                por_100mil=bool(taxa),
+            ),
+            use_container_width=True,
+        )
+        if tipo == "OBITOS" and not dados_pir.empty:
+            st.caption(
+                "Óbitos por faixa etária vêm do SIM, não do SINAN — o total pode "
+                "divergir dos demais painéis."
+            )
+
 st.divider()
-st.caption("Composição por variável do SINAN")
+with resiliencia.painel("Composição"):
+    st.caption("Composição por variável do SINAN")
 
-_rotulos_var = pack.variaveis_planas()
-variavel = st.selectbox(
-    "Variável",
-    list(_rotulos_var),
-    format_func=lambda c: f"{pack.grupo_da(c)} · {_rotulos_var[c]}",
-    key="variavel_composicao",
-)
+    _rotulos_var = pack.variaveis_planas()
+    variavel = st.selectbox(
+        "Variável",
+        list(_rotulos_var),
+        format_func=lambda c: f"{pack.grupo_da(c)} · {_rotulos_var[c]}",
+        key="variavel_composicao",
+    )
 
-composto = _composicao(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, variavel)
-st.altair_chart(
-    graficos.composicao(
-        composto, rotulo=_rotulos_var[variavel], cor=pack.cor(nav.metrica)
-    ),
-    use_container_width=True,
-)
+    composto = _composicao(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, variavel)
+    st.altair_chart(
+        graficos.composicao(
+            composto, rotulo=_rotulos_var[variavel], cor=pack.cor(nav.metrica)
+        ),
+        use_container_width=True,
+    )
 
-# Base pequena não vira percentual — a decisão vem de `leitura.composicao`,
-# aqui só se explica ao usuário por que o eixo mudou.
-if not composto.empty and composto["pct"].isna().all():
-    st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
+    # Base pequena não vira percentual — a decisão vem de `leitura.composicao`,
+    # aqui só se explica ao usuário por que o eixo mudou.
+    if not composto.empty and composto["pct"].isna().all():
+        st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
 
 st.caption(
     "Divergências conhecidas entre fontes de dados: ver docs/contrato-dados.md."

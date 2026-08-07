@@ -51,6 +51,20 @@ ARQUIVOS_HETEROGENEOS = {
 }
 
 
+class ParticaoAusente(FileNotFoundError):
+    """A partição pedida não existe, mas o dataset sim.
+
+    Quase sempre é ano ainda não consolidado, não erro de configuração: o SIM
+    fecha bem depois do SINAN, então `cache_ts_sim_obitos` e `obitos_sim_faixa`
+    ficam um ano atrás de `incidence` o tempo todo. Quem consulta uma fonte
+    sujeita a essa defasagem trata isto como ausência de dado; os demais deixam
+    subir, porque aí é mesmo defeito.
+
+    Distinta de `FileNotFoundError` de dataset inexistente — aquele é
+    configuração errada e precisa gritar.
+    """
+
+
 def caminho(dataset: str, arquivo: str | None = None, **particoes) -> str:
     """Glob dos parquets de um dataset, podando partições pelo caminho.
 
@@ -84,6 +98,14 @@ def caminho(dataset: str, arquivo: str | None = None, **particoes) -> str:
         if valor is None:
             break
         base = base / f"{chave}={valor}"
+
+    # Sem isto o DuckDB devolve `IOException: No files found that match the
+    # pattern`, que não distingue ano não consolidado de caminho errado — e
+    # derrubava a página inteira ao mover o slider para 2025.
+    if particoes and not base.is_dir():
+        raise ParticaoAusente(
+            f"Dataset '{dataset}' não tem a partição {particoes}: {base} não existe."
+        )
 
     esperados = ARQUIVOS_HETEROGENEOS.get(dataset)
     if esperados:

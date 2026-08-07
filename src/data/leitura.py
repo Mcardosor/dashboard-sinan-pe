@@ -15,7 +15,7 @@ from __future__ import annotations
 import pandas as pd
 
 from . import config
-from .conexao import caminho, conectar
+from .conexao import ParticaoAusente, caminho, conectar
 from .escopo import Escopo, mun6
 
 
@@ -71,13 +71,21 @@ def incidencia_0_14(esc: Escopo) -> dict:
 
 
 def obitos_sim(esc: Escopo) -> float | None:
-    """Óbitos do SIM no recorte — a fonte real de mortalidade."""
-    fonte = caminho(
-        "cache_ts_sim_obitos",
-        nivel=esc.nivel,
-        doenca=config.cod_sim(esc.doenca),
-        ano=esc.ano,
-    )
+    """Óbitos do SIM no recorte — a fonte real de mortalidade.
+
+    Devolve ``None`` quando o ano ainda não fechou no SIM, que fica um ano
+    atrás do SINAN. Sem isto, arrastar o slider para o ano corrente derrubava
+    a página com um erro de arquivo não encontrado.
+    """
+    try:
+        fonte = caminho(
+            "cache_ts_sim_obitos",
+            nivel=esc.nivel,
+            doenca=config.cod_sim(esc.doenca),
+            ano=esc.ano,
+        )
+    except ParticaoAusente:
+        return None
     sql = f"SELECT sum(casos_obitos) FROM read_parquet('{fonte}', hive_partitioning=true)"
     params: list = []
     if esc.nivel == "UF":
@@ -205,13 +213,19 @@ def obitos_por_faixa(esc: Escopo) -> pd.DataFrame:
 
     Este dataset só existe no nível MUN — não há partições de UF nem de BR.
     A agregação para os níveis acima é feita aqui, filtrando por ``cod_uf``.
+
+    Devolve vazio quando o ano ainda não fechou no SIM — mesma defasagem de
+    :func:`obitos_sim`.
     """
-    fonte = caminho(
-        "obitos_sim_faixa",
-        doenca=config.cod_sim(esc.doenca),
-        nivel="MUN",
-        ano=esc.ano,
-    )
+    try:
+        fonte = caminho(
+            "obitos_sim_faixa",
+            doenca=config.cod_sim(esc.doenca),
+            nivel="MUN",
+            ano=esc.ano,
+        )
+    except ParticaoAusente:
+        return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "obitos"])
     sql = f"""
         SELECT sexo, faixa_ord, faixa_etaria, sum(obitos_sim) AS obitos
         FROM read_parquet('{fonte}', hive_partitioning=true)
@@ -640,3 +654,28 @@ def composicao(esc: Escopo, variavel: str) -> pd.DataFrame:
         .sort_values("n", ascending=False)
         .reset_index(drop=True)
     )
+
+
+def meses_com_dado(doenca: str, ano: int) -> int:
+    """Quantos meses do ano já têm notificação, no Brasil.
+
+    Serve para marcar ano parcial. Sem esse aviso o painel mente por omissão:
+    em 2025 a incidência aparece como 0,83 contra 40,42 em 2024, e quem olha
+    conclui que a tuberculose despencou, não que o ano está pela metade.
+    """
+    try:
+        fonte = caminho(
+            "_cache_ts",
+            nivel="BR",
+            doenca=config.cod_agregado(doenca),
+            ano=int(ano),
+        )
+    except ParticaoAusente:
+        return 0
+    sql = f"""
+        SELECT count(DISTINCT mes)
+        FROM read_parquet('{fonte}', hive_partitioning=true)
+        WHERE casos > 0
+    """
+    linha = conectar().execute(sql).fetchone()
+    return int(linha[0]) if linha and linha[0] else 0
