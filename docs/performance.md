@@ -76,3 +76,40 @@ A pior sobreposição restante equivale a **0,06 pixel²** num mapa do Brasil de
 800px de largura. Custa cerca de 1,5 s por UF na geração, uma vez só.
 
 Limites monitorados em `tests/test_geo.py`.
+
+---
+
+## O payload do mapa — risco aberto, medido em 07/ago/2026
+
+O `GeoJsonLayer` do deck.gl recebe a geometria **embutida no JSON do
+componente**. Cada renderização do mapa reenvia o mosaico inteiro ao
+navegador:
+
+| Recorte | Payload | A 10 Mbit/s |
+|---|---:|---:|
+| Brasil (27 UFs) | 0,85 MB | 0,7 s |
+| PE (185 municípios) | 0,53 MB | 0,4 s |
+| **MG (853 municípios)** | **2,76 MB** | **2,2 s** |
+
+E não é só na primeira carga: o spec muda a cada navegação e a cada troca de
+métrica — as cores fazem parte dele —, então o mosaico volta pela rede toda
+vez que alguém clica.
+
+**Por que isso importa mais do que parece.** Em `localhost` o custo é zero, e
+foi em `localhost` que medimos os 754 ms que hoje sustentam a comparação com
+o painel em R. Sobre uma rede real, MG sozinho gasta mais tempo transferindo
+mapa do que o round-trip inteiro que medimos no painel deles. A meta de
+performance pode evaporar exatamente no recorte mais pesado, e nenhum teste
+local mostraria isso.
+
+**Caminhos, do mais barato ao mais caro:**
+
+1. Simplificar mais a malha nos níveis com muitos polígonos — hoje a
+   tolerância é a mesma para 27 UFs e para 853 municípios.
+2. Servir a geometria uma vez e mandar só as cores nas renderizações
+   seguintes. É o ganho grande e a mudança maior: exige separar geometria de
+   dado no componente.
+3. Aceitar e medir. Se a rede do servidor for rápida, 2,76 MB pode custar
+   pouco — mas isso é uma medição, não uma suposição.
+
+Só a opção 3 depende de servidor. As outras duas dão para atacar antes.
