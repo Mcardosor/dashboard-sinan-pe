@@ -109,6 +109,11 @@ def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, to
     return leitura.ranking(Escopo(doenca, ano, nivel, uf=uf), metrica, top_n)
 
 
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _piramide(doenca, ano, nivel, uf, mun, tipo):
+    return leitura.piramide_completa(Escopo(doenca, ano, nivel, uf=uf, mun=mun), tipo)
+
+
 @st.cache_data(ttl=3600)
 def _municipios(uf: str) -> dict[str, str]:
     """Código de 6 dígitos → nome, para o seletor e para a trilha."""
@@ -443,10 +448,40 @@ with direita:
                 nav.entrar_municipio(clicado, nome=nomes[clicado])
                 st.rerun()
 
-    st.markdown(
-        ui.painel_vazio("Pirâmide etária", "Entra ainda esta semana"),
-        unsafe_allow_html=True,
+    st.divider()
+
+    # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em
+    # nenhum parquet — a coluna existe só por sexo. Ver leitura.FONTE_PIRAMIDE.
+    st.caption("Pirâmide etária")
+    tipo = st.radio(
+        "O que exibir",
+        ["CASOS", "OBITOS"],
+        format_func=lambda t: {"CASOS": "Casos novos", "OBITOS": "Óbitos"}[t],
+        horizontal=True,
+        key="tipo_piramide",
     )
+
+    dados_pir = _piramide(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, tipo)
+
+    # Só casos trazem população, então só eles podem virar taxa.
+    taxa = tipo == "CASOS" and st.toggle(
+        "Por 100 mil habitantes", key="piramide_taxa",
+        help="Desconta o tamanho de cada faixa etária na população.",
+    )
+
+    st.altair_chart(
+        graficos.piramide(
+            dados_pir,
+            rotulo="Casos" if tipo == "CASOS" else "Óbitos",
+            por_100mil=bool(taxa),
+        ),
+        use_container_width=True,
+    )
+    if tipo == "OBITOS" and not dados_pir.empty:
+        st.caption(
+            "Óbitos por faixa etária vêm do SIM, não do SINAN — o total pode "
+            "divergir dos demais painéis."
+        )
 
 st.markdown(
     ui.painel_vazio("Composição por variável do SINAN", "Entra na semana 5"),

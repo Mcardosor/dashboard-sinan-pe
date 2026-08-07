@@ -221,3 +221,81 @@ def evolucao_dupla(
     )
 
     return tema(alt.layer(barras, linha).resolve_scale(y="independent"))
+
+
+#: Cores dos dois lados da pirâmide. Deliberadamente não é rosa e azul: a
+#: convenção de gênero por cor é ruído num gráfico epidemiológico, e o azul
+#: já está tomado pela métrica de mortalidade.
+COR_HOMENS = "#1C5D99"
+COR_MULHERES = "#B8860B"
+
+
+def piramide(
+    dados: pd.DataFrame, *, rotulo: str, por_100mil: bool = False
+) -> alt.Chart:
+    """Pirâmide etária: homens à esquerda, mulheres à direita.
+
+    Escala única. A tentação é desenhar a população como barra de fundo, no
+    estilo IBGE, mas população e casos diferem em três ordens de grandeza —
+    o fundo só cabe junto com um segundo eixo x, e aí o comprimento de uma
+    barra não diz nada sobre a outra. Quem quer o efeito da estrutura etária
+    usa ``por_100mil``, que é a leitura correta e cabe num eixo só.
+    """
+    if dados.empty:
+        return sem_dado("Sem dado por faixa etária para este recorte")
+
+    base = dados.copy()
+    if por_100mil:
+        pop = pd.to_numeric(base["pop"], errors="coerce")
+        base["valor"] = (base["valor"] / pop * 100_000).where(pop > 0)
+        base = base.dropna(subset=["valor"])
+        if base.empty:
+            return sem_dado("Sem população para calcular a taxa")
+        rotulo = f"{rotulo} por 100 mil hab."
+
+    base["lado"] = base["sexo"].map({"M": -1, "F": 1}).fillna(1)
+    base["sexo_rotulo"] = base["sexo"].map({"M": "Homens", "F": "Mulheres"})
+    base["evento"] = base["valor"] * base["lado"]
+
+    faixas = [f for _, f in sorted({(r.faixa_ord, r.faixa_etaria) for r in base.itertuples()})]
+    formato = ",.1f" if por_100mil else ",.0f"
+
+    # Domínio simétrico. Em tuberculose os homens somam quase o triplo das
+    # mulheres, e sem isso o eixo cresce só para a esquerda: a pirâmide fica
+    # torta e o excesso masculino, que é o achado, vira efeito de escala.
+    limite = float(base["evento"].abs().max()) or 1.0
+    dominio = [-limite, limite]
+
+    grafico = (
+        alt.Chart(base)
+        .mark_bar()
+        .encode(
+            # Sem sinal no eixo: o lado já diz o sexo, e "-500 casos" não existe.
+            x=alt.X(
+                "evento:Q",
+                title=rotulo,
+                scale=alt.Scale(domain=dominio, nice=False),
+                axis=alt.Axis(labelExpr=f"format(abs(datum.value), '{formato}')"),
+            ),
+            y=alt.Y(
+                "faixa_etaria:N",
+                sort=list(reversed(faixas)),
+                title=None,
+                # Sem isso o Altair rareia os rótulos e some com faixas.
+                axis=alt.Axis(labelOverlap=False),
+            ),
+            color=alt.Color(
+                "sexo_rotulo:N",
+                scale=alt.Scale(
+                    domain=["Homens", "Mulheres"], range=[COR_HOMENS, COR_MULHERES]
+                ),
+                legend=alt.Legend(title=None),
+            ),
+            tooltip=[
+                alt.Tooltip("faixa_etaria:N", title="Faixa"),
+                alt.Tooltip("sexo_rotulo:N", title="Sexo"),
+                alt.Tooltip("valor:Q", title=rotulo, format=formato),
+            ],
+        )
+    )
+    return tema(grafico, altura=max(280, 30 * len(faixas)))

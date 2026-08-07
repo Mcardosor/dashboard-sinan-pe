@@ -531,3 +531,71 @@ def serie_dupla(esc: Escopo, horizonte: str = "meses") -> pd.DataFrame:
     return casos.rename(columns={"valor": "casos"}).merge(
         incid.rename(columns={"valor": "incid"}), on="ano"
     )
+
+
+#: Ordem canônica das faixas, vinda de `piramides`. `obitos_sim_faixa` usa os
+#: mesmos códigos e rótulos, só não traz linha onde não houve óbito.
+FAIXAS = (
+    (0, "0 a 4 anos"), (5, "5 a 9 anos"), (10, "10 a 14 anos"),
+    (15, "15 a 19 anos"), (20, "20 a 29 anos"), (30, "30 a 39 anos"),
+    (40, "40 a 49 anos"), (50, "50 a 59 anos"), (60, "60 a 69 anos"),
+    (70, "70 a 79 anos"), (80, "80 anos ou mais"),
+)
+
+#: Tipos de pirâmide e de onde cada um vem hoje.
+#:
+#: `piramides` traz CURA e OBITOS zerados para tuberculose — o dado existe na
+#: fonte (54.323 curas e 6.668 óbitos no país em 2024, com sexo e idade em mais
+#: de 99,9%), mas some no pipeline. Ver docs/perguntas-equipe-r.md.
+#:
+#: Óbitos têm alternativa local: `obitos_sim_faixa`, do SIM. É outra fonte —
+#: SIM em vez de SINAN — e por isso o total difere do card, que vem de
+#: `cache_ts_sim_obitos`, também do SIM mas com outro corte geográfico.
+#:
+#: Cura não tem: `incidence` quebra por sexo mas não por idade, e
+#: `incidence_0_14` cobre só uma faixa. Precisa do banco.
+FONTE_PIRAMIDE = {
+    "CASOS": "piramides",
+    "OBITOS": "obitos_sim_faixa",
+    "CURA": None,
+}
+
+
+def piramide_completa(esc: Escopo, tipo: str = "CASOS") -> pd.DataFrame:
+    """Pirâmide etária por sexo, com todas as faixas.
+
+    Devolve ``sexo``, ``faixa_ord``, ``faixa_etaria``, ``valor`` e ``pop``,
+    com as onze faixas sempre presentes — faixa sem registro entra zerada,
+    para a pirâmide não ficar com degraus faltando.
+    """
+    tipo = str(tipo or "CASOS").strip().upper()
+    if tipo not in FONTE_PIRAMIDE:
+        raise ValueError(f"Tipo inválido: {tipo!r}. Esperado {sorted(FONTE_PIRAMIDE)}.")
+
+    if FONTE_PIRAMIDE[tipo] is None:
+        return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"])
+
+    if tipo == "CASOS":
+        bruto = piramide(esc, "CASOS")
+        if bruto.empty:
+            return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"])
+        base = bruto[["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"]]
+    else:
+        bruto = obitos_por_faixa(esc)
+        if bruto.empty:
+            return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"])
+        base = bruto.rename(columns={"obitos": "valor"}).assign(pop=pd.NA)
+
+    # Completa as faixas ausentes com zero, por sexo.
+    completo = pd.DataFrame(
+        [
+            {"sexo": s, "faixa_ord": ordem, "faixa_etaria": rotulo}
+            for s in sorted(base["sexo"].dropna().unique())
+            for ordem, rotulo in FAIXAS
+        ]
+    )
+    juncao = completo.merge(
+        base, on=["sexo", "faixa_ord", "faixa_etaria"], how="left"
+    )
+    juncao["valor"] = juncao["valor"].fillna(0)
+    return juncao.sort_values(["faixa_ord", "sexo"]).reset_index(drop=True)
