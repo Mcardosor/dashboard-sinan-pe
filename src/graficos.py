@@ -299,3 +299,56 @@ def piramide(
         )
     )
     return tema(grafico, altura=max(280, 30 * len(faixas)))
+
+
+def composicao(dados: pd.DataFrame, *, rotulo: str, cor: str) -> alt.Chart:
+    """Distribuição de uma variável do SINAN, em barras horizontais.
+
+    Mostra percentual quando a base sustenta e contagem quando não — a
+    decisão vem pronta da camada de dados, em ``leitura.composicao``, que
+    anula ``pct`` abaixo do limiar. Aqui só se obedece.
+    """
+    if dados.empty:
+        return sem_dado("Sem registro desta variável no recorte")
+
+    base = dados.copy()
+    percentual = "pct" in base.columns and base["pct"].notna().any()
+
+    if percentual:
+        base["valor"] = pd.to_numeric(base["pct"], errors="coerce")
+        # Inteiro no eixo, decimal só no tooltip: com passo de 2% o eixo
+        # ganhava 28 marcações e virava uma régua.
+        titulo_x, formato = "% dos casos", ".0f"
+    else:
+        base["valor"] = pd.to_numeric(base["n"], errors="coerce")
+        titulo_x, formato = "Casos", ",.0f"
+
+    ordem = base.sort_values("valor", ascending=False)["categoria"].tolist()
+
+    grafico = (
+        alt.Chart(base)
+        .mark_bar(color=cor, cornerRadiusTopRight=2, cornerRadiusBottomRight=2)
+        .encode(
+            x=alt.X(
+                "valor:Q",
+                title=titulo_x,
+                axis=alt.Axis(format=formato, tickCount=6),
+            ),
+            y=alt.Y("categoria:N", sort=ordem, title=None,
+                    axis=alt.Axis(labelLimit=220, labelOverlap=False)),
+            tooltip=[
+                alt.Tooltip("categoria:N", title=rotulo),
+                alt.Tooltip("n:Q", title="Casos", format=",.0f"),
+            ] + ([alt.Tooltip("pct:Q", title="% dos casos", format=".1f")]
+                 if percentual else []),
+        )
+    )
+    return tema(grafico, altura=max(200, 34 * len(base)))
+
+
+#: Aviso de base pequena. O texto evita "suprimido", que sugere censura: o
+#: motivo é estatístico, e a contagem continua à vista.
+AVISO_BASE_PEQUENA = (
+    "Base pequena ({n} registros) — exibindo a contagem, não o percentual. "
+    "Proporção sobre tão poucos casos não é interpretável."
+)

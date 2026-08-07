@@ -494,3 +494,41 @@ def painel_vazio(titulo: str, aviso: str, *, mapa: bool = False) -> str:
         f'<div class="sinan-painel {variante} sinan-painel-vazio">'
         f"<div><strong>{escape(titulo)}</strong><br>{escape(aviso)}</div></div>"
     )
+
+
+#: Seletor do contêiner do mapa no DOM do Streamlit.
+SELETOR_MAPA = '[data-testid="stDeckGlJsonChart"]'
+
+
+def script_travar_zoom() -> str:
+    """Impede a roda do mouse de dar zoom no mapa.
+
+    O caminho declarativo não existe: o ``DeckGlJsonChart`` do Streamlit passa
+    ``controller={true}`` fixo para o ``<DeckGL>`` e descarta o que vier no
+    JSON do pydeck. Sem isto, rolar a página com o cursor sobre o mapa aplica
+    zoom, o enquadramento se perde e só recarregando volta — e o mapa ocupa
+    metade da tela, então acontece o tempo todo.
+
+    A interceptação é na fase de captura, antes de o evento descer até o
+    deck.gl, e **sem** ``preventDefault``: a rolagem normal da página segue
+    acontecendo. Só o zoom morre.
+
+    Precisa rodar via ``st.components.v1.html`` — o ``st.markdown`` remove
+    ``<script>``. O componente vira um iframe de mesma origem, daí o
+    ``window.parent``.
+    """
+    return f"""
+<script>
+(function () {{
+  var doc = window.parent && window.parent.document;
+  if (!doc || doc.__travaZoomMapa) return;   // idempotente: o Streamlit
+  doc.__travaZoomMapa = true;                // reexecuta o script a cada rerun
+  doc.addEventListener('wheel', function (e) {{
+    var alvo = (e.target && e.target.closest) ? e.target : null;
+    if (alvo && alvo.closest('{SELETOR_MAPA}')) {{
+      e.stopPropagation();
+    }}
+  }}, {{ capture: true, passive: true }});
+}})();
+</script>
+"""

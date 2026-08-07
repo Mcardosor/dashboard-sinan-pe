@@ -98,11 +98,14 @@ Comportamento:
 
 ## Faixa de composição
 
-- [ ] Grid de 2 colunas, barras por variável SINAN
-- [ ] Variáveis do pack de TB: `TRATAMENTO`, `HIV`, `FORMA`, `CS_RACA`,
-      `AGRAVALCOO`, `SITUA_ENCE`, `POP_RUA`, `POP_SAUDE`, `AGRAVDROGAS`, `AGRAVTABACO`
-- [ ] Rótulos amigáveis do pack
-- [ ] Filtragem por **código**, nunca por `valor_lbl`
+- [x] Seletor + barras horizontais por variável do SINAN
+- [x] **24 variáveis** em 5 grupos, contra 9 no painel de PE e 7 no nacional.
+      O dado já está nos mesmos parquets; só entram as que dá para rotular
+      com segurança. `AGRAVDROGAS` e `AGRAVTABACO`, que o pack listava, **não
+      existem** nos dados — o catálogo antigo nunca tinha sido exercitado
+- [x] Rótulos amigáveis do pack, agrupados no seletor
+- [x] Filtragem por **código**, nunca por `valor_lbl`
+- [x] Percentual suprimido abaixo de 5 registros — ver `leitura.composicao`
 
 ## Transversal
 

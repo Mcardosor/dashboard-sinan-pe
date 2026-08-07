@@ -110,6 +110,11 @@ def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, to
 
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _composicao(doenca, ano, nivel, uf, mun, variavel):
+    return leitura.composicao(Escopo(doenca, ano, nivel, uf=uf, mun=mun), variavel)
+
+
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
 def _piramide(doenca, ano, nivel, uf, mun, tipo):
     return leitura.piramide_completa(Escopo(doenca, ano, nivel, uf=uf, mun=mun), tipo)
 
@@ -147,6 +152,10 @@ def _navegacao() -> Navegacao:
 
 st.markdown(ui.css_base(), unsafe_allow_html=True)
 st.markdown(ui.css_layout(), unsafe_allow_html=True)
+
+# Precisa ser `components.v1.html`, não `st.markdown`: o markdown remove
+# `<script>`. Altura zero — o iframe existe só para rodar o script.
+st.components.v1.html(ui.script_travar_zoom(), height=0)
 
 nav = _navegacao()
 anos = _anos()
@@ -483,10 +492,29 @@ with direita:
             "divergir dos demais painéis."
         )
 
-st.markdown(
-    ui.painel_vazio("Composição por variável do SINAN", "Entra na semana 5"),
-    unsafe_allow_html=True,
+st.divider()
+st.caption("Composição por variável do SINAN")
+
+_rotulos_var = pack.variaveis_planas()
+variavel = st.selectbox(
+    "Variável",
+    list(_rotulos_var),
+    format_func=lambda c: f"{pack.grupo_da(c)} · {_rotulos_var[c]}",
+    key="variavel_composicao",
 )
+
+composto = _composicao(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, variavel)
+st.altair_chart(
+    graficos.composicao(
+        composto, rotulo=_rotulos_var[variavel], cor=pack.cor(nav.metrica)
+    ),
+    use_container_width=True,
+)
+
+# Base pequena não vira percentual — a decisão vem de `leitura.composicao`,
+# aqui só se explica ao usuário por que o eixo mudou.
+if not composto.empty and composto["pct"].isna().all():
+    st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
 
 st.caption(
     "Divergências conhecidas entre fontes de dados: ver docs/contrato-dados.md."

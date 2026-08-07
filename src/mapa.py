@@ -183,31 +183,41 @@ def deck(
         highlight_color=[255, 255, 255, 60],
     )
 
-    return (
-        pydeck.Deck(
-            layers=[camada_geo],
-            initial_view_state=pydeck.ViewState(
-                latitude=quadro["center"]["lat"],
-                longitude=quadro["center"]["lon"],
-                zoom=quadro["zoom"],
-                bearing=0,
-                pitch=0,
-                height=altura,
-            ),
-            map_provider=None,
-            tooltip={
-                "html": f"<b>{{rotulo}}</b><br>{rotulo_metrica}: {{exibicao}}",
-                "style": {
-                    "backgroundColor": "rgba(17,24,39,.96)",
-                    "color": "#fff",
-                    "fontSize": "12px",
-                    "borderRadius": "10px",
-                    "padding": "6px 8px",
-                },
-            },
+    mapa_deck = pydeck.Deck(
+        layers=[camada_geo],
+        views=[pydeck.View(type="MapView", controller=False)],
+        initial_view_state=pydeck.ViewState(
+            latitude=quadro["center"]["lat"],
+            longitude=quadro["center"]["lon"],
+            zoom=quadro["zoom"],
+            bearing=0,
+            pitch=0,
+            height=altura,
         ),
-        escala,
+        map_provider=None,
+        tooltip={
+            "html": f"<b>{{rotulo}}</b><br>{rotulo_metrica}: {{exibicao}}",
+            "style": {
+                "backgroundColor": "rgba(17,24,39,.96)",
+                "color": "#fff",
+                "fontSize": "12px",
+                "borderRadius": "10px",
+                "padding": "6px 8px",
+            },
+        },
     )
+
+    # Declara o mapa travado nos dois lugares do spec — mas saiba que **isto
+    # sozinho não funciona no Streamlit**. O `DeckGlJsonChart` renderiza
+    # `<DeckGL controller={true}>` fixo no componente React e ignora o que vem
+    # no JSON (conferido no bundle: `controller:!0`). Fica aqui porque é a
+    # declaração correta, vale se o mapa for renderizado fora do Streamlit, e
+    # volta a valer sozinha no dia em que eles pararem de sobrescrever.
+    #
+    # Quem de fato trava é `componentes.script_travar_zoom`, no DOM.
+    mapa_deck.controller = False
+
+    return mapa_deck, escala
 
 
 def legenda(escala: Escala, titulo: str) -> str:

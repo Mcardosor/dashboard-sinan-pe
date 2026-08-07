@@ -599,3 +599,44 @@ def piramide_completa(esc: Escopo, tipo: str = "CASOS") -> pd.DataFrame:
     )
     juncao["valor"] = juncao["valor"].fillna(0)
     return juncao.sort_values(["faixa_ord", "sexo"]).reset_index(drop=True)
+
+
+#: Abaixo deste total, o percentual não é calculado.
+#:
+#: Não é uma regra de privacidade que alguém nos impôs — é que percentual de
+#: base minúscula não significa nada. "100% dos casos são do sexo masculino"
+#: apoiado numa pessoa é ruído apresentado como achado, e num município com
+#: um caso no ano — 993 dos 4.148 com notificação em 2024 — o cruzamento de
+#: município, sexo, idade e agravo deixa de ser agregado na prática.
+#:
+#: A supressão fica aqui, e não no gráfico, para que nenhum consumidor da
+#: camada de dados consiga exibir o percentual por engano.
+MINIMO_PARA_PERCENTUAL = 5
+
+
+def composicao(esc: Escopo, variavel: str) -> pd.DataFrame:
+    """Distribuição de uma variável do SINAN, com percentual quando cabe.
+
+    Devolve ``categoria``, ``n``, ``pct`` e ``total``. ``pct`` vem nulo
+    inteiro quando ``total`` não alcança :data:`MINIMO_PARA_PERCENTUAL` — aí
+    só a contagem é publicável.
+    """
+    bruto = variavel_sinan(esc, variavel)
+    if bruto.empty:
+        return pd.DataFrame(columns=["categoria", "n", "pct", "total"])
+
+    dados = bruto.rename(columns={"valor_lbl": "categoria"})[["categoria", "n"]]
+    dados = dados.dropna(subset=["categoria"])
+    dados["n"] = pd.to_numeric(dados["n"], errors="coerce").fillna(0)
+    dados = dados[dados["n"] > 0]
+    if dados.empty:
+        return pd.DataFrame(columns=["categoria", "n", "pct", "total"])
+
+    total = float(dados["n"].sum())
+    dados["pct"] = (dados["n"] / total * 100) if total >= MINIMO_PARA_PERCENTUAL else pd.NA
+    dados["total"] = total
+    return (
+        dados[["categoria", "n", "pct", "total"]]
+        .sort_values("n", ascending=False)
+        .reset_index(drop=True)
+    )

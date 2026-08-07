@@ -87,26 +87,6 @@ PALETA_LINHAS = (
     "#9A3412", "#B45309", "#D97706", "#A16207", "#431407",
 )
 
-#: Variáveis do SINAN exibidas no painel de composição.
-VARIAVEIS_COMPOSICAO = (
-    "TRATAMENTO", "HIV", "FORMA", "CS_RACA", "AGRAVALCOO",
-    "SITUA_ENCE", "POP_RUA", "POP_SAUDE", "AGRAVDROGAS", "AGRAVTABACO",
-)
-
-ROTULOS_COMPOSICAO = {
-    "TRATAMENTO": "Tipo de tratamento",
-    "HIV": "Coinfecção HIV",
-    "FORMA": "Forma clínica da tuberculose",
-    "CS_RACA": "Raça/Cor",
-    "AGRAVALCOO": "Agravo: alcoolismo",
-    "SITUA_ENCE": "Situação de encerramento",
-    "POP_RUA": "População em situação de rua",
-    "POP_SAUDE": "Profissional de saúde",
-    "AGRAVDROGAS": "Agravo: uso de drogas",
-    "AGRAVTABACO": "Agravo: tabagismo",
-}
-
-
 def cor(metrica: str) -> str:
     return CORES.get(metrica, CORES["secondary"])
 
@@ -122,3 +102,74 @@ def rampa_mapa(metrica: str) -> list[str]:
     """
     explicita = PALETA_MAPA.get(metrica)
     return list(explicita) if explicita else cores.rampa(cor(metrica))
+
+
+#: Variáveis do SINAN oferecidas no painel de composição, agrupadas.
+#:
+#: O painel em R expõe nove; aqui são vinte e quatro, porque o dado já está
+#: nos mesmos parquets e não custa nada a mais. Só entram as que dá para
+#: rotular com segurança — errar o nome de uma variável de saúde é pior que
+#: omiti-la.
+#:
+#: Ficam de fora, de propósito:
+#: - ``NU_COMU_EX`` (contatos examinados) e ``EXTRAPUL_O``: numéricas, com 141
+#:   e 1.587 valores distintos. O painel deles mostra a primeira; viraria uma
+#:   parede de barras.
+#: - ``BACILOSC_1``..``BACILOSC_6``: baciloscopia de acompanhamento mês a mês,
+#:   redundante com ``BACILOSC_E``.
+#: - ``MIGRADO_W``, ``NDUPLIC_N``, ``MUN_TRANSF``, ``AGRAVOUTDE``: controle do
+#:   sistema, ou volume pequeno demais para significar algo.
+#: - ``IN_VINCULA``: rótulos ambíguos ("vinculado"/"não vinculado") sem
+#:   documentação que permita explicar ao usuário o que está sendo contado.
+VARIAVEIS: dict[str, dict[str, str]] = {
+    "Perfil": {
+        "CS_RACA": "Raça/cor",
+        "CS_ESCOL_N": "Escolaridade",
+        "CS_GESTANT": "Gestante",
+    },
+    "Populações específicas": {
+        "POP_RUA": "População em situação de rua",
+        "POP_LIBER": "População privada de liberdade",
+        "POP_IMIG": "População imigrante",
+        "POP_SAUDE": "Profissional de saúde",
+        "BENEF_GOV": "Beneficiário de programa do governo",
+    },
+    "Agravos associados": {
+        "AGRAVAIDS": "Agravo: aids",
+        "AGRAVALCOO": "Agravo: alcoolismo",
+        "AGRAVDIABE": "Agravo: diabetes",
+        "AGRAVDOENC": "Agravo: doença mental",
+        "AGRAVOUTRA": "Agravo: outro",
+    },
+    "Clínica e diagnóstico": {
+        "FORMA": "Forma clínica",
+        "HIV": "Coinfecção HIV",
+        "BACILOSC_E": "Baciloscopia de escarro",
+        "CULTURA_ES": "Cultura de escarro",
+        "RAIOX_TORA": "Raio-X de tórax",
+        "HISTOPATOL": "Histopatologia",
+    },
+    "Tratamento e desfecho": {
+        # No SINAN o campo é o tipo de *entrada* — as categorias são "Caso
+        # novo", "Pós-óbito", "Não sabe". O painel em R chama de "Tipo de
+        # tratamento", que descreve mal o que está ali.
+        "TRATAMENTO": "Tipo de entrada",
+        "TRATSUP_AT": "Tratamento diretamente observado",
+        "SITUA_ENCE": "Situação de encerramento",
+        "DOENCA_TRA": "Doença relacionada ao trabalho",
+        "TRANSF": "Transferência",
+    },
+}
+
+
+def variaveis_planas() -> dict[str, str]:
+    """``código -> rótulo``, na ordem dos grupos."""
+    return {c: r for grupo in VARIAVEIS.values() for c, r in grupo.items()}
+
+
+def grupo_da(codigo: str) -> str:
+    """Grupo a que a variável pertence, para agrupar o seletor."""
+    for grupo, itens in VARIAVEIS.items():
+        if codigo in itens:
+            return grupo
+    return "Outras"

@@ -209,12 +209,12 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 - [ ] Cultura em casos de retratamento (`indicadores_tb_cultura_retratamento`)
 - [ ] Contatos identificados vs examinados (`indicadores_tb_contatos`)
 
-### 5.2 Painel de composição
-- [ ] Grid de 2 colunas com barras por variável SINAN
-- [ ] As 11 variáveis do pack de TB: `TRATAMENTO`, `HIV`, `FORMA`, `CS_RACA`,
-      `AGRAVALCOO`, `SITUA_ENCE`, `POP_RUA`, `POP_SAUDE`, `AGRAVDROGAS`, `AGRAVTABACO`
-- [ ] Rótulos amigáveis vindos do pack
-- [ ] Usar o **código**, nunca o `valor_lbl` — os rótulos vêm reagrupados (óbito e abandono ambos como "Desfavorável")
+### 5.2 Painel de composição — **feito, adiantado da semana 5**
+- [x] Seletor agrupado + barras horizontais por variável do SINAN
+- [x] 24 variáveis, contra 9 do painel de PE — o dado já estava em disco
+- [x] Rótulos amigáveis vindos do pack
+- [x] Usar o **código**, nunca o `valor_lbl` — os rótulos vêm reagrupados (óbito e abandono ambos como "Desfavorável")
+- [x] Supressão do percentual em base pequena, na camada de dados
 
 ### 5.3 Filtro de grau de incapacidade
 - [ ] Descoberta das opções em runtime
