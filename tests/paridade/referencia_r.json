@@ -1,0 +1,37 @@
+{
+  "_origem": "Lido da tela dos dashboards em R em 2026-08-07, com o ano fixado em 2024 (fechado). Brasil: https://cenariostb.unb.br/TB_BR/ · Pernambuco: https://cenariostb.unb.br/TB_PE/ (exige login).",
+  "_metodo": "Valores extraídos do DOM dos cards de KPI, não recalculados. São o que o painel deles mostra ao usuário, que é o alvo da paridade.",
+  "recortes": [
+    {
+      "nivel": "BR",
+      "uf": null,
+      "ano": 2024,
+      "kpis": {
+        "casos": 113651,
+        "incid": 53.46,
+        "obitos": 6347,
+        "mortalidade": 3.0,
+        "cura": 59565,
+        "letalidade": 5.6
+      }
+    },
+    {
+      "nivel": "UF",
+      "uf": "PE",
+      "ano": 2024,
+      "kpis": {
+        "casos": 7438,
+        "incid": 77.97,
+        "mortalidade": 5.0,
+        "cura": 3371,
+        "hiv_pos_pct": 13.9,
+        "interrupcao_trat_pct": 11.9
+      },
+      "denominadores": {
+        "hiv_testados": 8250,
+        "encerramentos": 8700,
+        "abandono": 1034
+      }
+    }
+  ]
+}

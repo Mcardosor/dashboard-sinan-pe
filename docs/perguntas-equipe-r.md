@@ -129,6 +129,52 @@ do dashboard de vocês sai de onde — do SINAN ou do SIM?
 
 ---
 
+## 5. De onde sai o card "Casos novos"? — A PERGUNTA MAIS IMPORTANTE
+
+Comparamos os KPIs contra a tela dos dois painéis de vocês, com o ano fixado
+em 2024. O resultado tem um padrão muito nítido.
+
+**Bate no número exato:**
+
+| KPI | Nosso | Painel de vocês |
+|---|---|---|
+| Taxa de mortalidade (PE) | 4,98 | 5,0 |
+| HIV positivo na testagem (PE) | 13,89% | 13,9% |
+| — testados no denominador | 8.250 | 8.250 |
+| Interrupção de tratamento (PE) | 11,89% | 11,9% |
+| — abandono / encerramentos | 1.034 / 8.700 | 1.034 / 8.700 |
+
+Ou seja: tudo que sai do `sinan_landing` e do SIM reproduz a regra de vocês,
+incluindo o critério de quem entra em cada denominador.
+
+**Não bate:**
+
+| KPI | Nosso | Painel de vocês | Razão |
+|---|---|---|---|
+| Casos novos (Brasil) | 85.932 | 113.651 | ×1,32 |
+| Casos novos (PE) | 5.246 | 7.438 | ×1,42 |
+| Incidência (Brasil) | 40,42 | 53,46 | ×1,32 |
+| Curas (Brasil) | 49.114 | 59.565 | ×1,21 |
+
+O fator não é constante entre os recortes, então não é escala nem duplicação
+de linhas. E não é escolha de dataset do nosso lado: `incidence`, `cases_new`
+e `_cache_ts` concordam entre si em torno de 85,9 mil para o Brasil — nenhum
+chega perto de 113 mil.
+
+**A pergunta:** de qual tabela sai o card "Casos novos"? Especificamente, ele
+inclui **recidiva** e **reingresso após abandono**, ou conta só caso novo?
+
+Perguntamos porque os parquets que recebemos têm apenas três tipos de entrada
+em `TRATAMENTO` — Caso Novo, Pós-óbito e Não Sabe. Recidiva e reingresso não
+aparecem. Se o painel de vocês os inclui, o extrato que nos passaram está
+filtrado e precisamos do não filtrado.
+
+Vale registrar que a nossa incidência nacional, 40,42 por 100 mil, é a ordem
+de grandeza publicada para tuberculose no Brasil; 53,46 fica acima. Não é
+prova de nada — é o motivo de perguntarmos antes de mudar o nosso lado.
+
+---
+
 ## Achados que não pedem resposta, só aviso
 
 São coisas que corrigimos do nosso lado, mas que provavelmente também afetam

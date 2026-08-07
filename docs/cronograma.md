@@ -40,11 +40,8 @@
 - [ ] **Gate: decidir a metodologia do abandono** — Regra do R = 11,89% ·
       padrão MS = 14,75% (TB/PE/2024). **Bloqueado na equipe de R.** As duas
       regras estão implementadas e testadas; falta a decisão de qual vale.
-- [ ] Extrair valores de referência do dashboard em R **rodando** —
-      **bloqueado**: os pacotes de R não estão instalados nesta máquina e o
-      `renv.lock` fixa R 4.4 contra o 4.6 disponível. As referências atuais
-      saem dos parquets por caminho independente, o que valida fórmula e
-      pega regressão, mas não substitui conferir contra a tela do original.
+- [x] Extrair valores de referência do dashboard em R **rodando** — feito
+      em 2026-08-07, dos dois painéis, em `tests/paridade/referencia_r.json`
 - [x] Suite pytest comparando os números com tolerância declarada
 - [x] `excecoes.md` — divergências intencionais, com justificativa
 
