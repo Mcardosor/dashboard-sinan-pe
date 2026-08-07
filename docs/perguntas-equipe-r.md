@@ -149,4 +149,6 @@ contra 5.246 do estado. Vale checar se o pipeline de vocês arredonda.
 **Os arquivos da faixa de identificação não vieram na entrega.**
 `Bandeira_de_Pernambuco.jpeg` e `cenarios_logo_full.jpeg` são procurados pelo
 `app_shell.R` dois níveis acima da pasta de dados; não achando, ele renderiza
-a faixa sem imagem, em silêncio. Já repusemos os dois do nosso lado.
+a faixa sem imagem, em silêncio. Repusemos o logotipo. A bandeira ficou de
+fora de propósito: nossos dados são nacionais e, ao lado de um mapa do
+Brasil, ela lia como recorte geográfico em vez de emissor.

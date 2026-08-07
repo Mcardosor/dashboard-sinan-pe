@@ -67,9 +67,10 @@ memória.
 ### 2.1 Shell da aplicação
 - [x] Layout: sidebar 380px + faixa de intro + linha de KPIs + linha principal + faixa de composição
 - [x] CSS base injetado uma única vez
-- [x] Faixa de intro (bandeira · título · logo) — **completa**. Os dois
-      arquivos não vieram na entrega do projeto em R e foram repostos depois;
-      a degradação graciosa continua valendo para quem clonar sem eles.
+- [x] Faixa de intro (título · logo) — **completa**. O logotipo não veio na
+      entrega do projeto em R e foi reposto depois; a degradação graciosa
+      continua valendo para quem clonar sem ele. A bandeira de PE do original
+      foi removida: os dados são nacionais e ela lia como recorte geográfico.
 
 ### 2.2 Estado de navegação
 - [x] `session_state`: uma `Navegacao` viva em `src/estado.py`, com nível, UF,

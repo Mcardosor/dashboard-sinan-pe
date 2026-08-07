@@ -68,10 +68,13 @@ Em `data/support/` ficam os arquivos de apoio de PE — os shapefiles de
 macrorregião e região de saúde e o `municipios.csv`. Também não são
 versionados, e são a única fonte dos recortes de saúde.
 
-As marcas da faixa de identificação ficam em **`assets/`** e **são
-versionadas**: são identidade visual, não dado, não mudam quando o SINAN
-atualiza, e somam 77 KB. Sem elas a faixa mostra só o título e a barra
-lateral avisa o que falta.
+O logotipo da faixa de identificação fica em **`assets/`** e **é
+versionado**: é identidade visual, não dado, não muda quando o SINAN atualiza.
+Sem ele a faixa mostra só o título e a barra lateral avisa o que falta.
+
+A bandeira de Pernambuco que o original exibe ao lado do título foi removida:
+os dados aqui são nacionais e, ao lado de um mapa do Brasil, ela lia como
+recorte geográfico em vez de emissor.
 
 ## Documentação
 
@@ -85,7 +88,7 @@ lateral avisa o que falta.
 ## Estrutura
 
 ```
-assets/         marcas da faixa de identificação (versionadas)
+assets/         logotipo da faixa de identificação (versionado)
 src/
   data/         camada DuckDB: conexão, readers por dataset, KPIs
   theme/        tokens de design, gerador de rampa de cor, componentes visuais

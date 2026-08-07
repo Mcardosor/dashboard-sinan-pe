@@ -364,7 +364,7 @@ section[data-testid="stSidebar"] {{
 
 .sinan-intro {{
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 10px 12px;
@@ -376,30 +376,23 @@ section[data-testid="stSidebar"] {{
 }}
 .sinan-intro-titulo {{
   margin: 0;
-  grid-column: 2;
+  grid-column: 1;
   font-family: var(--fonte);
   font-size: {tokens.TEXTO_TITULO};
   font-weight: 900;
   line-height: 1.08;
   letter-spacing: .01em;
-  text-align: center;
+  text-align: left;
   text-wrap: balance;
   color: inherit;
 }}
-.sinan-intro-bandeira, .sinan-intro-logo {{
+.sinan-intro-logo {{
   display: block;
   width: auto;
   object-fit: contain;
+  max-height: 66px;
+  max-width: min(33vw, 290px);
 }}
-.sinan-intro-bandeira {{
-  max-height: 54px;
-  max-width: min(18vw, 140px);
-  /* A metade inferior da bandeira de PE é branca pura. Sem contorno, ela
-     se funde com a placa e a bandeira parece cortada pela metade. */
-  border: 1px solid rgba(15,23,42,.22);
-  border-radius: 3px;
-}}
-.sinan-intro-logo {{ max-height: 66px; max-width: min(33vw, 290px); }}
 
 /* Os arquivos de marca são JPEG, sem canal alfa: no tema escuro o fundo
    branco viraria um bloco. Em vez de recortar a transparência — que mexeria
@@ -409,29 +402,15 @@ section[data-testid="stSidebar"] {{
 .sinan-intro-marca {{
   display: inline-flex;
   align-items: center;
-  /* Sem isto a célula do grid estica a placa e sobra branco ao lado da
-     imagem — `inline-flex` encolhe ao conteúdo, mas o `stretch` padrão do
-     grid vence. A da direita já encolhia por causa do `justify-self: end`. */
-  justify-self: start;
+  justify-self: end;
   width: fit-content;
   padding: 6px 10px;
   border-radius: 10px;
   background: #FFFFFF;
   box-shadow: 0 2px 8px rgba(2,6,23,.10);
 }}
-.sinan-intro-marca-fim {{ justify-self: end; }}
-
-/* O grid acompanha quantas marcas existem. Manter três colunas com uma só
-   preenchida deixa um vazio de um terço e a faixa parece desalinhada. */
+/* Sem logotipo não há segunda coluna: o título ocupa a faixa toda. */
 .sinan-intro.marcas-0 {{ grid-template-columns: 1fr; }}
-.sinan-intro.marcas-0 .sinan-intro-titulo {{ grid-column: 1; }}
-
-/* Com uma marca só, vira cabeçalho: título de um lado, marca do outro. */
-.sinan-intro.marcas-1 {{ grid-template-columns: minmax(0, 1fr) auto; }}
-.sinan-intro.marcas-1 .sinan-intro-titulo {{
-  grid-column: 1;
-  text-align: left;
-}}
 
 /* Linha principal: mapa à esquerda, gráficos à direita.
    O original travava `height` em 520px e 760px, o que quebra em telas baixas;
@@ -486,39 +465,26 @@ section[data-testid="stSidebar"] {{
 """
 
 
-def faixa_intro(titulo: str, bandeira: str | None = None, logo: str | None = None) -> str:
-    """Faixa de identificação.
+def faixa_intro(titulo: str, logo: str | None = None) -> str:
+    """Faixa de identificação: título à esquerda, logotipo à direita.
 
-    O arranjo acompanha quantas marcas existem, porque manter três colunas com
-    uma só preenchida deixa um vazio de um terço e a faixa parece desalinhada:
+    O original tinha três colunas, com a bandeira de Pernambuco à esquerda e o
+    título ao centro. A bandeira saiu: os dados são nacionais e ela lia como
+    recorte geográfico, não como emissor. Sem ela sobra um cabeçalho, e sem
+    logotipo nenhum o título ocupa a faixa toda.
 
-    - **duas**: bandeira · título centralizado · logotipo, como no original
-    - **uma**: cabeçalho, com o título à esquerda e a marca à direita
-    - **nenhuma**: só o título, ocupando a largura toda
-
-    ``bandeira`` e ``logo`` são URIs de dados (``data:image/...``).
+    ``logo`` é um URI de dados (``data:image/...``).
     """
-    presentes = [m for m in (bandeira, logo) if m]
-    classe = f"sinan-intro marcas-{len(presentes)}"
-
-    def marca(fonte: str, tipo: str, ao_fim: bool) -> str:
-        fim = " sinan-intro-marca-fim" if ao_fim else ""
-        return (
-            f'<span class="sinan-intro-marca{fim}">'
-            f'<img class="sinan-intro-{tipo}" src="{escape(fonte)}" alt=""></span>'
-        )
-
+    classe = f"sinan-intro marcas-{1 if logo else 0}"
     titulo_html = f'<h1 class="sinan-intro-titulo">{escape(titulo)}</h1>'
 
-    if len(presentes) == 2:
-        return (
-            f'<div class="{classe}">{marca(bandeira, "bandeira", False)}'
-            f'{titulo_html}{marca(logo, "logo", True)}</div>'
-        )
-    if len(presentes) == 1:
-        tipo = "bandeira" if bandeira else "logo"
-        return f'<div class="{classe}">{titulo_html}{marca(presentes[0], tipo, True)}</div>'
-    return f'<div class="{classe}">{titulo_html}</div>'
+    if not logo:
+        return f'<div class="{classe}">{titulo_html}</div>'
+    return (
+        f'<div class="{classe}">{titulo_html}'
+        f'<span class="sinan-intro-marca">'
+        f'<img class="sinan-intro-logo" src="{escape(logo)}" alt=""></span></div>'
+    )
 
 
 def painel_vazio(titulo: str, aviso: str, *, mapa: bool = False) -> str:

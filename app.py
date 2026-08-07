@@ -220,8 +220,8 @@ with st.sidebar:
         st.caption(
             "Faixa de identificação sem imagem: "
             + ", ".join(f"`{nome}`" for nome in ausentes)
-            + " não vieram na entrega do projeto em R. "
-            "Basta colocá-los em `data/support/`."
+            + " não veio na entrega do projeto em R. "
+            "Basta colocá-lo em `data/support/`."
         )
 
 
@@ -231,7 +231,7 @@ def selecionar_metrica(chave: str) -> None:
 
 
 st.markdown(
-    ui.faixa_intro(pack.TITULO, bandeira=marcas.bandeira(), logo=marcas.logo()),
+    ui.faixa_intro(pack.TITULO, logo=marcas.logo()),
     unsafe_allow_html=True,
 )
 

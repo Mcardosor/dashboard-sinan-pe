@@ -1,13 +1,16 @@
-"""Bandeira e logotipo da faixa de intro.
+"""Logotipo da faixa de intro.
 
-Ficam em ``assets/``, versionados — e não em ``data/``, que é ignorado pelo
-git. São identidade visual, não dado: não mudam quando o SINAN atualiza, e sem
-eles o dashboard fica descaracterizado em qualquer máquina nova. São 77 KB.
+Fica em ``assets/``, versionado — e não em ``data/``, que é ignorado pelo git.
+É identidade visual, não dado: não muda quando o SINAN atualiza, e sem ele o
+dashboard fica descaracterizado em qualquer máquina nova.
 
 ``data/support/`` continua sendo consultado depois, porque é onde o projeto em
-R os procurava e é para onde alguém tenderia a copiá-los.
+R o procurava e é para onde alguém tenderia a copiá-lo.
 
-Os dois **não vieram** na entrega do projeto em R — o código de lá, não
+O original também punha a bandeira de Pernambuco na faixa. Ela saiu: os dados
+são nacionais e a bandeira lia como recorte geográfico, não como emissor.
+
+O arquivo **não veio** na entrega do projeto em R — o código de lá, não
 achando, renderizava a faixa sem imagem nenhuma, em silêncio. Aqui
 :func:`disponiveis` diz o que falta, para a aplicação avisar em vez de só
 omitir.
@@ -22,9 +25,8 @@ from pathlib import Path
 
 from ..data import config
 
-#: Nomes procurados, na ordem de preferência. Os dois primeiros são os do
-#: original; os demais são variações razoáveis de quem for repor os arquivos.
-BANDEIRA = ("bandeira_pe.png", "Bandeira_de_Pernambuco.jpeg", "bandeira_pe.jpeg")
+#: Nomes procurados, na ordem de preferência. O primeiro é o do original; os
+#: demais são variações razoáveis de quem for repor o arquivo.
 LOGO = ("cenarios_logo_full.jpeg", "cenarios_logo.png", "logo.png")
 
 
@@ -49,12 +51,6 @@ def _data_uri(caminho: Path) -> str:
 
 
 @lru_cache(maxsize=1)
-def bandeira() -> str | None:
-    caminho = _achar(BANDEIRA)
-    return _data_uri(caminho) if caminho else None
-
-
-@lru_cache(maxsize=1)
 def logo() -> str | None:
     caminho = _achar(LOGO)
     return _data_uri(caminho) if caminho else None
@@ -62,17 +58,12 @@ def logo() -> str | None:
 
 def disponiveis() -> dict[str, bool]:
     """O que foi encontrado. Serve para a aplicação avisar o que falta."""
-    return {"bandeira": bandeira() is not None, "logo": logo() is not None}
+    return {"logo": logo() is not None}
 
 
 def faltando() -> list[str]:
     """Nomes esperados do que não foi encontrado."""
-    ausentes = []
-    if bandeira() is None:
-        ausentes.append(BANDEIRA[0])
-    if logo() is None:
-        ausentes.append(LOGO[0])
-    return ausentes
+    return [] if logo() else [LOGO[0]]
 
 
 def onde(nomes: tuple[str, ...]) -> Path | None:

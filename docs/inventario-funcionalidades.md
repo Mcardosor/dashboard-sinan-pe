@@ -16,7 +16,10 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 
 ## Faixa de intro
 
-- [x] Grid de 3 colunas: bandeira · título · logo. O arranjo acompanha quantas marcas existem; sem nenhuma, o título ocupa a faixa toda
+- [x] Título · logotipo. **Divergência intencional:** o original tem três
+  colunas, com a bandeira de Pernambuco à esquerda. Removida — os dados são
+  nacionais, e ao lado de um mapa do Brasil a bandeira lia como recorte
+  geográfico em vez de emissor. Sem logotipo, o título ocupa a faixa toda
 - [x] Título com `clamp(18px, 2.1vw, 30px)`
 
 ## KPIs

@@ -304,31 +304,24 @@ def test_faixa_de_intro_sem_imagens_ocupa_a_largura_toda() -> None:
     assert "Tuberculose" in html
 
 
-def test_faixa_de_intro_com_imagens() -> None:
-    html = c.faixa_intro(
-        "Tuberculose",
-        bandeira="data:image/jpeg;base64,AAA",
-        logo="data:image/jpeg;base64,BBB",
-    )
-    assert "marcas-2" in html
-    assert html.count("<img") == 2
-    assert "sinan-intro-bandeira" in html
+def test_faixa_de_intro_com_logotipo() -> None:
+    html = c.faixa_intro("Tuberculose", logo="data:image/jpeg;base64,BBB")
+    assert "marcas-1" in html
+    assert html.count("<img") == 1
     assert "sinan-intro-logo" in html
 
 
-def test_bandeira_tem_contorno() -> None:
-    """A metade inferior da bandeira de PE é branca pura.
+def test_bandeira_nao_volta_pela_porta_dos_fundos() -> None:
+    """A bandeira de PE saiu porque os dados são nacionais.
 
-    Sem contorno ela se funde com a placa e a bandeira parece cortada pela
-    metade — o defeito só aparece quando a imagem entra no contexto, não ao
-    olhar o arquivo sozinho.
+    Ela ficava à esquerda do título, onde lia como recorte geográfico e não
+    como emissor — ao lado de um mapa do Brasil, isso desmente o próprio
+    painel. Como o arranjo veio copiado do projeto em R, este teste existe
+    para o resquício não voltar junto com a próxima cópia.
     """
-    import re
-
-    css = c.css_layout()
-    bloco = re.search(r"\.sinan-intro-bandeira\s*\{([^}]*)\}", css)
-    assert bloco, "não achei a regra da bandeira"
-    assert "border:" in bloco.group(1)
+    assert not hasattr(c, "bandeira")
+    assert "bandeira" not in c.css_layout()
+    assert "bandeira" not in c.faixa_intro("Tuberculose", logo="data:b")
 
 
 def test_placa_encolhe_ao_conteudo() -> None:
@@ -337,7 +330,7 @@ def test_placa_encolhe_ao_conteudo() -> None:
 
     bloco = re.search(r"\.sinan-intro-marca\s*\{([^}]*)\}", c.css_layout())
     assert bloco
-    assert "justify-self: start" in bloco.group(1)
+    assert "justify-self: end" in bloco.group(1)
     assert "width: fit-content" in bloco.group(1)
 
 
@@ -351,29 +344,16 @@ def test_marca_sem_alfa_ganha_placa_branca() -> None:
 @pytest.mark.parametrize(
     "kwargs,esperado,imagens",
     [
-        ({"bandeira": "data:b", "logo": "data:l"}, "marcas-2", 2),
         ({"logo": "data:l"}, "marcas-1", 1),
-        ({"bandeira": "data:b"}, "marcas-1", 1),
         ({}, "marcas-0", 0),
     ],
 )
-def test_faixa_se_adapta_ao_numero_de_marcas(kwargs, esperado, imagens) -> None:
-    """Três colunas com uma só preenchida deixam um vazio de um terço."""
+def test_faixa_se_adapta_ao_logotipo(kwargs, esperado, imagens) -> None:
+    """Sem logotipo não há segunda coluna para deixar vazia."""
     html = c.faixa_intro("Tuberculose", **kwargs)
     assert esperado in html
     assert html.count("<img") == imagens
     assert "Tuberculose" in html
-
-
-def test_faixa_de_intro_com_uma_marca_vira_cabecalho() -> None:
-    """Com uma marca só, três colunas deixariam um vazio de um terço.
-
-    O arranjo passa a ser cabeçalho — título à esquerda, marca à direita — em
-    vez de manter a célula vazia só para preservar a centralização.
-    """
-    html = c.faixa_intro("Tuberculose", logo="data:image/png;base64,BBB")
-    assert "marcas-1" in html
-    assert html.count("<img") == 1
     assert "<span></span>" not in html, "não deve sobrar célula vazia"
 
 
@@ -382,11 +362,11 @@ def test_faixa_de_intro_escapa_o_titulo() -> None:
 
 
 def test_marcas_ausentes_sao_reportadas() -> None:
-    """Hoje os dois arquivos não vieram na entrega; o app avisa em vez de omitir."""
+    """O arquivo não veio na entrega em R; o app avisa em vez de só omitir."""
     from src.theme import marcas
 
     disponiveis = marcas.disponiveis()
-    assert set(disponiveis) == {"bandeira", "logo"}
+    assert set(disponiveis) == {"logo"}
     for nome, presente in disponiveis.items():
         assert isinstance(presente, bool)
     # `faltando` tem de ser coerente com `disponiveis`
@@ -474,19 +454,18 @@ def test_config_do_streamlit_define_claro_como_padrao() -> None:
     assert "dark" in tema, "o escuro precisa continuar disponível como alternativa"
 
 
-def test_marcas_vem_do_repositorio() -> None:
-    """As marcas são versionadas em `assets/`, não em `data/`.
+def test_marca_vem_do_repositorio() -> None:
+    """O logotipo é versionado em `assets/`, não em `data/`.
 
-    São identidade visual, não dado: não mudam quando o SINAN atualiza, e sem
-    elas o dashboard fica descaracterizado em qualquer clone novo. `data/` é
+    É identidade visual, não dado: não muda quando o SINAN atualiza, e sem ele
+    o dashboard fica descaracterizado em qualquer clone novo. `data/` é
     ignorado pelo git de propósito, por causa dos 888 MB.
     """
     from src.theme import marcas
 
-    caminhos = [marcas.onde(marcas.BANDEIRA), marcas.onde(marcas.LOGO)]
-    assert all(caminhos), f"marca ausente: {caminhos}"
-    for caminho in caminhos:
-        assert caminho.parent.name == "assets", f"{caminho} fora de assets/"
+    caminho = marcas.onde(marcas.LOGO)
+    assert caminho, "logotipo ausente"
+    assert caminho.parent.name == "assets", f"{caminho} fora de assets/"
 
 
 def test_data_support_continua_valendo_como_alternativa() -> None:
