@@ -315,7 +315,7 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 
 ### 8.2 Acessibilidade
 - [x] Navegação por teclado nos cards — `<button>` nativo, e não um `div` com `role="button"` como no original
-- [ ] `aria-pressed` no card selecionado — o `<button>` é renderizado pelo Streamlit, então exige remendo no DOM como o do zoom. **Lacuna real:** leitor de tela não anuncia qual métrica está ativa
+- [x] `aria-pressed` e `aria-label` nos cards — remendo no DOM, porque o botão é do Streamlit. Reaplica a cada rerun
 - [x] Contraste — cinco métricas ficavam abaixo de 3:1 no tema escuro, `incid` entre elas com 2,6. O acento passa a se misturar a `currentColor`, o que segue o tema do Streamlit e não o do sistema
 - [x] `prefers-reduced-motion`
 

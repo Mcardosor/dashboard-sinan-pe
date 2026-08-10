@@ -179,7 +179,10 @@ def enquadrar(
     # desenha cerca de 10% maior que o previsto —, e errar para o lado de
     # cortar a geometria é pior do que errar para o lado da margem.
     # Verificação final é olhar o mapa do Brasil inteiro na tela.
-    zoom = float(np.log2(px_por_grau * 360 / 256) - 0.35)
+    # 512 e não 256: o deck.gl usa tile de 512px, ao contrário do Leaflet.
+    # Com 256 o zoom saía um nível alto demais e o Brasil era cortado no
+    # norte e no sul — foi assim que Roraima sumiu da tela.
+    zoom = float(np.log2(px_por_grau * 360 / 512) - 0.05)
     return {"center": centro, "zoom": max(2.0, min(zoom, 11.0))}
 
 

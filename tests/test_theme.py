@@ -606,3 +606,47 @@ def test_nenhum_tamanho_de_fonte_fixo_no_css() -> None:
     da_escala = {"12px", "14px", "24px"}
     fora = [f for f in fixos if f not in da_escala]
     assert not fora, f"tamanhos fora da escala: {sorted(set(fora))}"
+
+
+def test_script_de_acessibilidade_marca_o_selecionado() -> None:
+    """`aria-pressed` é o que diz ao leitor de tela qual métrica está ativa.
+
+    Sem ele são seis botões "Selecionar X" indistinguíveis em estado — uma
+    informação que o vidente lê na hora, pelo acento e pela borda do card.
+    """
+    js = c.script_estado_kpis()
+    assert "aria-pressed" in js
+    assert "is-selected" in js, "o estado precisa vir da classe do card"
+
+
+def test_script_de_acessibilidade_corrige_o_rotulo_vazio() -> None:
+    """O Streamlit emite `aria-label=""`, e rótulo vazio é pior que nenhum.
+
+    Parte das tecnologias assistivas o respeita e anuncia um botão sem nome.
+    """
+    js = c.script_estado_kpis()
+    assert "aria-label" in js
+    assert "kpi-title" in js and "kpi-value" in js, (
+        "o nome tem de sair do título e do valor, que é o que o vidente vê"
+    )
+
+
+def test_script_de_acessibilidade_reaplica_apos_rerun() -> None:
+    """O Streamlit refaz os nós a cada interação.
+
+    Sem observar a árvore, os atributos se perderiam no primeiro clique —
+    exatamente quando passam a importar, porque a seleção mudou.
+    """
+    js = c.script_estado_kpis()
+    assert "MutationObserver" in js
+    assert "__estadoKpis" in js, "falta a guarda de idempotência"
+
+
+def test_os_dois_botoes_do_card_recebem_o_estado() -> None:
+    """O Streamlit renderiza dois botões por card quando há `help`.
+
+    Um dentro do invólucro de tooltip e outro fora. Marcar só o primeiro
+    deixaria o segundo anunciando estado errado.
+    """
+    js = c.script_estado_kpis()
+    assert "querySelectorAll('button')" in js

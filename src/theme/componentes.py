@@ -637,3 +637,60 @@ def indicador_programa(
         f'<div class="indicador-detalhe">{escape(detalhe)}</div>'
         f"</div>"
     )
+
+
+def script_estado_kpis() -> str:
+    """Anuncia ao leitor de tela qual métrica está selecionada.
+
+    O card é ``aria-hidden``, então quem carrega a semântica é o ``<button>``
+    transparente por cima — e ele é renderizado pelo Streamlit, sem como
+    receber atributos pelo Python. Daí o remendo no DOM, como o do zoom.
+
+    Dois problemas são corrigidos aqui:
+
+    ``aria-pressed``
+        Sem ele, um leitor de tela anuncia seis botões "Selecionar X"
+        indistinguíveis e o usuário não tem como saber qual métrica está
+        ativa — informação que o vidente lê na hora, pelo acento e pela
+        borda do card.
+
+    ``aria-label``
+        O Streamlit emite ``aria-label=""``. Rótulo vazio é pior que nenhum:
+        parte das tecnologias assistivas o respeita e anuncia um botão sem
+        nome. Aqui ele recebe o título e o valor do KPI, que é o que o
+        vidente vê.
+
+    Reaplica a cada mudança da árvore, porque o Streamlit refaz os nós a cada
+    interação e os atributos se perderiam no primeiro clique.
+    """
+    return """
+<script>
+(function () {
+  var doc = window.parent && window.parent.document;
+  if (!doc || doc.__estadoKpis) return;
+  doc.__estadoKpis = true;
+
+  function marcar() {
+    doc.querySelectorAll('[class*="st-key-kpi-"]').forEach(function (caixa) {
+      var card = caixa.querySelector('.kpi-card');
+      if (!card) return;
+
+      var ativo = card.classList.contains('is-selected');
+      var titulo = (caixa.querySelector('.kpi-title') || {}).textContent || '';
+      var valor = (caixa.querySelector('.kpi-value') || {}).textContent || '';
+      var nome = (titulo.trim() + ': ' + valor.trim()).trim();
+
+      // São dois botões por card: o Streamlit renderiza um dentro do
+      // invólucro de tooltip e outro fora. Os dois precisam do mesmo estado.
+      caixa.querySelectorAll('button').forEach(function (botao) {
+        botao.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+        if (nome) botao.setAttribute('aria-label', nome);
+      });
+    });
+  }
+
+  marcar();
+  new MutationObserver(marcar).observe(doc.body, {childList: true, subtree: true});
+})();
+</script>
+"""

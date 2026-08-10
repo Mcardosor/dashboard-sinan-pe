@@ -229,6 +229,10 @@ st.markdown(ui.css_layout(), unsafe_allow_html=True)
 # `<script>`. Altura zero — o iframe existe só para rodar o script.
 st.components.v1.html(ui.script_travar_zoom(), height=0)
 
+# Idem: o botão dos KPIs é do Streamlit, e `aria-pressed` só chega nele pelo
+# DOM. Ver `ui.script_estado_kpis`.
+st.components.v1.html(ui.script_estado_kpis(), height=0)
+
 nav = _navegacao()
 anos = _anos()
 ufs = sorted(config.CODIGO_POR_UF)
