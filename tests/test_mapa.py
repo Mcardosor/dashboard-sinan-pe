@@ -98,9 +98,43 @@ def test_rotulos_em_portugues() -> None:
 
 
 def test_enquadrar_centraliza_no_bbox() -> None:
+    """Longitude é média simples; latitude, média em Mercator.
+
+    O centro vertical da projeção não é a média dos graus: o Mercator estica
+    conforme se afasta do equador. Para o Brasil a diferença chega a 0,8°, o
+    bastante para Roraima e Amapá saírem pela borda de cima depois que o
+    enquadramento passou a ser justo.
+    """
     quadro = mapa.enquadrar((-40.0, -10.0, -30.0, -5.0))
     assert quadro["center"]["lon"] == pytest.approx(-35.0)
-    assert quadro["center"]["lat"] == pytest.approx(-7.5)
+
+    esperado = mapa._mercator_inverso(
+        (mapa._mercator(-10.0) + mapa._mercator(-5.0)) / 2
+    )
+    assert quadro["center"]["lat"] == pytest.approx(esperado)
+    assert quadro["center"]["lat"] != pytest.approx(-7.5, abs=1e-4), (
+        "voltou a centralizar pela média dos graus"
+    )
+
+
+def test_enquadrar_cabe_nas_duas_bordas() -> None:
+    """O que o corte do mapa do Brasil denunciou: precisa caber em cima e embaixo."""
+    import numpy as np
+
+    from src.data import geo
+
+    limites = tuple(geo.pais().total_bounds)
+    quadro = mapa.enquadrar(limites)
+    escala = 256 * 2 ** quadro["zoom"] / 360
+    meio = mapa._mercator(quadro["center"]["lat"])
+
+    for lat in (limites[1], limites[3]):
+        distancia = abs(mapa._mercator(lat) - meio) * escala
+        assert distancia <= mapa.ALTURA / 2, f"latitude {lat} sai do painel"
+
+    for lon in (limites[0], limites[2]):
+        distancia = abs(lon - quadro["center"]["lon"]) * escala
+        assert distancia <= mapa.LARGURA_PAINEL / 2, f"longitude {lon} sai do painel"
 
 
 def test_recorte_menor_recebe_zoom_maior() -> None:

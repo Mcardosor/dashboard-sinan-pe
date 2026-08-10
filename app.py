@@ -74,9 +74,13 @@ ENTRADAS_GEOMETRIA = 48
 #: ficava com mais de 1.000px de vazio embaixo.
 #:
 #: Desconta a barra de controles que fica acima do gráfico, para os dois
-#: painéis terminarem juntos e não só começarem juntos. Os 84px foram
-#: medidos no navegador — é o rádio de horizonte mais o toggle ao lado.
-ALTURA_LINHA_1 = mapa.ALTURA - 84
+#: painéis terminarem juntos e não só começarem juntos.
+#:
+#: Os 46px são o quanto a barra de controles da direita — rádio de horizonte
+#: mais toggle — excede o cabeçalho de uma linha do mapa. Medido no
+#: navegador; `tests/test_app.py` confere que o valor deriva de `mapa.ALTURA`,
+#: e a conferência final é olhar se os dois painéis fecham no mesmo pixel.
+ALTURA_LINHA_1 = mapa.ALTURA - 46
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
@@ -363,6 +367,19 @@ with esquerda, resiliencia.painel("Mapa"):
     # O que o mapa desenha depende do nível e, em PE, do recorte escolhido.
     recorte = nav.recorte if nav.tem_recortes_de_saude else "MUN"
     nivel_mapa = "UF" if nav.nivel == "BR" else recorte
+
+    # Cabeçalho, que também alinha as duas colunas: a da direita gasta 84px
+    # com o rádio de horizonte e o toggle, e sem isto o mapa começava no topo
+    # enquanto a série começava bem abaixo.
+    st.caption(
+        "Mapa — "
+        + {
+            "UF": "unidades da federação" if nav.nivel == "BR" else f"municípios de {nav.uf}",
+            "MACRO": f"macrorregiões de {nav.uf}",
+            "MICRO": f"regiões de saúde de {nav.uf}",
+            "MUN": f"municípios de {nav.uf}",
+        }[nivel_mapa]
+    )
     valores = _valores_mapa(
         pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, recorte
     )
@@ -456,7 +473,9 @@ with esquerda, resiliencia.painel("Mapa"):
 
 with direita:
     with resiliencia.painel("Evolução temporal"):
-        controle_h, controle_d = st.columns([2, 1])
+        # 3 para 2, e não 2 para 1: com um terço da largura o rótulo do
+        # toggle quebrava em duas linhas e desalinhava a barra.
+        controle_h, controle_d = st.columns([3, 2])
         horizonte = controle_h.radio(
             "Evolução temporal",
             ["meses", "anos"],
@@ -471,7 +490,11 @@ with direita:
         # Casos e incidência juntos é o gráfico que o original mostra para
         # tuberculose. Fica como opção, não como padrão, porque só faz sentido
         # para essas duas métricas.
-        duplo = controle_d.toggle("Casos + incidência", key="serie_dupla")
+        duplo = controle_d.toggle(
+            "Casos + incidência",
+            key="serie_dupla",
+            help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
+        )
 
         if duplo:
             serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)

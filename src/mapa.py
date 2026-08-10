@@ -105,22 +105,81 @@ def classificar(valores: pd.Series, escala: Escala) -> pd.Series:
     return faixas.astype(object).where(faixas.notna(), ROTULO_SEM_DADO)
 
 
-def enquadrar(limites: tuple[float, float, float, float]) -> dict:
-    """Centro e zoom para o bounding box caber na tela.
+def _mercator(lat: float) -> float:
+    """Latitude em graus de Mercator, na mesma escala da longitude.
 
-    O Plotly não tem `fitBounds`; o zoom é derivado da maior dimensão do bbox
-    contra a resolução de tela típica do painel.
+    É o que permite comparar a extensão vertical com a horizontal: no
+    Mercator um grau de latitude ocupa mais pixels quanto mais longe do
+    equador, e o Brasil cobre de -33° a +5°.
+    """
+    limitada = max(-85.0, min(85.0, float(lat)))
+    radianos = np.radians(limitada)
+    return float(np.degrees(np.log(np.tan(np.pi / 4 + radianos / 2))))
+
+
+def _mercator_inverso(y: float) -> float:
+    """Volta de graus de Mercator para latitude."""
+    radianos = np.radians(float(y))
+    return float(np.degrees(2 * np.arctan(np.exp(radianos)) - np.pi / 2))
+
+
+#: Tamanho do painel do mapa, em pixels. A largura é a de uma coluna da grade
+#: num monitor comum; a altura é :data:`ALTURA`.
+LARGURA_PAINEL = 463
+
+
+def enquadrar(
+    limites: tuple[float, float, float, float],
+    *,
+    largura: int = LARGURA_PAINEL,
+    altura: int = ALTURA,
+) -> dict:
+    """Centro e zoom para o bounding box caber no painel.
+
+    O deck.gl não expõe `fitBounds` no spec JSON, então o zoom é calculado
+    aqui. **Considera as duas dimensões do painel**, e não só a maior do
+    bounding box: o painel é mais alto que largo, e uma geometria larga e
+    baixa — Pernambuco é o caso extremo — desperdiçava metade da altura
+    quando o ajuste era feito só pela maior extensão.
+
+    A conta é a do Mercator: no zoom 0 os 360° de longitude ocupam 256px, e
+    cada nível dobra. Fica o menor dos dois zooms possíveis, que é o que faz
+    a geometria caber inteira.
     """
     xmin, ymin, xmax, ymax = limites
-    centro = {"lat": (ymin + ymax) / 2, "lon": (xmin + xmax) / 2}
 
-    extensao = max(xmax - xmin, ymax - ymin)
-    if extensao <= 0:
+    # O centro vertical é a média em **Mercator**, não em graus. Para o
+    # Brasil, que vai de -33,7° a +5,3°, a média aritmética cai 0,8° ao norte
+    # do centro real da projeção — o bastante para Roraima e Amapá saírem
+    # pela borda de cima depois que o enquadramento passou a ser justo.
+    centro = {
+        "lat": _mercator_inverso((_mercator(ymin) + _mercator(ymax)) / 2),
+        "lon": (xmin + xmax) / 2,
+    }
+
+    dx, dy = xmax - xmin, ymax - ymin
+    if dx <= 0 and dy <= 0:
         return {"center": centro, "zoom": 9.0}
 
-    # 360° cabem no zoom 0; cada nível dobra a escala. O -0.4 é folga para a
-    # geometria não encostar na borda do painel.
-    zoom = float(np.log2(360 / extensao) - 0.4)
+    # A latitude precisa ir para unidades de Mercator antes de virar escala:
+    # o mapa estica conforme se afasta do equador, e o Brasil vai de -33° a
+    # +5°. Tratando grau de latitude como grau de longitude, a geometria
+    # estouraria a borda de baixo nos recortes mais ao sul.
+    dy_merc = abs(_mercator(ymax) - _mercator(ymin))
+
+    escalas = []
+    if dx > 0:
+        escalas.append(largura / dx)
+    if dy_merc > 0:
+        escalas.append(altura / dy_merc)
+    px_por_grau = min(escalas)
+
+    # A folga é maior do que a conta pediria. O zoom do deck.gl não segue
+    # exatamente este modelo de 256px por 360° — medido no navegador, ele
+    # desenha cerca de 10% maior que o previsto —, e errar para o lado de
+    # cortar a geometria é pior do que errar para o lado da margem.
+    # Verificação final é olhar o mapa do Brasil inteiro na tela.
+    zoom = float(np.log2(px_por_grau * 360 / 256) - 0.35)
     return {"center": centro, "zoom": max(2.0, min(zoom, 11.0))}
 
 
