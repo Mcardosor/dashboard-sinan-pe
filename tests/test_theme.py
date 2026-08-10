@@ -525,6 +525,15 @@ def test_css_do_kpi_atravessa_os_invólucros_de_tooltip() -> None:
 
     css = c.css_base()   # o bloco do KPI vive aqui, não em `css_layout`
     assert ".stButton > button" not in css, "seletor de filho direto voltou"
-    assert re.search(r'\.stButton button\s*\{', css), "faltou o seletor descendente"
-    # Os invólucros precisam esticar, senão o botão encolhe ao ícone.
-    assert "stTooltipHoverTarget" in css
+    assert re.search(r"\.stButton button\s*\{", css), "faltou o seletor descendente"
+
+    # O botão é fixado à caixa do card, e não esticado pelos invólucros.
+    # Esticar os invólucros esticava também o segundo botão que o Streamlit
+    # renderiza junto com o `help`, e ele ficava pendurado abaixo do card
+    # como área clicável invisível.
+    bloco = re.search(r"\.stButton button\s*\{([^}]*)\}", css).group(1)
+    assert "position: absolute" in bloco
+    assert "inset: 0" in bloco
+    assert "height: 100%" not in css.split(".stButton button")[0][-400:], (
+        "voltou a esticar os invólucros de tooltip"
+    )

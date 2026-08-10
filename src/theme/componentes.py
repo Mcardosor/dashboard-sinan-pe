@@ -170,19 +170,22 @@ def css_base() -> str:
 [class*="st-key-kpi-"] [data-testid="stElementContainer"]:has(.stButton) {{
   position: static;
 }}
-/* Ao receber `help`, o Streamlit embrulha o botão em dois `span` de tooltip
-   (`stTooltipIcon` > `stTooltipHoverTarget`). São `inline` e quebram tanto o
-   seletor de filho direto quanto o esticamento — o rótulo do botão, que era
-   invisível, reaparecia por cima do título do card. Daí o seletor descendente
-   e o `display:block` nos invólucros. */
-[class*="st-key-kpi-"] .stButton [data-testid="stTooltipIcon"],
-[class*="st-key-kpi-"] .stButton [data-testid="stTooltipHoverTarget"],
-[class*="st-key-kpi-"] .stButton > div {{
-  display: block;
-  width: 100%;
-  height: 100%;
-}}
+/* Ao receber `help`, o Streamlit renderiza o botão **duas vezes**: um dentro
+   dos `span` de tooltip (`stTooltipIcon` > `stTooltipHoverTarget`) e um
+   segundo, irmão, sem invólucro nenhum.
+
+   A primeira versão disto esticava os invólucros com `height: 100%`, o que
+   esticava também o segundo botão — e ele ficava pendurado logo abaixo do
+   card, como 110px de área clicável invisível. A área de clique era o dobro
+   do retângulo visível.
+
+   Fixar o botão ao contêiner com `position: absolute` resolve
+   independentemente de quantos invólucros o Streamlit resolva criar: os dois
+   botões passam a ocupar exatamente a caixa do card, e clicar em qualquer um
+   aciona o mesmo callback, porque a chave é a mesma. */
 [class*="st-key-kpi-"] .stButton button {{
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   min-height: 0;
