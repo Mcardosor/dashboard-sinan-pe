@@ -81,7 +81,7 @@ AVISO_NOTIFICACAO = (
 )
 
 
-def evolucao_mensal(dados: pd.DataFrame, *, rotulo: str, cor: str) -> alt.Chart:
+def evolucao_mensal(dados: pd.DataFrame, *, rotulo: str, cor: str, altura: int = ALTURA) -> alt.Chart:
     """Casos por mês do ano selecionado."""
     if dados.empty:
         return sem_dado("Sem série mensal para este recorte")
@@ -97,11 +97,12 @@ def evolucao_mensal(dados: pd.DataFrame, *, rotulo: str, cor: str) -> alt.Chart:
                 alt.Tooltip("mes_nome:N", title="Mês"),
                 alt.Tooltip("valor:Q", title=rotulo, format=",.0f"),
             ],
-        )
+        ),
+        altura=altura,
     )
 
 
-def evolucao_anual(dados: pd.DataFrame, *, rotulo: str, cor: str, ano: int) -> alt.Chart:
+def evolucao_anual(dados: pd.DataFrame, *, rotulo: str, cor: str, altura: int = ALTURA, ano: int) -> alt.Chart:
     """Série histórica anual, com o ano selecionado destacado."""
     if dados.empty:
         return sem_dado("Sem série histórica para este recorte")
@@ -121,7 +122,8 @@ def evolucao_anual(dados: pd.DataFrame, *, rotulo: str, cor: str, ano: int) -> a
                 alt.Tooltip("ano:O", title="Ano"),
                 alt.Tooltip("valor:Q", title=rotulo, format=",.0f"),
             ],
-        )
+        ),
+        altura=altura,
     )
 
 
@@ -183,7 +185,13 @@ def alvo_do_clique(evento, nome_selecao: str = "barra") -> str | None:
 
 
 def evolucao_dupla(
-    dados: pd.DataFrame, *, cor_barra: str, cor_linha: str, eixo_x: str, titulo_x: str | None = None
+    dados: pd.DataFrame,
+    *,
+    cor_barra: str,
+    cor_linha: str,
+    eixo_x: str,
+    titulo_x: str | None = None,
+    altura: int = ALTURA,
 ) -> alt.Chart:
     """Contagem em barras e taxa em linha, com eixos independentes.
 
@@ -220,7 +228,7 @@ def evolucao_dupla(
         )
     )
 
-    return tema(alt.layer(barras, linha).resolve_scale(y="independent"))
+    return tema(alt.layer(barras, linha).resolve_scale(y="independent"), altura=altura)
 
 
 #: Cores dos dois lados da pirâmide. Deliberadamente não é rosa e azul: a

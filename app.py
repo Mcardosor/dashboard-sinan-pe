@@ -69,6 +69,15 @@ ENTRADAS_PESADAS = 256  # até 31 KB: valores do mapa
 #:
 ENTRADAS_GEOMETRIA = 48
 
+#: Altura da primeira linha da grade. O mapa manda: é ele que tem altura fixa,
+#: e a série ao lado precisa fechar no mesmo ponto. Sem isto a coluna do mapa
+#: ficava com mais de 1.000px de vazio embaixo.
+#:
+#: Desconta a barra de controles que fica acima do gráfico, para os dois
+#: painéis terminarem juntos e não só começarem juntos. Os 84px foram
+#: medidos no navegador — é o rádio de horizonte mais o toggle ao lado.
+ALTURA_LINHA_1 = mapa.ALTURA - 84
+
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
     return calc.calcular(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
@@ -468,6 +477,7 @@ with direita:
             serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
             figura_serie = graficos.evolucao_dupla(
                 serie,
+                altura=ALTURA_LINHA_1,
                 cor_barra=pack.cor("casos"),
                 cor_linha=pack.cor("incid"),
                 eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
@@ -483,11 +493,13 @@ with direita:
                 )
             elif horizonte == "meses":
                 figura_serie = graficos.evolucao_mensal(
-                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica)
+                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica),
+                    altura=ALTURA_LINHA_1,
                 )
             else:
                 figura_serie = graficos.evolucao_anual(
-                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano
+                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano,
+                    altura=ALTURA_LINHA_1,
                 )
 
         st.altair_chart(figura_serie, use_container_width=True)
@@ -498,7 +510,14 @@ with direita:
         if horizonte == "meses":
             st.caption(graficos.AVISO_NOTIFICACAO)
 
-    st.divider()
+st.divider()
+
+# Segunda linha da grade: ranking e pirâmide lado a lado.
+# Sem isto, a coluna do mapa ficava com mais de 1.000px de vazio
+# enquanto a da direita empilhava três painéis.
+baixo_esq, baixo_dir = st.columns(2, gap="small")
+
+with baixo_esq:
     with resiliencia.painel("Ranking"):
 
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
@@ -540,6 +559,8 @@ with direita:
                     st.rerun()
 
     st.divider()
+
+with baixo_dir:
     with resiliencia.painel("Pirâmide etária"):
 
         # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em

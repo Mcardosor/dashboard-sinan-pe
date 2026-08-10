@@ -66,3 +66,34 @@ def test_constantes_de_cache_existem() -> None:
 
 def test_app_compila() -> None:
     compile(APP.read_text(encoding="utf-8"), str(APP), "exec")
+
+
+def test_altura_da_primeira_linha_deriva_do_mapa() -> None:
+    """A série tem de fechar no mesmo ponto que o mapa.
+
+    O mapa manda porque é ele que tem altura fixa. Antes a coluna do mapa
+    tinha 520px de conteúdo e mais de 1.000px de vazio, enquanto a da direita
+    empilhava três painéis — as duas nunca terminavam juntas.
+    """
+    import re
+
+    achado = re.search(r"^ALTURA_LINHA_1 = (.+)$", APP, re.M)
+    assert achado, "ALTURA_LINHA_1 sumiu"
+    assert "mapa.ALTURA" in achado.group(1), (
+        "a altura da linha 1 precisa derivar de `mapa.ALTURA`, não ser fixa"
+    )
+
+
+def test_as_tres_series_recebem_a_mesma_altura() -> None:
+    """Mensal, anual e dupla desenham no mesmo lugar da grade.
+
+    Uma delas ficou sem o argumento na primeira tentativa — a indentação
+    mudara com a reorganização e o `replace` não casou, em silêncio.
+    """
+    assert APP.count("altura=ALTURA_LINHA_1") == 3
+
+
+def test_a_grade_tem_duas_linhas_de_duas_colunas() -> None:
+    """Mapa | série em cima, ranking | pirâmide embaixo."""
+    assert "esquerda, direita = st.columns(2" in APP
+    assert "baixo_esq, baixo_dir = st.columns(2" in APP
