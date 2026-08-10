@@ -217,8 +217,10 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 - [ ] Descoberta das opções em runtime
 - [ ] Propagação para KPIs, mapa e gráficos
 
-### 5.4 Ajuda contextual
-- [ ] Badges "i" com tooltip nos painéis
+### 5.4 Ajuda contextual — **feito, antecipado**
+- [x] Tooltips nos 6 KPIs e nos controles ambíguos. Explicam sobretudo o
+      **denominador**: "Interrupção de tratamento (%)" não dizia percentual
+      sobre o quê, e a resposta muda o número em quase 4 pontos
 
 **Pronto quando:** o inventário de funcionalidades está integralmente marcado.
 
@@ -237,9 +239,12 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 - [ ] Verificar partition pruning nas queries DuckDB
 - [ ] Definir e bater um alvo de tempo de resposta por interação
 
-### 6.3 Robustez
-- [ ] Tratamento de erro por componente — um gráfico quebrado não derruba a página
-- [ ] Estados vazios (ano sem dado, município sem caso)
+### 6.3 Robustez — **feito, antecipado**
+- [x] Tratamento de erro por componente — `src/resiliencia.py`. Verificado
+      injetando falha na pirâmide: ranking e composição seguiram de pé
+- [x] Estados vazios (ano sem SIM, município sem caso), mais o aviso de ano
+      incompleto — 2025 mostrava incidência 0,83 contra 40,42 sem dizer que
+      o ano estava pela metade
 
 **Pronto quando:** harness verde e alvo de performance batido.
 
