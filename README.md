@@ -29,10 +29,14 @@ Três metas, nesta ordem de prioridade:
    acento lateral, escala por quantil) e corrige o que ficou fraco (alturas
    fixas, ausência de tema escuro, tipografia sem escala).
 
-Além da paridade, há uma funcionalidade que o original em R não tem: a aba de
-**Análise Livre** com Apache Superset, para exploração self-service. Reaproveita
-a arquitetura já em produção no projeto `dashboard-tb-v4`. Ver
-**[docs/analise-livre.md](docs/analise-livre.md)**.
+Além da paridade, o painel já faz coisas que o original em R não faz —
+indicadores do programa (contatos examinados, cultura em retratamento), a
+pirâmide de óbitos, 24 variáveis de composição contra 9 do painel de PE, e o
+aviso de ano incompleto. Todas conferidas contra a tela deles.
+
+A aba de **Análise Livre** com Apache Superset está **adiada, e pode não
+entrar**: virou a última prioridade. O plano segue registrado em
+**[docs/analise-livre.md](docs/analise-livre.md)** para quem retomar.
 
 ## Escopo
 
@@ -55,7 +59,7 @@ variáveis de composição).
   com o Streamlit
 - **Mapa:** pydeck (deck.gl). O coroplético do Plotly não dispara evento de
   clique, verificado com clique real; ver [docs/mapa-clique.md](docs/mapa-clique.md)
-- **Análise livre:** Apache Superset sobre DuckDB, embutido no mesmo domínio
+- **Análise livre:** Apache Superset sobre DuckDB — planejado, adiado
 
 ## Dados
 
