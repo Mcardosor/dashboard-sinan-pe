@@ -214,3 +214,38 @@ DESCRICOES = {
 
 def descricao(metrica: str) -> str | None:
     return DESCRICOES.get(metrica)
+
+
+#: Indicadores de qualidade do programa, com tudo que a tela precisa.
+#:
+#: Vive aqui e não no core de leitura porque rótulo, descrição e cor são
+#: específicos da doença — é o padrão de *disease pack*. O core só resolve
+#: `numerador/denominador → proporção` a partir desta tabela.
+INDICADORES_PROGRAMA = (
+    {
+        "chave": "contatos",
+        "leitor": "indicador_tb_contatos",
+        "rotulo": "Contatos examinados",
+        "numerador": "examinados",
+        "denominador": "identificados",
+        "cor": CORES["cura"],
+        "descricao": (
+            "Dos contatos identificados de casos novos, quantos foram "
+            "efetivamente examinados. Mede busca ativa: contato não examinado "
+            "é transmissão que segue invisível."
+        ),
+    },
+    {
+        "chave": "cultura",
+        "leitor": "indicador_tb_cultura",
+        "rotulo": "Cultura em retratamento",
+        "numerador": "cultura",
+        "denominador": "retratamento",
+        "cor": CORES["incid"],
+        "descricao": (
+            "Dos casos em retratamento, quantos tiveram cultura realizada. "
+            "É o exame que identifica resistência a medicamento, e retratamento "
+            "é justamente onde a resistência é mais provável."
+        ),
+    },
+)

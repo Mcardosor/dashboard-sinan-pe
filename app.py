@@ -41,6 +41,34 @@ def _anos() -> list[int]:
     return leitura.anos_disponiveis(pack.DOENCA)
 
 
+#: Validade do cache de dados, em segundos.
+#:
+#: Os parquets são imutáveis entre publicações — mudam quando alguém troca os
+#: arquivos e reinicia o serviço, e o reinício já limpa o cache. O TTL de 10
+#: minutos que estava aqui só produzia releitura periódica sem motivo.
+#:
+#: Não é infinito de propósito: se alguém trocar os arquivos **sem** reiniciar,
+#: um dia é o limite de quanto o painel serve dado velho. É a única razão de o
+#: número não ser `None`.
+TTL_DADOS = 24 * 3600
+
+#: Quantos resultados guardar por leitor.
+#:
+#: A cardinalidade possível é grande demais para caber — 8.064 combinações só
+#: para o mapa, 89.568 para os KPIs —, então isto é limite de memória, não de
+#: cobertura. Os números saem do tamanho medido de cada resultado:
+#: KPI ocupa 0,1 KB, série e ranking cerca de 2 KB, valores do mapa até 31 KB
+#: em Minas Gerais.
+ENTRADAS_LEVES = 1024   # ~0,1 KB cada: KPIs
+ENTRADAS_MEDIAS = 512   # ~2 KB cada: séries, ranking, pirâmide, composição
+ENTRADAS_PESADAS = 256  # até 31 KB: valores do mapa
+
+#: Camadas geométricas: de 122 KB (as 27 UFs) a 359 KB (municípios de MG).
+#: Estava **sem limite** — 27 UFs mais os recortes de saúde e o modo detalhe
+#: cresciam sem teto. Com 48, o pior caso fica em torno de 17 MB.
+#:
+ENTRADAS_GEOMETRIA = 48
+
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
     return calc.calcular(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
@@ -80,6 +108,18 @@ def _camada(
     return municipios
 
 
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_GEOMETRIA, show_spinner=False)
+def _geojson(nivel, uf, recorte, mun, detalhe, micro):
+    """Geometria da camada já em GeoJSON.
+
+    Recebe exatamente os argumentos de `_camada` para as duas terem a **mesma
+    identidade**. Antes a chave era remontada à mão como string na página:
+    mudar a assinatura de `_camada` e esquecer a string serviria a malha
+    errada, em silêncio.
+    """
+    return mapa.geometrias_geojson(_camada(nivel, uf, recorte, mun, detalhe, micro))
+
+
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_PESADAS, show_spinner=False)
 def _valores_mapa(
     doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, recorte: str
@@ -112,7 +152,9 @@ def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, to
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _indicadores_programa(doenca, ano, nivel, uf, mun):
-    return leitura.indicadores_programa(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
+    return leitura.indicadores_programa(
+        Escopo(doenca, ano, nivel, uf=uf, mun=mun), pack.INDICADORES_PROGRAMA
+    )
 
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
@@ -160,33 +202,6 @@ def _navegacao() -> Navegacao:
         st.session_state.nav = Navegacao(doenca=pack.DOENCA, ano=_anos()[-2])
     return st.session_state.nav
 
-
-#: Validade do cache de dados, em segundos.
-#:
-#: Os parquets são imutáveis entre publicações — mudam quando alguém troca os
-#: arquivos e reinicia o serviço, e o reinício já limpa o cache. O TTL de 10
-#: minutos que estava aqui só produzia releitura periódica sem motivo.
-#:
-#: Não é infinito de propósito: se alguém trocar os arquivos **sem** reiniciar,
-#: um dia é o limite de quanto o painel serve dado velho. É a única razão de o
-#: número não ser `None`.
-TTL_DADOS = 24 * 3600
-
-#: Quantos resultados guardar por leitor.
-#:
-#: A cardinalidade possível é grande demais para caber — 8.064 combinações só
-#: para o mapa, 89.568 para os KPIs —, então isto é limite de memória, não de
-#: cobertura. Os números saem do tamanho medido de cada resultado:
-#: KPI ocupa 0,1 KB, série e ranking cerca de 2 KB, valores do mapa até 31 KB
-#: em Minas Gerais.
-ENTRADAS_LEVES = 1024   # ~0,1 KB cada: KPIs
-ENTRADAS_MEDIAS = 512   # ~2 KB cada: séries, ranking, pirâmide, composição
-ENTRADAS_PESADAS = 256  # até 31 KB: valores do mapa
-
-#: Camadas geométricas: de 122 KB (as 27 UFs) a 359 KB (municípios de MG).
-#: Estava **sem limite** — 27 UFs mais os recortes de saúde e o modo detalhe
-#: cresciam sem teto. Com 48, o pior caso fica em torno de 17 MB.
-ENTRADAS_GEOMETRIA = 48
 
 #: Para nomear o último mês com dado no aviso de ano incompleto.
 MESES = (
@@ -377,12 +392,8 @@ with esquerda, resiliencia.painel("Mapa"):
             rotulo_metrica=pack.rotulo(nav.metrica),
             coluna_nome="nome_mun" if chave == "cod_mun6" else chave,
             decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
-            # A chave descreve a **geometria**, não o dado: os mesmos
-            # argumentos de `_camada`, sem ano nem métrica. Trocar de métrica
-            # tem de reaproveitar a malha; trocar de recorte, não.
-            chave_cache="|".join(
-                str(x)
-                for x in (nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro)
+            geometrias=_geojson(
+                nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro
             ),
         )
 
@@ -608,7 +619,7 @@ with resiliencia.painel("Indicadores do programa"):
                 ind["pct"],
                 ind["numerador"],
                 ind["denominador"],
-                cor=pack.cor("cura" if ind["chave"] == "contatos" else "incid"),
+                cor=ind["cor"],
                 ajuda=ind["descricao"],
             ),
             unsafe_allow_html=True,

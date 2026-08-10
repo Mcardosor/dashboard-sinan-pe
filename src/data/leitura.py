@@ -579,6 +579,10 @@ FAIXAS = (
 #:
 #: Cura não tem: `incidence` quebra por sexo mas não por idade, e
 #: `incidence_0_14` cobre só uma faixa. Precisa do banco.
+#: Colunas que `piramide_completa` sempre devolve, mesmo vazia. O contrato
+#: estava escrito em três lugares dentro da própria função.
+COLUNAS_PIRAMIDE = ["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"]
+
 FONTE_PIRAMIDE = {
     "CASOS": "piramides",
     "OBITOS": "obitos_sim_faixa",
@@ -598,17 +602,17 @@ def piramide_completa(esc: Escopo, tipo: str = "CASOS") -> pd.DataFrame:
         raise ValueError(f"Tipo inválido: {tipo!r}. Esperado {sorted(FONTE_PIRAMIDE)}.")
 
     if FONTE_PIRAMIDE[tipo] is None:
-        return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"])
+        return pd.DataFrame(columns=COLUNAS_PIRAMIDE)
 
     if tipo == "CASOS":
         bruto = piramide(esc, "CASOS")
         if bruto.empty:
-            return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"])
+            return pd.DataFrame(columns=COLUNAS_PIRAMIDE)
         base = bruto[["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"]]
     else:
         bruto = obitos_por_faixa(esc)
         if bruto.empty:
-            return pd.DataFrame(columns=["sexo", "faixa_ord", "faixa_etaria", "valor", "pop"])
+            return pd.DataFrame(columns=COLUNAS_PIRAMIDE)
         base = bruto.rename(columns={"obitos": "valor"}).assign(pop=pd.NA)
 
     # Completa as faixas ausentes com zero, por sexo.
@@ -692,38 +696,7 @@ def meses_com_dado(doenca: str, ano: int) -> int:
     return int(linha[0]) if linha and linha[0] else 0
 
 
-#: Indicadores de qualidade do programa de tuberculose.
-#:
-#: Nenhum dos dois painéis em R exibe estes números — conferido na tela de
-#: `TB_BR` e de `TB_PE` em 08/ago/2026. O dado veio nos parquets e ficou sem
-#: uso; aqui ele aparece.
-INDICADORES_PROGRAMA = (
-    {
-        "chave": "contatos",
-        "rotulo": "Contatos examinados",
-        "numerador": "examinados",
-        "denominador": "identificados",
-        "descricao": (
-            "Dos contatos identificados de casos novos, quantos foram "
-            "efetivamente examinados. Mede busca ativa: contato não examinado "
-            "é transmissão que segue invisível."
-        ),
-    },
-    {
-        "chave": "cultura",
-        "rotulo": "Cultura em retratamento",
-        "numerador": "cultura",
-        "denominador": "retratamento",
-        "descricao": (
-            "Dos casos em retratamento, quantos tiveram cultura realizada. "
-            "É o exame que identifica resistência a medicamento, e retratamento "
-            "é justamente onde a resistência é mais provável."
-        ),
-    },
-)
-
-
-def indicadores_programa(esc: Escopo) -> list[dict]:
+def indicadores_programa(esc: Escopo, specs) -> list[dict]:
     """Os indicadores de programa do recorte, prontos para exibição.
 
     Cada item traz ``rotulo``, ``numerador``, ``denominador``, ``pct`` e
@@ -737,22 +710,15 @@ def indicadores_programa(esc: Escopo) -> list[dict]:
     ler os dois lado a lado num ano em que só um fechou; quem chama precisa
     avisar. Ver docs/contrato-dados.md, armadilha 12.
     """
-    fontes = {
-        "contatos": indicador_tb_contatos(esc),
-        "cultura": indicador_tb_cultura(esc),
-    }
-
     saida: list[dict] = []
-    for spec in INDICADORES_PROGRAMA:
-        bruto = fontes.get(spec["chave"]) or {}
+    for spec in specs:
+        bruto = globals()[spec["leitor"]](esc) or {}
         num = pd.to_numeric(bruto.get(spec["numerador"]), errors="coerce")
         den = pd.to_numeric(bruto.get(spec["denominador"]), errors="coerce")
         valido = pd.notna(num) and pd.notna(den) and den > 0
         saida.append(
             {
-                "chave": spec["chave"],
-                "rotulo": spec["rotulo"],
-                "descricao": spec["descricao"],
+                **{c: spec[c] for c in ("chave", "rotulo", "descricao", "cor")},
                 "numerador": float(num) if pd.notna(num) else None,
                 "denominador": float(den) if pd.notna(den) else None,
                 "pct": float(num) / float(den) * 100 if valido else None,

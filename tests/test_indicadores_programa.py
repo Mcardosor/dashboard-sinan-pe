@@ -22,7 +22,7 @@ ESCOPOS = [
 
 @pytest.mark.parametrize("esc", ESCOPOS, ids=lambda e: e.uf or "BR")
 def test_devolve_os_dois_indicadores_com_proporcao(esc: Escopo) -> None:
-    itens = leitura.indicadores_programa(esc)
+    itens = leitura.indicadores_programa(esc, pack.INDICADORES_PROGRAMA)
     assert [i["chave"] for i in itens] == ["contatos", "cultura"]
     for item in itens:
         assert item["pct"] is not None, f"{item['chave']} sem proporção"
@@ -35,7 +35,8 @@ def test_devolve_os_dois_indicadores_com_proporcao(esc: Escopo) -> None:
 def test_recorte_sem_dado_nao_some_da_lista() -> None:
     """Ausência é informação: o card aparece com "—", não desaparece."""
     itens = leitura.indicadores_programa(
-        Escopo(pack.DOENCA, 2024, "MUN", uf="MG", mun="311280")
+        Escopo(pack.DOENCA, 2024, "MUN", uf="MG", mun="311280"),
+        pack.INDICADORES_PROGRAMA,
     )
     assert len(itens) == 2
     assert all(i["pct"] is None for i in itens)
@@ -44,7 +45,7 @@ def test_recorte_sem_dado_nao_some_da_lista() -> None:
 def test_nao_divide_por_zero() -> None:
     """Denominador zero ou ausente vira `None`, nunca exceção."""
     for esc in (Escopo(pack.DOENCA, 1999, "BR"), Escopo(pack.DOENCA, 2024, "MUN", uf="MG", mun="311280")):
-        for item in leitura.indicadores_programa(esc):
+        for item in leitura.indicadores_programa(esc, pack.INDICADORES_PROGRAMA):
             assert item["pct"] is None or item["pct"] >= 0
 
 
@@ -59,7 +60,7 @@ def test_ano_dos_indicadores_diverge_do_resto() -> None:
 
     def razao(ano: int) -> float:
         esc = Escopo(pack.DOENCA, ano, "BR")
-        contatos = leitura.indicadores_programa(esc)[0]["denominador"]
+        contatos = leitura.indicadores_programa(esc, pack.INDICADORES_PROGRAMA)[0]["denominador"]
         return contatos / calc.calcular(esc).casos
 
     assert razao(2024) < 5, "2024 deveria ser plausível"
@@ -83,3 +84,17 @@ def test_barra_nao_estoura_com_proporcao_acima_de_cem() -> None:
     """Pode acontecer se numerador e denominador vierem de recortes distintos."""
     html = c.indicador_programa("X", 140.0, 14, 10, cor="#000")
     assert "width:100.0%" in html
+
+
+def test_spec_dos_indicadores_vive_no_pack() -> None:
+    """Rótulo, descrição e cor são específicos da doença.
+
+    Estavam no core de leitura, contrariando o padrão de *disease pack* que o
+    próprio projeto documenta. O core agora só resolve
+    `numerador/denominador → proporção` a partir da tabela que o pack fornece.
+    """
+    assert not hasattr(leitura, "INDICADORES_PROGRAMA")
+    for spec in pack.INDICADORES_PROGRAMA:
+        assert {"chave", "leitor", "rotulo", "numerador", "denominador",
+                "cor", "descricao"} <= set(spec)
+        assert hasattr(leitura, spec["leitor"]), spec["leitor"]

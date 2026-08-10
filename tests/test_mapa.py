@@ -274,54 +274,48 @@ def test_payload_sai_sem_indentacao() -> None:
     assert ", " not in texto[:200], "separadores não estão compactos"
 
 
-def test_cache_de_geometria_nao_muda_o_desenho() -> None:
-    """Reaproveitar a malha não pode alterar geometria nem propriedades.
-
-    A conversão para GeoJSON custa 75 ms em MG e é o item mais caro de montar
-    o mapa — mas o ganho não vale nada se servir uma malha diferente.
-    """
+def _montar_features(uf: str, geometrias=None):
     import json
 
     from src.data import leitura
     from src.data.escopo import Escopo
     from src.doencas import tuberculose as pack
 
-    camada = geo.municipios("PE")
-    valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf="PE"), "incid")
+    camada = geo.municipios(uf)
+    valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf=uf), "incid")
+    figura, _ = mapa.deck(
+        camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
+        rotulo_metrica="Incidência", coluna_nome="nome_mun", geometrias=geometrias,
+    )
+    return json.loads(figura.to_json())["layers"][0]["data"]["features"]
 
-    def montar(chave_cache):
-        figura, _ = mapa.deck(
-            camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
-            rotulo_metrica="Incidência", coluna_nome="nome_mun",
-            chave_cache=chave_cache,
-        )
-        return json.loads(figura.to_json())["layers"][0]["data"]["features"]
 
-    sem, com = montar(None), montar("teste-pe")
+def test_geometria_pronta_nao_muda_o_desenho() -> None:
+    """Reaproveitar a malha convertida não pode alterar o que é desenhado.
+
+    A conversão custa 75 ms em MG e é o item mais caro de montar o mapa — mas
+    o ganho não vale nada se servir geometria diferente.
+    """
+    convertidas = mapa.geometrias_geojson(geo.municipios("PE"))
+    sem, com = _montar_features("PE"), _montar_features("PE", convertidas)
+
     assert len(sem) == len(com)
     for a, b in zip(sem, com):
         assert a["geometry"] == b["geometry"]
         assert a["properties"] == b["properties"]
 
 
-def test_cache_de_geometria_nao_serve_recorte_errado() -> None:
-    """Chave diferente, malha diferente — senão PE apareceria dentro de MG."""
-    from src.data import leitura
-    from src.data.escopo import Escopo
-    from src.doencas import tuberculose as pack
+def test_geometria_de_tamanho_errado_e_ignorada() -> None:
+    """A guarda que impede servir a malha de outro recorte.
 
-    def contar(uf: str) -> int:
-        camada = geo.municipios(uf)
-        valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf=uf), "incid")
-        figura, _ = mapa.deck(
-            camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
-            rotulo_metrica="Incidência", coluna_nome="nome_mun",
-            chave_cache=f"UF|{uf}|MUN",
-        )
-        import json
+    Se a lista não corresponde à camada, `deck` volta ao caminho normal em vez
+    de emparelhar geometria de um município com o dado de outro.
+    """
+    de_outro_estado = mapa.geometrias_geojson(geo.municipios("MG"))
+    assert len(de_outro_estado) != len(geo.municipios("PE"))
 
-        return len(json.loads(figura.to_json())["layers"][0]["data"]["features"])
-
-    assert contar("PE") == len(geo.municipios("PE"))
-    assert contar("MG") == len(geo.municipios("MG"))
-    assert contar("PE") == len(geo.municipios("PE")), "cache serviu a malha errada"
+    correto = _montar_features("PE")
+    com_lista_errada = _montar_features("PE", de_outro_estado)
+    assert [f["geometry"] for f in com_lista_errada] == [
+        f["geometry"] for f in correto
+    ], "a lista de tamanho errado foi usada em vez de descartada"

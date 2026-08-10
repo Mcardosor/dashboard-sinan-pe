@@ -604,16 +604,13 @@ def indicador_programa(
     cravar um número oficial que não verifiquei; a barra mostra a proporção
     contra o total, e quem conhece a meta a aplica de cabeça.
     """
-    tem = pct is not None
-    valor = f"{pct:.1f}%".replace(".", ",") if tem else "—"
-    largura = max(0.0, min(100.0, pct)) if tem else 0.0
-
-    if numerador is not None and denominador is not None:
-        detalhe = (
-            f"{_milhar(numerador)} de {_milhar(denominador)}"
-        )
-    else:
-        detalhe = "sem dado neste recorte"
+    valor = "—" if pct is None else f"{formatar_decimal(pct, 1)}%"
+    largura = 0.0 if pct is None else max(0.0, min(100.0, pct))
+    detalhe = (
+        "sem dado neste recorte"
+        if numerador is None or denominador is None
+        else f"{formatar_inteiro(numerador)} de {formatar_inteiro(denominador)}"
+    )
 
     titulo = f' title="{escape(ajuda)}"' if ajuda else ""
     return (
@@ -624,7 +621,3 @@ def indicador_programa(
         f'<div class="indicador-detalhe">{escape(detalhe)}</div>'
         f"</div>"
     )
-
-
-def _milhar(valor: float) -> str:
-    return f"{int(round(valor)):,}".replace(",", ".")

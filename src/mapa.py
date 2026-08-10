@@ -130,37 +130,19 @@ def _rgb(cor: str) -> list[int]:
     return [int(texto[i : i + 2], 16) for i in (0, 2, 4)]
 
 
-#: Geometrias já convertidas para GeoJSON, por chave de recorte.
-#:
-#: Converter a malha custa 75 ms em Minas Gerais, e é o item mais caro de
-#: montar o mapa — mais que todas as leituras de dado somadas. O trabalho é
-#: idêntico a cada renderização: a geometria não muda quando o usuário troca
-#: de métrica ou de ano, só as cores mudam.
-#:
-#: Guarda só a geometria, nunca as propriedades. Propriedade carrega cor e
-#: valor, que mudam a cada interação — cachear junto serviria mapa velho.
-_GEOMETRIAS: dict[str, list] = {}
+def geometrias_geojson(camada) -> list:
+    """Geometrias da camada em GeoJSON, sem as propriedades.
 
-#: Recortes distintos guardados. Cabe o país, as 27 UFs e folga para os
-#: recortes de saúde; cada entrada custa poucos MB.
-_LIMITE_GEOMETRIAS = 40
+    Converter a malha custa 75 ms em Minas Gerais e é o item mais caro de
+    montar o mapa — mais que todas as leituras de dado somadas. O resultado é
+    idêntico entre renderizações: a geometria não muda quando o usuário troca
+    de métrica ou de ano, só as cores mudam.
 
-
-def _geometrias(camada, chave_cache: str | None) -> list | None:
-    """Geometrias em GeoJSON, reaproveitadas entre renderizações.
-
-    Sem ``chave_cache`` devolve ``None`` e o chamador segue pelo caminho
-    normal — é o que os testes usam, e evita que uma chave errada sirva a
-    malha de outro estado.
+    Fica separado de :func:`deck` para o chamador poder memoizar. **Só a
+    geometria** — propriedade carrega cor e valor, que mudam a cada interação,
+    e guardar junto serviria mapa velho.
     """
-    if chave_cache is None:
-        return None
-    if chave_cache not in _GEOMETRIAS:
-        if len(_GEOMETRIAS) >= _LIMITE_GEOMETRIAS:
-            _GEOMETRIAS.clear()
-        bruto = camada[["geometry"]].__geo_interface__
-        _GEOMETRIAS[chave_cache] = [f["geometry"] for f in bruto["features"]]
-    return _GEOMETRIAS[chave_cache]
+    return [f["geometry"] for f in camada[["geometry"]].__geo_interface__["features"]]
 
 
 def _compactar(mapa_deck) -> None:
@@ -208,7 +190,7 @@ def deck(
     coluna_nome: str = "nome_mun",
     decimais: int = 1,
     altura: int = ALTURA,
-    chave_cache: str | None = None,
+    geometrias: list | None = None,
 ):
     """Mapa em pydeck, para o drill-down por clique.
 
@@ -237,9 +219,8 @@ def deck(
 
     quadro = enquadrar(tuple(camada.total_bounds))
 
-    # A geometria vem do cache quando o chamador identifica o recorte; as
+    # As geometrias chegam prontas quando o chamador as memoizou; as
     # propriedades são sempre montadas do zero, porque carregam a cor.
-    geometrias = _geometrias(camada, chave_cache)
     if geometrias is not None and len(geometrias) == len(dados):
         propriedades = dados.drop(columns="geometry").to_dict("records")
         colecao = {
@@ -269,7 +250,6 @@ def deck(
 
     mapa_deck = pydeck.Deck(
         layers=[camada_geo],
-        views=[pydeck.View(type="MapView", controller=False)],
         initial_view_state=pydeck.ViewState(
             latitude=quadro["center"]["lat"],
             longitude=quadro["center"]["lon"],
@@ -293,15 +273,12 @@ def deck(
 
     _compactar(mapa_deck)
 
-    # Declara o mapa travado nos dois lugares do spec — mas saiba que **isto
-    # sozinho não funciona no Streamlit**. O `DeckGlJsonChart` renderiza
-    # `<DeckGL controller={true}>` fixo no componente React e ignora o que vem
-    # no JSON (conferido no bundle: `controller:!0`). Fica aqui porque é a
-    # declaração correta, vale se o mapa for renderizado fora do Streamlit, e
-    # volta a valer sozinha no dia em que eles pararem de sobrescrever.
-    #
-    # Quem de fato trava é `componentes.script_travar_zoom`, no DOM.
-    mapa_deck.controller = False
+    # O zoom pela roda do mouse é bloqueado no DOM, por
+    # `componentes.script_travar_zoom`. Declarar `controller: false` aqui não
+    # adianta: o `DeckGlJsonChart` do Streamlit renderiza
+    # `<DeckGL controller={true}>` fixo e descarta o que vem no JSON. Havia
+    # duas declarações inertes neste ponto — saíram, porque código que não faz
+    # nada mas parece fazer engana quem for mexer depois.
 
     return mapa_deck, escala
 

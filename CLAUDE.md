@@ -75,10 +75,14 @@ uma investigação; a íntegra está em `docs/contrato-dados.md`.
    `RerunException`, que herda de `BaseException` justamente para atravessar
    `except Exception`. Ampliar a captura mata a navegação por clique sem erro
    nenhum aparecer.
-8. **A pirâmide de CURA está zerada** para tuberculose e hanseníase em todos
+8. **A suíte não importa o `app.py`.** Importar dispararia o script inteiro.
+   `tests/test_app.py` faz checagem estática com `ast` — foi assim que se
+   pegou uma constante de cache definida **depois** do decorador que a usava,
+   com o app quebrando na importação e 629 testes verdes.
+9. **A pirâmide de CURA está zerada** para tuberculose e hanseníase em todos
    os anos — falha do pipeline da equipe parceira, não ausência de dado.
    Óbitos saem de `obitos_sim_faixa`; cura não tem fonte local.
-9. **Os indicadores de TB vêm de outra extração**, com cobertura de ano
+10. **Os indicadores de TB vêm de outra extração**, com cobertura de ano
    própria. Não compare com os KPIs num ano que ainda não fechou.
 
 ### Paridade
