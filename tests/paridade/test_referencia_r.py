@@ -118,3 +118,35 @@ def test_divergentes_continuam_divergindo(recorte: dict) -> None:
                 f"{nome} passou a bater com o R ({obtido} ≈ {esperado}). "
                 f"Tire de DIVERGENTES e de excecoes.md."
             )
+
+
+def test_toda_divergencia_esta_registrada() -> None:
+    """`excecoes.md` precisa cobrir tudo que `DIVERGENTES` declara.
+
+    A regra do registro é "o que não estiver listado e divergir é bug". Ela
+    só vale se o registro acompanhar o código — e foi assim que a linha do
+    denominador de HIV ficou contraditória por um dia, afirmando que batia no
+    número exato depois de já não bater.
+    """
+    from pathlib import Path
+
+    registro = (Path(__file__).parent / "excecoes.md").read_text(encoding="utf-8")
+    for nome in DIVERGENTES:
+        assert nome in registro, (
+            f"{nome} está em DIVERGENTES mas não aparece em excecoes.md"
+        )
+
+
+def test_registro_nao_promete_paridade_onde_ela_nao_existe() -> None:
+    """Guarda contra a contradição que já aconteceu.
+
+    O registro afirmava que o denominador da interrupção batia "no número
+    exato (1.034 de 8.700)" — e três linhas abaixo explicava que aquele
+    número era o dobro do correto.
+    """
+    from pathlib import Path
+
+    registro = (Path(__file__).parent / "excecoes.md").read_text(encoding="utf-8")
+    assert "1.034 de 8.700" not in registro.split("## 2.")[0], (
+        "a seção de paridade confirmada voltou a citar o denominador dobrado"
+    )

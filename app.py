@@ -41,12 +41,12 @@ def _anos() -> list[int]:
     return leitura.anos_disponiveis(pack.DOENCA)
 
 
-@st.cache_data(ttl=600, max_entries=256)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
     return calc.calcular(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_GEOMETRIA, show_spinner=False)
 def _camada(
     nivel: str,
     uf: str | None,
@@ -80,7 +80,7 @@ def _camada(
     return municipios
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_PESADAS, show_spinner=False)
 def _valores_mapa(
     doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, recorte: str
 ):
@@ -92,7 +92,7 @@ def _valores_mapa(
     return leitura.valores_por_geografia(escopo, metrica)
 
 
-@st.cache_data(ttl=600, max_entries=256, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _serie(doenca, ano, nivel, uf, mun, horizonte, metrica):
     escopo = Escopo(doenca, ano, nivel, uf=uf, mun=mun)
     if horizonte == "meses":
@@ -100,44 +100,44 @@ def _serie(doenca, ano, nivel, uf, mun, horizonte, metrica):
     return leitura.serie_anual(escopo, metrica)
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _serie_dupla(doenca, ano, nivel, uf, mun, horizonte):
     return leitura.serie_dupla(Escopo(doenca, ano, nivel, uf=uf, mun=mun), horizonte)
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, top_n: int):
     return leitura.ranking(Escopo(doenca, ano, nivel_agregado(nivel), uf=uf), metrica, top_n)
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _indicadores_programa(doenca, ano, nivel, uf, mun):
     return leitura.indicadores_programa(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _composicao(doenca, ano, nivel, uf, mun, variavel):
     return leitura.composicao(Escopo(doenca, ano, nivel, uf=uf, mun=mun), variavel)
 
 
-@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _piramide(doenca, ano, nivel, uf, mun, tipo):
     return leitura.piramide_completa(Escopo(doenca, ano, nivel, uf=uf, mun=mun), tipo)
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=TTL_DADOS)
 def _meses_com_dado(doenca: str, ano: int) -> int:
     return leitura.meses_com_dado(doenca, ano)
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=TTL_DADOS)
 def _municipios(uf: str) -> dict[str, str]:
     """Código de 6 dígitos → nome, para o seletor e para a trilha."""
     camada = geo.municipios(uf)
     return dict(zip(camada["cod_mun6"], camada["nome_mun"]))
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=TTL_DADOS)
 def _rotulos_busca(uf: str) -> dict[str, str]:
     """Rótulo da busca. Em PE inclui a região de saúde, como no original.
 
@@ -160,6 +160,33 @@ def _navegacao() -> Navegacao:
         st.session_state.nav = Navegacao(doenca=pack.DOENCA, ano=_anos()[-2])
     return st.session_state.nav
 
+
+#: Validade do cache de dados, em segundos.
+#:
+#: Os parquets são imutáveis entre publicações — mudam quando alguém troca os
+#: arquivos e reinicia o serviço, e o reinício já limpa o cache. O TTL de 10
+#: minutos que estava aqui só produzia releitura periódica sem motivo.
+#:
+#: Não é infinito de propósito: se alguém trocar os arquivos **sem** reiniciar,
+#: um dia é o limite de quanto o painel serve dado velho. É a única razão de o
+#: número não ser `None`.
+TTL_DADOS = 24 * 3600
+
+#: Quantos resultados guardar por leitor.
+#:
+#: A cardinalidade possível é grande demais para caber — 8.064 combinações só
+#: para o mapa, 89.568 para os KPIs —, então isto é limite de memória, não de
+#: cobertura. Os números saem do tamanho medido de cada resultado:
+#: KPI ocupa 0,1 KB, série e ranking cerca de 2 KB, valores do mapa até 31 KB
+#: em Minas Gerais.
+ENTRADAS_LEVES = 1024   # ~0,1 KB cada: KPIs
+ENTRADAS_MEDIAS = 512   # ~2 KB cada: séries, ranking, pirâmide, composição
+ENTRADAS_PESADAS = 256  # até 31 KB: valores do mapa
+
+#: Camadas geométricas: de 122 KB (as 27 UFs) a 359 KB (municípios de MG).
+#: Estava **sem limite** — 27 UFs mais os recortes de saúde e o modo detalhe
+#: cresciam sem teto. Com 48, o pior caso fica em torno de 17 MB.
+ENTRADAS_GEOMETRIA = 48
 
 #: Para nomear o último mês com dado no aviso de ano incompleto.
 MESES = (

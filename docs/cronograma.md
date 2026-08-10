@@ -232,15 +232,15 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 ## Semana 6 — Paridade + performance (07–11/set)
 
 ### 6.1 Auditoria de paridade
-- [ ] Rodar o harness completo em todos os níveis e anos
-- [ ] Investigar e classificar cada divergência: bug vs exceção intencional
-- [ ] Fechar `excecoes.md`
+- [x] Rodar o harness completo em todos os níveis e anos — 57 checagens, 16 anos, 3 níveis
+- [x] Investigar e classificar cada divergência: bug vs exceção intencional
+- [x] Fechar `excecoes.md` — reorganizado em idêntico / intencional / aberto, com teste prendendo o registro ao código
 
 ### 6.2 Performance
-- [ ] Profiling: identificar o componente mais lento
-- [ ] Tuning de `st.cache_data` (TTL, `max_entries`)
+- [x] Profiling: o mais lento era montar o mapa (112 ms em MG), dos quais 75 ms eram converter a malha
+- [x] Tuning de `st.cache_data` — TTL de 10 min para 24 h (dado imutável entre publicações) e teto para o cache de geometria, que estava sem limite
 - [ ] Verificar partition pruning nas queries DuckDB
-- [ ] Definir e bater um alvo de tempo de resposta por interação
+- [ ] Definir e bater um alvo de tempo de resposta por interação — **depende de medir pela rede**, ver docs/performance.md
 
 ### 6.3 Robustez — **feito, antecipado**
 - [x] Tratamento de erro por componente — `src/resiliencia.py`. Verificado
