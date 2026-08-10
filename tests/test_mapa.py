@@ -272,3 +272,56 @@ def test_payload_sai_sem_indentacao() -> None:
     texto = _payload("PE")
     assert '\n  "' not in texto, "voltou a indentar"
     assert ", " not in texto[:200], "separadores não estão compactos"
+
+
+def test_cache_de_geometria_nao_muda_o_desenho() -> None:
+    """Reaproveitar a malha não pode alterar geometria nem propriedades.
+
+    A conversão para GeoJSON custa 75 ms em MG e é o item mais caro de montar
+    o mapa — mas o ganho não vale nada se servir uma malha diferente.
+    """
+    import json
+
+    from src.data import leitura
+    from src.data.escopo import Escopo
+    from src.doencas import tuberculose as pack
+
+    camada = geo.municipios("PE")
+    valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf="PE"), "incid")
+
+    def montar(chave_cache):
+        figura, _ = mapa.deck(
+            camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
+            rotulo_metrica="Incidência", coluna_nome="nome_mun",
+            chave_cache=chave_cache,
+        )
+        return json.loads(figura.to_json())["layers"][0]["data"]["features"]
+
+    sem, com = montar(None), montar("teste-pe")
+    assert len(sem) == len(com)
+    for a, b in zip(sem, com):
+        assert a["geometry"] == b["geometry"]
+        assert a["properties"] == b["properties"]
+
+
+def test_cache_de_geometria_nao_serve_recorte_errado() -> None:
+    """Chave diferente, malha diferente — senão PE apareceria dentro de MG."""
+    from src.data import leitura
+    from src.data.escopo import Escopo
+    from src.doencas import tuberculose as pack
+
+    def contar(uf: str) -> int:
+        camada = geo.municipios(uf)
+        valores = leitura.valores_por_geografia(Escopo("TB", 2024, "UF", uf=uf), "incid")
+        figura, _ = mapa.deck(
+            camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
+            rotulo_metrica="Incidência", coluna_nome="nome_mun",
+            chave_cache=f"UF|{uf}|MUN",
+        )
+        import json
+
+        return len(json.loads(figura.to_json())["layers"][0]["data"]["features"])
+
+    assert contar("PE") == len(geo.municipios("PE"))
+    assert contar("MG") == len(geo.municipios("MG"))
+    assert contar("PE") == len(geo.municipios("PE")), "cache serviu a malha errada"

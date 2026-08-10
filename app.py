@@ -350,6 +350,13 @@ with esquerda, resiliencia.painel("Mapa"):
             rotulo_metrica=pack.rotulo(nav.metrica),
             coluna_nome="nome_mun" if chave == "cod_mun6" else chave,
             decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
+            # A chave descreve a **geometria**, não o dado: os mesmos
+            # argumentos de `_camada`, sem ano nem métrica. Trocar de métrica
+            # tem de reaproveitar a malha; trocar de recorte, não.
+            chave_cache="|".join(
+                str(x)
+                for x in (nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro)
+            ),
         )
 
         # pydeck, e não Plotly: o coroplético do Plotly não emite evento de

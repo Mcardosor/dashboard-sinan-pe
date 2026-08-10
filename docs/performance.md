@@ -140,3 +140,53 @@ renderização nem o de regerar a malha, e o teto de 1 MB já tem folga.
 Nenhuma das duas é necessária hoje. O que continua valendo é medir pela rede
 depois do deploy: 0,71 MB por navegação ainda é o maior item isolado do que
 trafega, e localhost não cobra por isso.
+
+---
+
+## Perfil do servidor — medido em 08/ago/2026
+
+Com o payload já resolvido, restava saber onde o tempo é gasto **antes** de a
+resposta sair. Medido com cache quente, média de três execuções:
+
+| Etapa | Brasil | MG (853 mun) |
+|---|---:|---:|
+| `kpis.calcular` | 13,2 ms | 13,6 ms |
+| `composicao` | 6,5 ms | 6,5 ms |
+| `piramide_completa` | 6,3 ms | 6,9 ms |
+| `ranking` | 3,6 ms | 7,6 ms |
+| `serie_mensal` | 3,0 ms | 3,1 ms |
+| `indicadores_programa` | 2,3 ms | 3,7 ms |
+| `valores_por_geografia` | 1,7 ms | 2,3 ms |
+| **soma das leituras** | **~37 ms** | **~44 ms** |
+| **`mapa.deck()`** | **50,7 ms** | **112,5 ms** |
+
+**A camada de dados não é o gargalo.** Nenhuma leitura passa de 14 ms — o
+DuckDB sobre parquet particionado entrega o que prometia. O item mais caro era
+montar o mapa, e dentro dele **75,6 ms eram converter a malha para GeoJSON**,
+trabalho idêntico repetido a cada renderização: a geometria não muda quando o
+usuário troca de métrica ou de ano.
+
+**Correção:** a geometria convertida passa a ser guardada por recorte, em
+`mapa._geometrias`. Só a geometria — propriedade carrega cor e valor, que
+mudam a cada interação, e cachear junto serviria mapa velho.
+
+| | Antes | Depois |
+|---|---:|---:|
+| `mapa.deck()` em MG | 110,8 ms | **39,2 ms** |
+
+De quebra o payload encolheu de novo: sem passar pelo `__geo_interface__`
+completo, somem os campos `bbox` e `id` que ele acrescenta por feição e que o
+deck.gl não usa.
+
+### O que isso diz sobre a meta de performance
+
+Somando, o servidor gasta hoje cerca de **80 ms** por navegação em MG — 44 ms
+de leitura e 39 ms de mapa. A medição ponta a ponta em localhost deu 754 ms.
+
+A diferença, aproximadamente **670 ms, é overhead do próprio Streamlit**:
+reexecução do script, diferença de árvore de widgets, WebSocket e renderização
+no navegador. Não é dado, não é DuckDB, não é geometria.
+
+Isso delimita o alvo realista: dá para melhorar o que é nosso, e o que é nosso
+já custa 10% do total. Perseguir os outros 90% significaria trocar de
+framework, o que não está em discussão.

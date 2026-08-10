@@ -130,6 +130,39 @@ def _rgb(cor: str) -> list[int]:
     return [int(texto[i : i + 2], 16) for i in (0, 2, 4)]
 
 
+#: Geometrias já convertidas para GeoJSON, por chave de recorte.
+#:
+#: Converter a malha custa 75 ms em Minas Gerais, e é o item mais caro de
+#: montar o mapa — mais que todas as leituras de dado somadas. O trabalho é
+#: idêntico a cada renderização: a geometria não muda quando o usuário troca
+#: de métrica ou de ano, só as cores mudam.
+#:
+#: Guarda só a geometria, nunca as propriedades. Propriedade carrega cor e
+#: valor, que mudam a cada interação — cachear junto serviria mapa velho.
+_GEOMETRIAS: dict[str, list] = {}
+
+#: Recortes distintos guardados. Cabe o país, as 27 UFs e folga para os
+#: recortes de saúde; cada entrada custa poucos MB.
+_LIMITE_GEOMETRIAS = 40
+
+
+def _geometrias(camada, chave_cache: str | None) -> list | None:
+    """Geometrias em GeoJSON, reaproveitadas entre renderizações.
+
+    Sem ``chave_cache`` devolve ``None`` e o chamador segue pelo caminho
+    normal — é o que os testes usam, e evita que uma chave errada sirva a
+    malha de outro estado.
+    """
+    if chave_cache is None:
+        return None
+    if chave_cache not in _GEOMETRIAS:
+        if len(_GEOMETRIAS) >= _LIMITE_GEOMETRIAS:
+            _GEOMETRIAS.clear()
+        bruto = camada[["geometry"]].__geo_interface__
+        _GEOMETRIAS[chave_cache] = [f["geometry"] for f in bruto["features"]]
+    return _GEOMETRIAS[chave_cache]
+
+
 def _compactar(mapa_deck) -> None:
     """Faz o deck serializar sem indentação.
 
@@ -175,6 +208,7 @@ def deck(
     coluna_nome: str = "nome_mun",
     decimais: int = 1,
     altura: int = ALTURA,
+    chave_cache: str | None = None,
 ):
     """Mapa em pydeck, para o drill-down por clique.
 
@@ -203,9 +237,24 @@ def deck(
 
     quadro = enquadrar(tuple(camada.total_bounds))
 
+    # A geometria vem do cache quando o chamador identifica o recorte; as
+    # propriedades são sempre montadas do zero, porque carregam a cor.
+    geometrias = _geometrias(camada, chave_cache)
+    if geometrias is not None and len(geometrias) == len(dados):
+        propriedades = dados.drop(columns="geometry").to_dict("records")
+        colecao = {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature", "geometry": g, "properties": p}
+                for g, p in zip(geometrias, propriedades)
+            ],
+        }
+    else:
+        colecao = dados.__geo_interface__
+
     camada_geo = pydeck.Layer(
         "GeoJsonLayer",
-        data=dados.__geo_interface__,
+        data=colecao,
         get_fill_color="properties.cor",
         get_line_color=[255, 255, 255, 150],
         line_width_min_pixels=0.6,
