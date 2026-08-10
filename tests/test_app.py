@@ -14,7 +14,8 @@ import ast
 from pathlib import Path
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
-ARVORE = ast.parse(APP.read_text(encoding="utf-8"))
+FONTE = APP.read_text(encoding="utf-8")
+ARVORE = ast.parse(FONTE)
 
 
 def _definidos_ate(linha: int) -> set[str]:
@@ -65,7 +66,7 @@ def test_constantes_de_cache_existem() -> None:
 
 
 def test_app_compila() -> None:
-    compile(APP.read_text(encoding="utf-8"), str(APP), "exec")
+    compile(FONTE, str(APP), "exec")
 
 
 def test_altura_da_primeira_linha_deriva_do_mapa() -> None:
@@ -77,7 +78,7 @@ def test_altura_da_primeira_linha_deriva_do_mapa() -> None:
     """
     import re
 
-    achado = re.search(r"^ALTURA_LINHA_1 = (.+)$", APP, re.M)
+    achado = re.search(r"^ALTURA_LINHA_1 = (.+)$", FONTE, re.M)
     assert achado, "ALTURA_LINHA_1 sumiu"
     assert "mapa.ALTURA" in achado.group(1), (
         "a altura da linha 1 precisa derivar de `mapa.ALTURA`, não ser fixa"
@@ -90,10 +91,10 @@ def test_as_tres_series_recebem_a_mesma_altura() -> None:
     Uma delas ficou sem o argumento na primeira tentativa — a indentação
     mudara com a reorganização e o `replace` não casou, em silêncio.
     """
-    assert APP.count("altura=ALTURA_LINHA_1") == 3
+    assert FONTE.count("altura=ALTURA_LINHA_1") == 3
 
 
 def test_a_grade_tem_duas_linhas_de_duas_colunas() -> None:
     """Mapa | série em cima, ranking | pirâmide embaixo."""
-    assert "esquerda, direita = st.columns(2" in APP
-    assert "baixo_esq, baixo_dir = st.columns(2" in APP
+    assert "esquerda, direita = st.columns(2" in FONTE
+    assert "baixo_esq, baixo_dir = st.columns(2" in FONTE
