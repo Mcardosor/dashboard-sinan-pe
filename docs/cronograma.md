@@ -311,18 +311,18 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 - [x] Responsivo — remover as alturas fixas de 760px e 520px do original *(feito em 2.1)*
 - [x] Tema claro como padrão, escuro como alternativa *(antecipado da semana 8)*
 - [ ] Escala tipográfica consistente
-- [ ] Aumentar os tooltips (10,5px no original é pequeno demais)
+- [x] Tooltips em 12px — registrado como divergência visual em `excecoes.md`
 
 ### 8.2 Acessibilidade
-- [ ] Navegação por teclado nos cards
-- [ ] `aria-label` / `aria-pressed`
-- [ ] Contraste
-- [ ] `prefers-reduced-motion`
+- [x] Navegação por teclado nos cards — `<button>` nativo, e não um `div` com `role="button"` como no original
+- [ ] `aria-pressed` no card selecionado — o `<button>` é renderizado pelo Streamlit, então exige remendo no DOM como o do zoom. **Lacuna real:** leitor de tela não anuncia qual métrica está ativa
+- [x] Contraste — cinco métricas ficavam abaixo de 3:1 no tema escuro, `incid` entre elas com 2,6. O acento passa a se misturar a `currentColor`, o que segue o tema do Streamlit e não o do sistema
+- [x] `prefers-reduced-motion`
 
 ### 8.3 Entrega
 - [ ] Deploy
-- [ ] README de execução
-- [ ] Registrar as divergências metodológicas para a equipe de R
+- [x] README de execução
+- [x] Registrar as divergências metodológicas — `excecoes.md` e `perguntas-equipe-r.md`
 
 ---
 

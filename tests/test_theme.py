@@ -537,3 +537,36 @@ def test_css_do_kpi_atravessa_os_invólucros_de_tooltip() -> None:
     assert "height: 100%" not in css.split(".stButton button")[0][-400:], (
         "voltou a esticar os invólucros de tooltip"
     )
+
+
+def test_todas_as_metricas_tem_contraste_nos_dois_temas() -> None:
+    """O valor do KPI é 28px em peso 900 — texto grande, mínimo 3:1 na WCAG.
+
+    Cinco métricas falhavam no tema escuro, `incid` entre elas: é a padrão, e
+    portanto o número mais visto do painel, com 2,6:1. A correção não foi
+    trocar as cores, e sim misturar o acento com `currentColor` — no claro o
+    texto é escuro e a cor escurece de leve; no escuro clareia. Assim o ajuste
+    segue o tema do Streamlit, e não o do sistema operacional.
+    """
+    from src.doencas import tuberculose as pack
+    from src.theme import cores
+
+    TEXTO = {"claro": "#0B1220", "escuro": "#E5E7EB"}
+    FUNDO = {"claro": "#FFFFFF", "escuro": "#0B1220"}
+
+    ruins = []
+    for metrica, cor in pack.CORES.items():
+        for tema in TEXTO:
+            misturada = cores.misturar(cor, TEXTO[tema], 0.28)
+            razao = cores.contraste(misturada, FUNDO[tema])
+            if razao < 3.0:
+                ruins.append(f"{metrica} no tema {tema}: {razao:.1f}")
+    assert not ruins, "contraste abaixo de 3:1 — " + "; ".join(ruins)
+
+
+def test_o_acento_do_kpi_se_mistura_ao_texto() -> None:
+    """A mistura é o que faz o contraste seguir o tema sem media query."""
+    import re
+
+    bloco = re.search(r"\.kpi-value\s*\{([^}]*)\}", c.css_base()).group(1)
+    assert "color-mix" in bloco and "currentColor" in bloco

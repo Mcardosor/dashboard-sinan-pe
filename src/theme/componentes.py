@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from html import escape
 
+from . import cores
+
 from . import tokens
 
 
@@ -130,11 +132,19 @@ def css_base() -> str:
   line-height: 1.25;
   min-height: 2.5em;
 }}
+/* O acento se ajusta ao tema sem media query. `prefers-color-scheme` segue o
+   sistema operacional, e não o tema do Streamlit — com o app em claro e o
+   sistema em escuro, pintaria o acento errado.
+   Misturar com `currentColor` resolve pela própria página: no tema claro o
+   texto é escuro e a cor escurece de leve; no escuro o texto é claro e ela
+   clareia. Cinco métricas ficavam abaixo do mínimo de 3:1 para texto grande
+   no fundo escuro — `incid`, a padrão, em 2,6. */
 .kpi-value {{
   font-size: {tokens.TEXTO_XL};
   font-weight: 900;
   letter-spacing: -.2px;
   line-height: 1.03;
+  color: color-mix(in srgb, var(--kpi-accent) 72%, currentColor 28%);
 }}
 .kpi-sub {{
   font-size: {tokens.TEXTO_XS};
@@ -283,7 +293,10 @@ def kpi_card(
         else ""
     )
     return (
-        f'<div class="{classes}" style="--kpi-accent:{escape(cor)};" aria-hidden="true">'
+        f'<div class="{classes}" '
+        f'style="--kpi-accent:{escape(cor)};'
+        f'--kpi-accent-escuro:{escape(cores.para_fundo_escuro(cor))};" '
+        f'aria-hidden="true">'
         f'<div class="kpi-inner">'
         f'<div class="kpi-accent"></div>'
         f'<div class="kpi-text">'

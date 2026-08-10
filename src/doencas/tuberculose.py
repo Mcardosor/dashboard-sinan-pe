@@ -18,7 +18,10 @@ CORES = {
     "casos": "#C1440A",
     "obitos": "#DC2626",
     "cura": "#16A34A",
-    "pop": "#111827",
+    # Cinza médio e não quase-preto: `pop` em #111827 dava 2,4:1 de contraste
+    # no tema escuro. Não é exibido como card hoje, mas a rampa do mapa usa a
+    # cor da métrica.
+    "pop": "#6B7280",
     "incid": "#92400E",
     "mortalidade": "#1D4ED8",
     "letalidade": "#6D28D9",

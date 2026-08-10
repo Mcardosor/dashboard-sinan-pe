@@ -71,3 +71,51 @@ def contraste_texto(fundo: str) -> str:
     r, g, b = (canal(c) for c in hex_para_rgb(fundo))
     luminancia = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return "#111827" if luminancia > 0.179 else "#FFFFFF"
+
+
+#: Fundo do tema escuro, de `.streamlit/config.toml`.
+FUNDO_ESCURO = "#0B1220"
+
+#: Contraste mínimo para texto grande, pela WCAG 2.1 (nível AA). O valor do
+#: KPI é 28px em peso 800, então cai nessa faixa.
+CONTRASTE_MINIMO = 3.0
+
+
+def _luminancia(cor: str) -> float:
+    # `hex_para_rgb` já devolve 0–1; dividir por 255 outra vez zerava tudo e
+    # fazia todo contraste dar 1,0.
+    canais = []
+    for x in hex_para_rgb(cor):
+        canais.append(x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4)
+    r, g, b = canais
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contraste(a: str, b: str) -> float:
+    """Razão de contraste entre duas cores, de 1 a 21."""
+    la, lb = _luminancia(a), _luminancia(b)
+    claro, escuro = max(la, lb), min(la, lb)
+    return (claro + 0.05) / (escuro + 0.05)
+
+
+def para_fundo_escuro(cor: str, fundo: str = FUNDO_ESCURO, alvo: float = 3.5) -> str:
+    """Clareia a cor até ela ser legível sobre fundo escuro.
+
+    As cores das métricas foram escolhidas para o tema claro, onde todas
+    passam. Sobre o fundo escuro, cinco delas ficavam abaixo do mínimo de
+    3:1 para texto grande — incluindo `incid`, que é a métrica padrão e
+    portanto o número mais visto do painel, com 2,6:1.
+
+    Clarear preserva a identidade da métrica; trocar por outra cor a
+    perderia. O alvo é 3,5 e não 3,0 para haver folga: o valor exato depende
+    de arredondamento do navegador.
+    """
+    if contraste(cor, fundo) >= alvo:
+        return cor
+
+    # Mistura com branco em passos pequenos; o primeiro que passa vence.
+    for passo in range(1, 21):
+        candidato = misturar(cor, "#FFFFFF", passo / 20)
+        if contraste(candidato, fundo) >= alvo:
+            return candidato
+    return "#FFFFFF"
