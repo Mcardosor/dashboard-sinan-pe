@@ -326,6 +326,32 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 
 ---
 
+## Aberto — encontrado em 08/ago/2026
+
+### Mapa e ranking não cobrem dois dos seis KPIs
+
+`interrupcao_trat_pct` e `hiv_pos_pct` devolvem zero linhas em
+`valores_por_geografia` e em `ranking`. Clicar nesses cards leva ao estado
+vazio "ainda não é pintável no mapa". Confirmado no Brasil, 2024: os outros
+quatro devolvem 27 UFs, esses dois devolvem nada.
+
+**Causa.** Os quatro que funcionam saem de coluna direta do `incidence`, que
+já vem por geografia (`_COLUNA_DIRETA` tem `casos`, `cura`, `incid`, `pop`;
+`mortalidade` deriva de óbitos). Os dois que faltam são calculados a partir
+do `sinan_landing`, e `variavel_sinan` filtra **uma** geografia por vez —
+serve para o card, não para pintar 27 UFs de uma vez.
+
+**Correção.** Um leitor que agrupe em vez de filtrar: `sinan_landing` tem
+`uf` e `geo_id`, então dá para `GROUP BY` a chave geográfica aplicando as
+mesmas regras dos KPIs — positivos sobre positivos mais negativos para o HIV,
+código 2 sobre todos os encerramentos para a interrupção. Atenção a
+`sexo = 'TOTAL'` (armadilha 11) e ao critério por **código** e nunca por
+rótulo (armadilha 5).
+
+Cuidado ao ligar: no nível de município a base fica pequena, e o mesmo limiar
+de `MINIMO_PARA_PERCENTUAL` que protege o painel de composição deveria valer
+aqui — um município com dois encerramentos não pode virar uma cor no mapa.
+
 ## Fora do escopo desta entrega
 
 Dengue, Zika e Hanseníase. Pela arquitetura de *disease pack*, entram depois como
