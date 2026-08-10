@@ -253,7 +253,16 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 
 ---
 
-## Semana 7 — Análise livre / Superset (14–18/set)
+## Semana 7 — Análise livre / Superset (14–18/set) — **ADIADA**
+
+> Decidido em 08/ago/2026: passa a ser a última prioridade, e pode não entrar.
+> O que sustentava o bloco era ser a única coisa além do original; isso deixou
+> de valer — o painel já entrega indicadores do programa, pirâmide de óbitos,
+> 24 variáveis de composição e aviso de ano incompleto, nenhum deles presente
+> nos painéis em R.
+>
+> O plano fica registrado abaixo e em `docs/analise-livre.md`. Nada foi
+> começado, então adiar não deixa ponta solta.
 
 > Não se parte do zero: o **dashboard-tb-v4** já resolveu esta integração e está
 > em produção. Ler `docs/analise-livre.md` e o `PLANO_SEMANA.md` do v4 **antes**
