@@ -54,12 +54,22 @@ def test_kpis_que_devem_bater(recorte: dict) -> None:
         )
 
 
-def test_denominadores_do_sinan_batem_exatamente() -> None:
-    """O achado mais forte da comparação.
+def test_denominadores_do_r_sao_o_dobro_dos_nossos() -> None:
+    """Os dois painéis usavam o mesmo denominador — e ele estava dobrado.
 
-    Testados e encerramentos de PE conferem no número exato — 8.250 e 8.700 —,
-    o que mostra que os percentuais derivados do `sinan_landing` reproduzem a
-    regra do R, incluindo o critério de quem entra no denominador.
+    `sinan_landing` traz linhas por sexo M, F e I **mais** uma linha TOTAL que
+    já é a soma delas. Conferido em 9,97 milhões de combinações de nível,
+    geografia, ano e variável: TOTAL bate com a soma das partes em todas, sem
+    uma exceção. Somar tudo, como fazíamos e como o painel em R faz, dá
+    exatamente o dobro.
+
+    A proporção nunca sentiu, porque numerador e denominador dobravam juntos —
+    é por isso que HIV e interrupção continuam batendo com eles. O que sentia
+    era a contagem exibida.
+
+    Este teste prende o fator 2 em vez de esconder a divergência: se um dia
+    eles corrigirem, ele falha e avisa que a exceção pode sair de
+    `excecoes.md`.
     """
     import unicodedata
 
@@ -76,10 +86,18 @@ def test_denominadores_do_sinan_batem_exatamente() -> None:
     rotulos = hiv["valor_lbl"].map(sem_acento)
     negativo = rotulos.str.contains("negativ|nao reag", regex=True, na=False)
     positivo = ~negativo & rotulos.str.contains("positiv|reagente", regex=True, na=False)
-    assert int(hiv.loc[positivo | negativo, "n"].sum()) == esperado["hiv_testados"]
+    nossos_testados = int(hiv.loc[positivo | negativo, "n"].sum())
+    assert nossos_testados * 2 == esperado["hiv_testados"], (
+        f"testados: nossos {nossos_testados}, R {esperado['hiv_testados']} — "
+        f"esperado exatamente o dobro"
+    )
 
     encerramentos = leitura.variavel_sinan(esc, "SITUA_ENCE")
-    assert int(encerramentos["n"].sum()) == esperado["encerramentos"]
+    nossos_encerramentos = int(encerramentos["n"].sum())
+    assert nossos_encerramentos * 2 == esperado["encerramentos"], (
+        f"encerramentos: nossos {nossos_encerramentos}, "
+        f"R {esperado['encerramentos']} — esperado exatamente o dobro"
+    )
 
 
 @pytest.mark.parametrize("recorte", _recortes())

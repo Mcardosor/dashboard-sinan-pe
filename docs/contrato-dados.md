@@ -169,14 +169,55 @@ ignorado.
 ### 9. A pirâmide de tuberculose só tem CASOS
 
 O dataset `piramides` particiona por `tipo` ∈ CASOS, CURA, OBITOS. Para
-tuberculose, **CURA e OBITOS somam zero** em todos os 15 anos e nos três
-níveis. Só a dengue tem OBITOS preenchido; hanseníase e zika também estão
-vazias.
+tuberculose, **CURA e OBITOS somam zero** em todos os 16 anos e nos três
+níveis.
+
+E o padrão por doença diz de onde vem o defeito:
+
+| Doença | CASOS | CURA | OBITOS |
+|---|:--:|:--:|:--:|
+| Dengue | ✓ | ✓ | ✓ |
+| Zika | ✓ | ✓ | ✓ |
+| **Tuberculose** | ✓ | **zero** | **zero** |
+| **Hanseníase** | ✓ | **zero** | **zero** |
+
+A divisão é exatamente entre arboviroses e as duas doenças crônicas — que são
+justamente as que registram desfecho em `SITUA_ENCE`, e não em `EVOLUCAO`.
+A hipótese é que o pipeline da pirâmide leia um único campo de desfecho, que
+existe para dengue e zika e não para as outras duas.
 
 Consequência: a alternância CASOS/CURA/ÓBITOS da pirâmide etária não funciona
 na entrega de TB. A pirâmide de óbitos precisa sair de `obitos_sim_faixa`, que
 tem o dado (6.354 óbitos no Brasil em 2024). Esse dataset, por sua vez, só
 existe no nível MUN — a agregação para UF e BR é feita na query.
+
+### 11. `sinan_landing` tem linha TOTAL além de M, F e I — somar tudo dobra
+
+A coluna `sexo` assume `M`, `F`, `I`, `NA`, `1` **e `TOTAL`**. A linha TOTAL
+não é uma categoria: é a soma das demais, já agregada. Conferido em **9,97
+milhões** de combinações de nível, geografia, ano e variável — TOTAL bate com
+a soma das partes em todas, sem uma exceção.
+
+Somar o dataset inteiro, que é o caminho óbvio, devolve exatamente o dobro.
+
+```sql
+-- errado: conta em dobro
+SELECT sum(n) FROM sinan_landing WHERE variavel = 'SITUA_ENCE'
+-- certo
+SELECT sum(n) FROM sinan_landing WHERE variavel = 'SITUA_ENCE' AND sexo = 'TOTAL'
+```
+
+**Por que passou despercebido tanto tempo.** Proporção não sente: numerador e
+denominador dobram juntos. Nossos KPIs de HIV e de interrupção batiam com o
+painel em R **porque os dois estavam dobrados da mesma forma** — em PE 2024,
+os dois mostravam "1.034 de 8.700" quando o correto é 517 de 4.350.
+
+O que sentia era a contagem exibida, e o limiar de supressão de base pequena,
+que valia metade do que aparentava: um município com 3 registros reais
+aparecia com 6 e escapava do corte em 5.
+
+Ver `excecoes.md` — virou divergência intencional, em que estamos certos e o
+original não.
 
 ## Conciliação entre fontes
 

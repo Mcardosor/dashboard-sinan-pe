@@ -97,3 +97,33 @@ def test_grafico_troca_o_eixo_conforme_a_base() -> None:
 def test_grafico_vazio_nao_quebra() -> None:
     vazio = pd.DataFrame(columns=["categoria", "n", "pct", "total"])
     assert graficos.composicao(vazio, rotulo="X", cor="#000") is not None
+
+
+def test_contagem_nao_conta_em_dobro() -> None:
+    """`sinan_landing` tem linha TOTAL além de M, F e I.
+
+    A linha TOTAL já é a soma das outras — conferido em 9,97 milhões de
+    combinações, sem exceção. Somar tudo dava exatamente o dobro, e a
+    contagem exibida no painel de composição saía dobrada. A proporção nunca
+    sentiu, porque numerador e denominador dobravam juntos; foi por isso que
+    o defeito sobreviveu à comparação com o painel em R, que tem o mesmo.
+    """
+    from src.data import conexao, config
+
+    esc = Escopo(pack.DOENCA, 2024, "UF", uf="PE")
+    nosso = int(leitura.variavel_sinan(esc, "SITUA_ENCE")["n"].sum())
+
+    caminho = str(config.dashboard_dir() / "sinan_landing" / "**" / "*.parquet")
+    bruto = conexao.conectar().execute(
+        """
+        SELECT sum(CASE WHEN sexo = 'TOTAL' THEN n ELSE 0 END) AS total,
+               sum(CASE WHEN sexo <> 'TOTAL' THEN n ELSE 0 END) AS partes
+        FROM read_parquet(?, hive_partitioning=true)
+        WHERE ano = 2024 AND variavel = 'SITUA_ENCE' AND nivel = 'UF' AND uf = 'PE'
+        """,
+        [caminho],
+    ).fetchone()
+
+    assert bruto[0] == bruto[1], "TOTAL deixou de ser a soma das partes"
+    assert nosso == bruto[0], "o leitor não está usando só a linha TOTAL"
+    assert nosso * 2 == bruto[0] + bruto[1], "somar tudo continua dobrando"

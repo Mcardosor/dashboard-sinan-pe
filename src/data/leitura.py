@@ -126,6 +126,17 @@ def variavel_sinan(esc: Escopo, variavel: str) -> pd.DataFrame:
     O ``valor`` bruto vem com espaço à esquerda (``" 2"``, não ``"2"``). Aqui ele
     sai já com ``trim`` aplicado — sem isso, todo filtro por código falha em
     silêncio. Ver docs/contrato-dados.md, armadilha 3.
+
+    **Filtra ``sexo = 'TOTAL'``**, e essa linha é o que separa a contagem certa
+    da dobrada. O dataset traz M, F, I *e* uma linha TOTAL que já é a soma
+    delas — conferido em 9,97 milhões de combinações de nível, geografia, ano
+    e variável, sem uma única divergência. Somar tudo, como fazíamos, dá
+    exatamente o dobro.
+
+    Proporção não sentia — numerador e denominador dobravam juntos, e é por
+    isso que HIV e interrupção batiam com o painel em R. Contagem sentia: o
+    painel de composição exibia o dobro dos casos, e o limiar de supressão de
+    base pequena valia metade do que aparentava.
     """
     fonte = caminho(
         "sinan_landing",
@@ -136,7 +147,7 @@ def variavel_sinan(esc: Escopo, variavel: str) -> pd.DataFrame:
     sql = f"""
         SELECT trim(valor) AS valor, any_value(valor_lbl) AS valor_lbl, sum(n) AS n
         FROM read_parquet('{fonte}', hive_partitioning=true)
-        WHERE variavel = ?
+        WHERE variavel = ? AND sexo = 'TOTAL'
     """
     params: list = [variavel]
     if esc.nivel == "UF":

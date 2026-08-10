@@ -175,6 +175,42 @@ prova de nada — é o motivo de perguntarmos antes de mudar o nosso lado.
 
 ---
 
+## 6. Duas coisas que achamos e vocês vão querer conferir
+
+Não são perguntas — são defeitos que encontramos no dado e que afetam o painel
+de vocês também.
+
+**As contagens do `sinan_landing` estão dobradas.** A coluna `sexo` tem M, F e
+I **mais** uma linha TOTAL, que já é a soma das outras. Conferimos em 9,97
+milhões de combinações de nível, geografia, ano e variável: TOTAL bate com a
+soma das partes em todas, sem uma exceção. Quem soma o dataset inteiro obtém
+exatamente o dobro.
+
+Em PE, 2024, o painel de vocês mostra "Abandono: 1.034 de 8.700". O correto é
+**517 de 4.350**. A proporção não muda — 11,9% dos dois jeitos —, e é
+justamente por isso que passou despercebido: numerador e denominador dobram
+juntos. O que fica errado é todo número absoluto vindo dessa tabela.
+
+Corrigimos do nosso lado filtrando `sexo = 'TOTAL'`.
+
+**A pirâmide falha por doença, e o padrão diz onde procurar.** `CURA` e
+`OBITOS` somam zero para tuberculose e hanseníase nos 16 anos, e funcionam
+para dengue e zika:
+
+| Doença | CASOS | CURA | OBITOS |
+|---|:--:|:--:|:--:|
+| Dengue | ✓ | ✓ | ✓ |
+| Zika | ✓ | ✓ | ✓ |
+| Tuberculose | ✓ | zero | zero |
+| Hanseníase | ✓ | zero | zero |
+
+A divisão é exatamente entre arboviroses e as duas doenças que registram
+desfecho em `SITUA_ENCE` em vez de `EVOLUCAO`. Nosso palpite é que o pipeline
+da pirâmide leia um campo só de desfecho, que existe para dengue e zika e não
+para as outras duas.
+
+---
+
 ## Achados que não pedem resposta, só aviso
 
 São coisas que corrigimos do nosso lado, mas que provavelmente também afetam
