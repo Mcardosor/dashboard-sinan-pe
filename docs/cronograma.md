@@ -326,6 +326,38 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 
 ---
 
+## Aberto — decidido em 08/ago/2026
+
+### Separar leitura de controle nos KPIs
+
+**Decisão:** o card de KPI volta a ser **só leitura**, e a métrica ativa passa
+a ter um controle explícito — segmentado ou rádio horizontal, acima do mapa,
+ao lado do cabeçalho "Mapa — unidades da federação".
+
+**Por quê.** O card clicável veio do painel em R e nunca foi examinado. Ele
+custou quatro rodadas de conserto: o botão transparente por cima, o rótulo
+vazando sobre o título, a área de clique saindo com o dobro do card, e
+`aria-pressed`/`aria-label` remendados no DOM. Tudo isso para uma interação
+que `st.radio` entrega nativamente, com teclado e leitor de tela incluídos.
+
+E o defeito de fundo não era nenhum desses: **o card não avisa que é
+clicável**. Parece um indicador porque é um indicador. A única pista é o
+realce no hover, que não existe em toque. Pagamos caro por uma interação que
+boa parte dos usuários nunca encontra.
+
+**Resolve de graça** o problema dos dois KPIs sem mapa (abaixo): um controle
+explícito lista só as métricas que funcionam, e não há card morto para clicar.
+
+**O que sai:**
+- `componentes.kpi_clicavel` e o bloco CSS de `[class*="st-key-kpi-"]`
+- `componentes.script_estado_kpis` — `aria-pressed` passa a ser nativo
+- os testes que existem só para vigiar o botão invisível
+
+**O que fica:** `kpi_card`, sem `aria-hidden`, porque passa a ser o conteúdo
+de verdade e não um enfeite atrás de um botão.
+
+Registrar em `excecoes.md` como divergência visual intencional.
+
 ## Aberto — encontrado em 08/ago/2026
 
 ### Mapa e ranking não cobrem dois dos seis KPIs
