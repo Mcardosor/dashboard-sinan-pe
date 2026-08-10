@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from src.doencas import tuberculose as tb
@@ -570,3 +572,37 @@ def test_o_acento_do_kpi_se_mistura_ao_texto() -> None:
 
     bloco = re.search(r"\.kpi-value\s*\{([^}]*)\}", c.css_base()).group(1)
     assert "color-mix" in bloco and "currentColor" in bloco
+
+
+def test_escala_tipografica_nao_tem_degrau_morto() -> None:
+    """Degrau que ninguém usa é convite a contornar a escala.
+
+    `TEXTO_BASE` e `TEXTO_LG` existiam sem uso nenhum, e os componentes
+    resolviam com `font-size` fixo — apareceram 11px, 12px e 28px soltos no
+    CSS, três tamanhos que a régua não previa.
+    """
+    from src.theme import tokens
+
+    raiz = Path(__file__).resolve().parents[1] / "src"
+    origem = (raiz / "theme" / "componentes.py").read_text(encoding="utf-8")
+    origem += (raiz / "graficos.py").read_text(encoding="utf-8")
+
+    # Os degraus são interpolados nas f-strings do CSS, então se procura o
+    # nome do token, não o valor em pixels.
+    degraus = [
+        n for n in dir(tokens)
+        if n.startswith("TEXTO_") and n not in ("TEXTO_TITULO", "TEXTO_CLARO", "TEXTO_ESCURO")
+    ]
+    mortos = [d for d in degraus if f"tokens.{d}" not in origem]
+    assert not mortos, f"degraus declarados e nunca usados: {mortos}"
+
+
+def test_nenhum_tamanho_de_fonte_fixo_no_css() -> None:
+    """Todo tamanho sai da escala, para a régua continuar sendo a régua."""
+    import re
+
+    css = c.css_base() + c.css_layout()
+    fixos = re.findall(r"font-size:\s*(\d+(?:\.\d+)?px)", css)
+    da_escala = {"12px", "14px", "24px"}
+    fora = [f for f in fixos if f not in da_escala]
+    assert not fora, f"tamanhos fora da escala: {sorted(set(fora))}"

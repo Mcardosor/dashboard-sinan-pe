@@ -16,6 +16,11 @@ import pandas as pd
 
 from .theme import tokens
 
+def _px(token: str) -> int:
+    """`"12px"` para `12`. O Altair quer número, o CSS quer unidade."""
+    return int(token.rstrip("px"))
+
+
 #: Altura padrão dos gráficos do painel direito.
 ALTURA = 300
 
@@ -35,8 +40,8 @@ def tema(grafico: alt.Chart, *, altura: int = ALTURA) -> alt.Chart:
         .configure_axis(
             labelFont=tokens.FONTE,
             titleFont=tokens.FONTE,
-            labelFontSize=11,
-            titleFontSize=11,
+            labelFontSize=_px(tokens.TEXTO_XS),
+            titleFontSize=_px(tokens.TEXTO_XS),
             titleFontWeight="normal",
             labelColor="currentColor",
             titleColor="currentColor",
@@ -48,8 +53,8 @@ def tema(grafico: alt.Chart, *, altura: int = ALTURA) -> alt.Chart:
         .configure_legend(
             labelFont=tokens.FONTE,
             titleFont=tokens.FONTE,
-            labelFontSize=11,
-            titleFontSize=11,
+            labelFontSize=_px(tokens.TEXTO_XS),
+            titleFontSize=_px(tokens.TEXTO_XS),
             labelColor="currentColor",
             titleColor="currentColor",
             orient="top",

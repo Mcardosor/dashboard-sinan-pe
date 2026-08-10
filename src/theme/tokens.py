@@ -41,11 +41,19 @@ FONTE = (
 )
 
 #: Escala tipográfica. O original usava tamanhos avulsos; aqui há uma razão fixa.
-TEXTO_XS = "12px"
-TEXTO_SM = "13px"
-TEXTO_BASE = "14px"
-TEXTO_LG = "17px"
-TEXTO_XL = "24px"
+#: Escala tipográfica, razão 1,2 a partir de 14px.
+#:
+#: Antes eram seis degraus, dos quais **dois nunca foram usados** — os
+#: componentes contornavam com `font-size` fixo, e apareceram 11px, 12px e
+#: 28px soltos no CSS. Uma escala que ninguém segue não é escala.
+#:
+#: Todo degrau declarado aqui é usado; acrescentar um pede um caso de uso,
+#: não um espaço vago na régua — cheguei a declarar um 17px "para subtítulo
+#: de painel" que nada usava, e o teste o pegou na mesma hora.
+#: `tests/test_theme.py` confere as duas coisas.
+TEXTO_XS = "12px"    # legenda, detalhe, rótulo de eixo, tooltip
+TEXTO_SM = "14px"    # corpo
+TEXTO_XL = "24px"    # valor de KPI e de indicador
 TEXTO_TITULO = "clamp(18px, 2.1vw, 30px)"
 
 # --- Semântica -------------------------------------------------------------

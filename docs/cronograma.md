@@ -310,7 +310,7 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 ### 8.1 Acabamento visual
 - [x] Responsivo — remover as alturas fixas de 760px e 520px do original *(feito em 2.1)*
 - [x] Tema claro como padrão, escuro como alternativa *(antecipado da semana 8)*
-- [ ] Escala tipográfica consistente
+- [x] Escala tipográfica — três degraus, todos em uso. Havia seis, dos quais dois nunca foram usados; os componentes contornavam com `font-size` fixo (11px, 12px, 28px)
 - [x] Tooltips em 12px — registrado como divergência visual em `excecoes.md`
 
 ### 8.2 Acessibilidade

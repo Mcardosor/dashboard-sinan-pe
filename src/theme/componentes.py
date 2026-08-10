@@ -449,14 +449,14 @@ section[data-testid="stSidebar"] {{
   background: color-mix(in srgb, currentColor 3%, transparent);
 }}
 .indicador-titulo {{
-  font-size: 12px;
+  font-size: {tokens.TEXTO_XS};
   font-weight: 600;
   opacity: .75;
   margin-bottom: 4px;
 }}
 .indicador-valor {{
   font-family: var(--fonte);
-  font-size: 28px;
+  font-size: {tokens.TEXTO_XL};
   font-weight: 800;
   line-height: 1.1;
   color: var(--ind-cor);
@@ -476,7 +476,7 @@ section[data-testid="stSidebar"] {{
   border-radius: 999px;
   background: var(--ind-cor);
 }}
-.indicador-detalhe {{ font-size: 11px; opacity: .65; }}
+.indicador-detalhe {{ font-size: {tokens.TEXTO_XS}; opacity: .65; }}
 
 /* Sem logotipo não há segunda coluna: o título ocupa a faixa toda. */
 .sinan-intro.marcas-0 {{ grid-template-columns: 1fr; }}
