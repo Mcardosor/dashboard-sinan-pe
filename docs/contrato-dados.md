@@ -219,6 +219,29 @@ aparecia com 6 e escapava do corte em 5.
 Ver `excecoes.md` — virou divergência intencional, em que estamos certos e o
 original não.
 
+### 12. Os indicadores de TB vêm de outra extração, com outro ano
+
+`indicadores_tb_contatos` e `indicadores_tb_cultura_retratamento` não seguem a
+cobertura de ano do resto. Comparando o Brasil:
+
+| Ano | Contatos identificados | Casos novos (`incidence`) | Contatos por caso |
+|---|---:|---:|---:|
+| 2024 | 169.207 | 85.932 | 2,0 |
+| 2025 | 161.739 | 1.773 | **91,2** |
+
+Em 2024, com as duas fontes fechadas, a razão é plausível. Em 2025 o arquivo
+de indicadores está praticamente completo enquanto `incidence` mal começou —
+são extrações de datas diferentes.
+
+Consequência: **não dá para ler estes indicadores ao lado dos KPIs num ano que
+ainda não fechou.** A proporção em si continua válida, porque numerador e
+denominador saem do mesmo arquivo; o que não vale é a comparação com o resto
+da tela. O painel avisa quando o ano está incompleto.
+
+Estes dois arquivos também têm esquema próprio — `por_ano.parquet` nacional e
+`por_ano_geo.parquet` com município, e coluna geográfica
+`CO_MUNI_RESIDENCIA`. Ver armadilha 8.
+
 ## Conciliação entre fontes
 
 Quatro datasets respondem "quantos casos", em três camadas que não conciliam:

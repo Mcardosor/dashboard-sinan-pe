@@ -203,8 +203,11 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 ## Semana 5 — TB específico + composição (31/ago–04/set)
 
 ### 5.1 Indicadores de TB
-- [ ] Cultura em casos de retratamento (`indicadores_tb_cultura_retratamento`)
-- [ ] Contatos identificados vs examinados (`indicadores_tb_contatos`)
+- [x] Cultura em casos de retratamento (`indicadores_tb_cultura_retratamento`)
+- [x] Contatos identificados vs examinados (`indicadores_tb_contatos`)
+- [x] **Ganho sobre o original:** nenhum dos dois painéis em R exibe estes
+      indicadores — conferido na tela de `TB_BR` e de `TB_PE`. O dado veio nos
+      parquets e estava sem uso
 
 ### 5.2 Painel de composição — **feito, adiantado da semana 5**
 - [x] Seletor agrupado + barras horizontais por variável do SINAN

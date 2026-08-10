@@ -111,6 +111,11 @@ def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, to
 
 
 @st.cache_data(ttl=600, max_entries=128, show_spinner=False)
+def _indicadores_programa(doenca, ano, nivel, uf, mun):
+    return leitura.indicadores_programa(Escopo(doenca, ano, nivel, uf=uf, mun=mun))
+
+
+@st.cache_data(ttl=600, max_entries=128, show_spinner=False)
 def _composicao(doenca, ano, nivel, uf, mun, variavel):
     return leitura.composicao(Escopo(doenca, ano, nivel, uf=uf, mun=mun), variavel)
 
@@ -553,6 +558,40 @@ with resiliencia.painel("Composição"):
     # aqui só se explica ao usuário por que o eixo mudou.
     if not composto.empty and composto["pct"].isna().all():
         st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
+
+st.divider()
+with resiliencia.painel("Indicadores do programa"):
+    st.caption("Indicadores do programa de tuberculose")
+
+    indicadores = _indicadores_programa(
+        pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun
+    )
+    colunas = st.columns(len(indicadores), gap="small")
+    for coluna, ind in zip(colunas, indicadores):
+        coluna.markdown(
+            ui.indicador_programa(
+                ind["rotulo"],
+                ind["pct"],
+                ind["numerador"],
+                ind["denominador"],
+                cor=pack.cor("cura" if ind["chave"] == "contatos" else "incid"),
+                ajuda=ind["descricao"],
+            ),
+            unsafe_allow_html=True,
+        )
+
+    # Estes arquivos vêm de outra extração, com cobertura de ano própria: em
+    # 2025 trazem 161.739 contatos identificados para 1.773 casos novos, o que
+    # daria 91 contatos por caso. Em 2024, com os dois fechados, a razão é 2.
+    # Recalculado aqui em vez de reaproveitar a variável da barra lateral:
+    # depender de um nome atribuído 300 linhas acima quebra em silêncio se
+    # alguém reordenar a página. A leitura é cacheada, então não custa.
+    if _meses_com_dado(pack.DOENCA, nav.ano) < 12:
+        st.caption(
+            f"Estes dois indicadores vêm de uma extração separada, que pode "
+            f"cobrir período diferente do resto do painel — e {nav.ano} ainda "
+            f"não fechou. Não compare com os cartões do topo."
+        )
 
 st.caption(
     "Divergências conhecidas entre fontes de dados: ver docs/contrato-dados.md."

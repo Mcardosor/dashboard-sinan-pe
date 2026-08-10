@@ -100,8 +100,8 @@ Comportamento:
       Ver contrato-dados, armadilha 9
 
 ### Fora das abas
-- [ ] Cultura em retratamento (TB)
-- [ ] Contatos examinados (TB)
+- [x] Cultura em retratamento (TB) — **o original não exibe**, o dado estava sem uso
+- [x] Contatos examinados (TB) — idem
 - [ ] Classificação operacional (Hanseníase)
 - [ ] Casos 0–14 + taxa de detecção (Hanseníase)
 - [ ] `kpi_mb_prop` e `kpi_grau2_prop` (Hanseníase)

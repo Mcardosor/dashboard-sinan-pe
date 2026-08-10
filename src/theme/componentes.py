@@ -426,6 +426,42 @@ section[data-testid="stSidebar"] {{
   background: #FFFFFF;
   box-shadow: 0 2px 8px rgba(2,6,23,.10);
 }}
+.indicador-programa {{
+  padding: 14px 16px;
+  border-radius: {tokens.RAIO_CARD};
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  background: color-mix(in srgb, currentColor 3%, transparent);
+}}
+.indicador-titulo {{
+  font-size: 12px;
+  font-weight: 600;
+  opacity: .75;
+  margin-bottom: 4px;
+}}
+.indicador-valor {{
+  font-family: var(--fonte);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ind-cor);
+}}
+/* A trilha usa `currentColor` para funcionar nos dois temas sem duplicar
+   regra — no claro ela escurece o fundo, no escuro ela o clareia. */
+.indicador-barra {{
+  height: 6px;
+  margin: 8px 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  overflow: hidden;
+}}
+.indicador-barra > span {{
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ind-cor);
+}}
+.indicador-detalhe {{ font-size: 11px; opacity: .65; }}
+
 /* Sem logotipo não há segunda coluna: o título ocupa a faixa toda. */
 .sinan-intro.marcas-0 {{ grid-template-columns: 1fr; }}
 
@@ -549,3 +585,46 @@ def script_travar_zoom() -> str:
 }})();
 </script>
 """
+
+
+def indicador_programa(
+    rotulo: str,
+    pct: float | None,
+    numerador: float | None,
+    denominador: float | None,
+    *,
+    cor: str,
+    ajuda: str = "",
+) -> str:
+    """Card de indicador de programa: proporção, componentes e barra.
+
+    A barra existe porque proporção sem referência visual não comunica: 22%
+    e 81% viram só dois números parecidos numa lista. Deliberadamente **sem
+    meta desenhada** — as metas do programa nacional existem, mas não vou
+    cravar um número oficial que não verifiquei; a barra mostra a proporção
+    contra o total, e quem conhece a meta a aplica de cabeça.
+    """
+    tem = pct is not None
+    valor = f"{pct:.1f}%".replace(".", ",") if tem else "—"
+    largura = max(0.0, min(100.0, pct)) if tem else 0.0
+
+    if numerador is not None and denominador is not None:
+        detalhe = (
+            f"{_milhar(numerador)} de {_milhar(denominador)}"
+        )
+    else:
+        detalhe = "sem dado neste recorte"
+
+    titulo = f' title="{escape(ajuda)}"' if ajuda else ""
+    return (
+        f'<div class="indicador-programa" style="--ind-cor:{escape(cor)};"{titulo}>'
+        f'<div class="indicador-titulo">{escape(rotulo)}</div>'
+        f'<div class="indicador-valor">{valor}</div>'
+        f'<div class="indicador-barra"><span style="width:{largura:.1f}%"></span></div>'
+        f'<div class="indicador-detalhe">{escape(detalhe)}</div>'
+        f"</div>"
+    )
+
+
+def _milhar(valor: float) -> str:
+    return f"{int(round(valor)):,}".replace(",", ".")

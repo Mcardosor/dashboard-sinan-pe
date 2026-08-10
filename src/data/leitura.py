@@ -690,3 +690,72 @@ def meses_com_dado(doenca: str, ano: int) -> int:
     """
     linha = conectar().execute(sql).fetchone()
     return int(linha[0]) if linha and linha[0] else 0
+
+
+#: Indicadores de qualidade do programa de tuberculose.
+#:
+#: Nenhum dos dois painéis em R exibe estes números — conferido na tela de
+#: `TB_BR` e de `TB_PE` em 08/ago/2026. O dado veio nos parquets e ficou sem
+#: uso; aqui ele aparece.
+INDICADORES_PROGRAMA = (
+    {
+        "chave": "contatos",
+        "rotulo": "Contatos examinados",
+        "numerador": "examinados",
+        "denominador": "identificados",
+        "descricao": (
+            "Dos contatos identificados de casos novos, quantos foram "
+            "efetivamente examinados. Mede busca ativa: contato não examinado "
+            "é transmissão que segue invisível."
+        ),
+    },
+    {
+        "chave": "cultura",
+        "rotulo": "Cultura em retratamento",
+        "numerador": "cultura",
+        "denominador": "retratamento",
+        "descricao": (
+            "Dos casos em retratamento, quantos tiveram cultura realizada. "
+            "É o exame que identifica resistência a medicamento, e retratamento "
+            "é justamente onde a resistência é mais provável."
+        ),
+    },
+)
+
+
+def indicadores_programa(esc: Escopo) -> list[dict]:
+    """Os indicadores de programa do recorte, prontos para exibição.
+
+    Cada item traz ``rotulo``, ``numerador``, ``denominador``, ``pct`` e
+    ``descricao``. Indicador sem dado no recorte sai com ``pct`` nulo, e não
+    some da lista — a ausência é informação.
+
+    **Atenção ao ano.** Estes arquivos vêm de uma extração diferente da de
+    `incidence`, com cobertura própria: em 2025 trazem 161.739 contatos
+    identificados enquanto `incidence` registra 1.773 casos, o que daria 91
+    contatos por caso. Em 2024, com os dois fechados, a razão é 2. Não dá para
+    ler os dois lado a lado num ano em que só um fechou; quem chama precisa
+    avisar. Ver docs/contrato-dados.md, armadilha 12.
+    """
+    fontes = {
+        "contatos": indicador_tb_contatos(esc),
+        "cultura": indicador_tb_cultura(esc),
+    }
+
+    saida: list[dict] = []
+    for spec in INDICADORES_PROGRAMA:
+        bruto = fontes.get(spec["chave"]) or {}
+        num = pd.to_numeric(bruto.get(spec["numerador"]), errors="coerce")
+        den = pd.to_numeric(bruto.get(spec["denominador"]), errors="coerce")
+        valido = pd.notna(num) and pd.notna(den) and den > 0
+        saida.append(
+            {
+                "chave": spec["chave"],
+                "rotulo": spec["rotulo"],
+                "descricao": spec["descricao"],
+                "numerador": float(num) if pd.notna(num) else None,
+                "denominador": float(den) if pd.notna(den) else None,
+                "pct": float(num) / float(den) * 100 if valido else None,
+            }
+        )
+    return saida
