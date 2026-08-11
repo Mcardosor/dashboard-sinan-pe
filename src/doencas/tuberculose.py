@@ -55,6 +55,16 @@ LAYOUT_KPI = (
     "cura",
 )
 
+#: Métricas que o mapa e o ranking sabem desenhar.
+#:
+#: Ficam de fora `interrupcao_trat_pct` e `hiv_pos_pct`: as duas vêm do
+#: `sinan_landing`, que o leitor consulta uma geografia por vez — serve para o
+#: card, não para pintar 27 UFs de uma vez. Enquanto isso não mudar, elas não
+#: entram no seletor, porque oferecer uma opção que leva a um painel vazio é
+#: pior que não oferecer.
+METRICAS_MAPA = ("incid", "casos", "mortalidade", "cura")
+
+
 #: Métricas em que uma queda é boa. `cura` fica de fora de propósito.
 BOM_SE_CAI = frozenset(
     {"casos", "obitos", "incid", "mortalidade", "letalidade",

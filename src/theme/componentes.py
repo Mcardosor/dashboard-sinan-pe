@@ -157,69 +157,6 @@ def css_base() -> str:
 .kpi-ruim {{ color: {tokens.RUIM}; }}
 .kpi-igual {{ opacity: {tokens.NEUTRO_OPACIDADE}; }}
 
-/* Slot clicável -----------------------------------------------------------
-   O card é HTML injetado e não consegue falar de volta com o Python. A
-   solução é um `st.button` real, transparente, esticado por cima do card
-   dentro de um `st.container(key=...)`.
-
-   Ganho sobre o original: lá o card era um `div` com `role="button"` e um
-   handler de JS — um controle falso. Aqui o controle é um `<button>` de
-   verdade, então foco, teclado e leitor de tela funcionam sem nada extra.
-
-   O botão usa a chave `selkpi-<metrica>`, e não `kpi-btn-<metrica>`, de
-   propósito: `[class*="st-key-kpi-"]` casaria também com o contêiner do
-   próprio botão, que viraria a âncora do posicionamento absoluto e prenderia
-   o botão a si mesmo em vez de esticá-lo sobre o card. */
-[class*="st-key-kpi-"] {{ position: relative; }}
-[class*="st-key-kpi-"] .stButton {{
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  z-index: 3;
-}}
-[class*="st-key-kpi-"] [data-testid="stElementContainer"]:has(.stButton) {{
-  position: static;
-}}
-/* Ao receber `help`, o Streamlit renderiza o botão **duas vezes**: um dentro
-   dos `span` de tooltip (`stTooltipIcon` > `stTooltipHoverTarget`) e um
-   segundo, irmão, sem invólucro nenhum.
-
-   A primeira versão disto esticava os invólucros com `height: 100%`, o que
-   esticava também o segundo botão — e ele ficava pendurado logo abaixo do
-   card, como 110px de área clicável invisível. A área de clique era o dobro
-   do retângulo visível.
-
-   Fixar o botão ao contêiner com `position: absolute` resolve
-   independentemente de quantos invólucros o Streamlit resolva criar: os dois
-   botões passam a ocupar exatamente a caixa do card, e clicar em qualquer um
-   aciona o mesmo callback, porque a chave é a mesma. */
-[class*="st-key-kpi-"] .stButton button {{
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: transparent;
-  box-shadow: none;
-  border-radius: {tokens.RAIO_CARD};
-  cursor: pointer;
-}}
-/* O foco aparece no card, não no botão invisível. */
-[class*="st-key-kpi-"] .stButton button:focus-visible {{ outline: none; }}
-[class*="st-key-kpi-"]:has(.stButton button:focus-visible) .kpi-card {{
-  border-color: color-mix(in srgb, var(--kpi-accent) 55%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-accent) 35%, transparent),
-              var(--sombra-hover);
-}}
-[class*="st-key-kpi-"]:hover .kpi-card {{
-  border-color: color-mix(in srgb, currentColor 24%, transparent);
-  box-shadow: var(--sombra-hover);
-}}
-[class*="st-key-kpi-"]:hover .kpi-card::after {{ opacity: 1; }}
-
 @media (prefers-reduced-motion: reduce) {{
   .kpi-card {{ transition: none !important; transform: none !important; }}
 }}
@@ -275,18 +212,25 @@ def kpi_card(
     subtitulo: str | None = None,
     badge_delta: str = "",
     selecionado: bool = False,
+    ajuda: str = "",
 ) -> str:
-    """Card de KPI — apenas apresentação.
+    """Card de KPI — indicador, e só.
 
     A cor entra como variável CSS inline (``--kpi-accent``), o que permite um
     único bloco de estilo servir todas as métricas.
 
-    Deliberadamente **sem** ``role="button"`` ou ``tabindex``: quem torna o
-    card clicável é :func:`kpi_clicavel`, com um ``<button>`` de verdade por
-    cima. Um `div` fingindo ser botão, como no original, engana o leitor de
-    tela e cria uma parada de tabulação que não funciona com o teclado.
+    **Não é controle.** Já foi: um ``<button>`` transparente ficava esticado
+    por cima para trocar a métrica do mapa. Saiu porque o card não avisava que
+    era clicável — parecia indicador porque é indicador —, e a interação
+    custou quatro rodadas de conserto. Quem troca a métrica agora é um
+    controle próprio, ao lado do mapa, com teclado e foco nativos.
+
+    ``selecionado`` continua existindo para o card espelhar a métrica ativa,
+    o que é leitura, não interação.
     """
     classes = "kpi-card is-selected" if selecionado else "kpi-card"
+    # A explicação vive no `title`, agora que não há botão para receber `help`.
+    titulo_ajuda = f' title="{escape(ajuda)}"' if ajuda else ""
     sub = (
         f'<div class="kpi-sub">{escape(subtitulo)}</div>'
         if subtitulo
@@ -295,8 +239,8 @@ def kpi_card(
     return (
         f'<div class="{classes}" '
         f'style="--kpi-accent:{escape(cor)};'
-        f'--kpi-accent-escuro:{escape(cores.para_fundo_escuro(cor))};" '
-        f'aria-hidden="true">'
+        f'--kpi-accent-escuro:{escape(cores.para_fundo_escuro(cor))};"'
+        f'{titulo_ajuda}>'
         f'<div class="kpi-inner">'
         f'<div class="kpi-accent"></div>'
         f'<div class="kpi-text">'
@@ -309,56 +253,6 @@ def kpi_card(
 
 def grade_kpis(cards: list[str]) -> str:
     return f'<div class="kpi-grid">{"".join(cards)}</div>'
-
-
-def kpi_clicavel(
-    st,
-    chave: str,
-    titulo: str,
-    valor: str,
-    *,
-    cor: str,
-    subtitulo: str | None = None,
-    badge_delta: str = "",
-    selecionado: bool = False,
-    ajuda: str | None = None,
-    ao_clicar=None,
-) -> bool:
-    """Renderiza um card de KPI que seleciona a métrica ao ser clicado.
-
-    Recebe o módulo ``streamlit`` por parâmetro para este módulo continuar
-    testável sem subir a aplicação.
-
-    O card é HTML e não consegue devolver evento ao Python. Quem captura o
-    clique é um ``st.button`` transparente esticado por cima, dentro de um
-    ``st.container(key=...)`` — a chave vira uma classe no DOM
-    (``st-key-kpi-<chave>``) que o CSS usa para posicionar o botão.
-
-    Devolve ``True`` se foi clicado nesta execução.
-    """
-    with st.container(key=f"kpi-{chave}"):
-        st.markdown(
-            kpi_card(
-                titulo,
-                valor,
-                cor=cor,
-                subtitulo=subtitulo,
-                badge_delta=badge_delta,
-                selecionado=selecionado,
-            ),
-            unsafe_allow_html=True,
-        )
-        # A ajuda vai no botão, não no card: o botão transparente fica por
-        # cima, então é ele que recebe o cursor — `title` no card nunca
-        # dispararia.
-        return st.button(
-            f"Selecionar {titulo}",
-            key=f"selkpi-{chave}",
-            help=ajuda,
-            on_click=ao_clicar,
-            args=(chave,) if ao_clicar else None,
-            use_container_width=True,
-        )
 
 
 def css_layout() -> str:
@@ -637,60 +531,3 @@ def indicador_programa(
         f'<div class="indicador-detalhe">{escape(detalhe)}</div>'
         f"</div>"
     )
-
-
-def script_estado_kpis() -> str:
-    """Anuncia ao leitor de tela qual métrica está selecionada.
-
-    O card é ``aria-hidden``, então quem carrega a semântica é o ``<button>``
-    transparente por cima — e ele é renderizado pelo Streamlit, sem como
-    receber atributos pelo Python. Daí o remendo no DOM, como o do zoom.
-
-    Dois problemas são corrigidos aqui:
-
-    ``aria-pressed``
-        Sem ele, um leitor de tela anuncia seis botões "Selecionar X"
-        indistinguíveis e o usuário não tem como saber qual métrica está
-        ativa — informação que o vidente lê na hora, pelo acento e pela
-        borda do card.
-
-    ``aria-label``
-        O Streamlit emite ``aria-label=""``. Rótulo vazio é pior que nenhum:
-        parte das tecnologias assistivas o respeita e anuncia um botão sem
-        nome. Aqui ele recebe o título e o valor do KPI, que é o que o
-        vidente vê.
-
-    Reaplica a cada mudança da árvore, porque o Streamlit refaz os nós a cada
-    interação e os atributos se perderiam no primeiro clique.
-    """
-    return """
-<script>
-(function () {
-  var doc = window.parent && window.parent.document;
-  if (!doc || doc.__estadoKpis) return;
-  doc.__estadoKpis = true;
-
-  function marcar() {
-    doc.querySelectorAll('[class*="st-key-kpi-"]').forEach(function (caixa) {
-      var card = caixa.querySelector('.kpi-card');
-      if (!card) return;
-
-      var ativo = card.classList.contains('is-selected');
-      var titulo = (caixa.querySelector('.kpi-title') || {}).textContent || '';
-      var valor = (caixa.querySelector('.kpi-value') || {}).textContent || '';
-      var nome = (titulo.trim() + ': ' + valor.trim()).trim();
-
-      // São dois botões por card: o Streamlit renderiza um dentro do
-      // invólucro de tooltip e outro fora. Os dois precisam do mesmo estado.
-      caixa.querySelectorAll('button').forEach(function (botao) {
-        botao.setAttribute('aria-pressed', ativo ? 'true' : 'false');
-        if (nome) botao.setAttribute('aria-label', nome);
-      });
-    });
-  }
-
-  marcar();
-  new MutationObserver(marcar).observe(doc.body, {childList: true, subtree: true});
-})();
-</script>
-"""

@@ -328,7 +328,7 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 
 ## Aberto — decidido em 08/ago/2026
 
-### Separar leitura de controle nos KPIs
+### Separar leitura de controle nos KPIs — **FEITO**
 
 **Decisão:** o card de KPI volta a ser **só leitura**, e a métrica ativa passa
 a ter um controle explícito — segmentado ou rádio horizontal, acima do mapa,

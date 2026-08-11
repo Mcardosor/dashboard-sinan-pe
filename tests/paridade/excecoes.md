@@ -73,7 +73,7 @@ isso a linha continua aqui em vez de ser fechada de um lado ou do outro.
 
 | Item | No R | Aqui | Justificativa |
 |---|---|---|---|
-| Card de KPI clicável | clicar no card troca a métrica do mapa | card é só leitura; a métrica tem controle próprio | O card não avisa que é clicável — parece indicador porque é indicador, e a única pista é o realce no hover, que não existe em toque. A interação custou quatro rodadas de conserto (botão invisível, rótulo vazando, área de clique dobrada, `aria-pressed` no DOM) para algo que um controle nativo entrega com teclado e leitor de tela incluídos. **Decidido em 08/ago/2026, a implementar.** |
+| Card de KPI clicável | clicar no card troca a métrica do mapa | card é só leitura; a métrica tem controle próprio | O card não avisa que é clicável — parece indicador porque é indicador, e a única pista é o realce no hover, que não existe em toque. A interação custou quatro rodadas de conserto (botão invisível, rótulo vazando, área de clique dobrada, `aria-pressed` no DOM) para algo que um controle nativo entrega com teclado e leitor de tela incluídos. **Implementado em 08/ago/2026.** |
 | Bandeira de PE na faixa | à esquerda do título | removida | Os dados são nacionais; ao lado de um mapa do Brasil ela lia como recorte geográfico, não como emissor |
 | Zoom do mapa pela roda do mouse | ativo | bloqueado | Rolar a página com o cursor sobre o mapa destruía o enquadramento, sem volta a não ser recarregando |
 | Overlay de carregamento | cobre a tela por ~3 s | indicador discreto | Copiar seria anunciar uma lentidão que não temos |

@@ -229,9 +229,6 @@ st.markdown(ui.css_layout(), unsafe_allow_html=True)
 # `<script>`. Altura zero — o iframe existe só para rodar o script.
 st.components.v1.html(ui.script_travar_zoom(), height=0)
 
-# Idem: o botão dos KPIs é do Streamlit, e `aria-pressed` só chega nele pelo
-# DOM. Ver `ui.script_estado_kpis`.
-st.components.v1.html(ui.script_estado_kpis(), height=0)
 
 nav = _navegacao()
 anos = _anos()
@@ -321,10 +318,6 @@ with st.sidebar:
 
 
 # --- KPIs ------------------------------------------------------------------
-def selecionar_metrica(chave: str) -> None:
-    nav.metrica = chave
-
-
 st.markdown(
     ui.faixa_intro(pack.TITULO, logo=marcas.logo()),
     unsafe_allow_html=True,
@@ -343,10 +336,8 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
     for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
         valor = getattr(atual, chave)
         taxa = chave in pack.TAXAS
-        with coluna:
-            ui.kpi_clicavel(
-                st,
-                chave,
+        coluna.markdown(
+            ui.kpi_card(
                 pack.rotulo(chave),
                 ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
                 cor=pack.cor(chave),
@@ -358,8 +349,9 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
                     bom_se_cai=chave in pack.BOM_SE_CAI,
                 ),
                 ajuda=pack.descricao(chave),
-                ao_clicar=selecionar_metrica,
-            )
+            ),
+            unsafe_allow_html=True,
+        )
 
 # --- Linha principal e composição -----------------------------------------
 # Os painéis são espaços reservados: o mapa entra na semana 3, os gráficos na
@@ -375,6 +367,22 @@ with esquerda, resiliencia.painel("Mapa"):
     # Cabeçalho, que também alinha as duas colunas: a da direita gasta 84px
     # com o rádio de horizonte e o toggle, e sem isto o mapa começava no topo
     # enquanto a série começava bem abaixo.
+    # A métrica do mapa é escolhida aqui, e não clicando no card. O card não
+    # avisava que era clicável — parecia indicador porque é indicador —, e a
+    # interação custou quatro rodadas de conserto. Este controle é nativo:
+    # teclado, foco e `aria-checked` vêm de graça.
+    nav.metrica = st.radio(
+        "Métrica do mapa",
+        pack.METRICAS_MAPA,
+        index=pack.METRICAS_MAPA.index(nav.metrica)
+        if nav.metrica in pack.METRICAS_MAPA
+        else 0,
+        format_func=pack.rotulo,
+        horizontal=True,
+        key="metrica_mapa",
+        help="Define o que o mapa pinta e o que o ranking ordena.",
+    )
+
     st.caption(
         "Mapa — "
         + {
