@@ -129,7 +129,27 @@ do dashboard de vocês sai de onde — do SINAN ou do SIM?
 
 ---
 
-## 5. De onde sai o card "Casos novos"? — A PERGUNTA MAIS IMPORTANTE
+## 5. De onde sai o card "Casos novos"? — RESOLVIDA por fonte externa
+
+> **Atualização (11/ago).** Esta era a pergunta que travava o projeto, e ela
+> deixou de travar. O **Boletim Epidemiológico de Tuberculose 2026** do
+> Ministério da Saúde (número especial, março/2026, Figura 1) publica a série
+> oficial: **86.204 casos novos e incidência 40,6 no Brasil em 2024**.
+>
+> | Fonte | Casos novos | Incidência | Desvio vs MS |
+> |---|---:|---:|---:|
+> | Boletim do MS | 86.204 | 40,6 | — |
+> | Nosso painel | 85.932 | 40,42 | −0,32% |
+> | Painel de vocês | 113.651 | 53,46 | +31,8% |
+>
+> Nossos 0,32% a menos são compatíveis com datas de extração diferentes — o
+> boletim é de fevereiro/2026 e o SINAN atualiza retroativamente. Os 31,8% a
+> mais do painel de vocês não são.
+>
+> A pergunta abaixo **continua valendo**, mas mudou de natureza: não é mais
+> "quem está certo", e sim "o que no pipeline de vocês produz 27 mil casos a
+> mais que o número oficial". A hipótese de recidiva + reingresso após
+> abandono segue sendo a mais provável.
 
 Comparamos os KPIs contra a tela dos dois painéis de vocês, com o ano fixado
 em 2024. O resultado tem um padrão muito nítido.

@@ -28,8 +28,17 @@ REFERENCIA = json.loads(
 #: nosso 2,9993 —, então a comparação é do valor exibido, não do float.
 TOLERANCIA = 0.01
 
-#: KPIs cuja divergência é conhecida e ainda não explicada. Ver `excecoes.md`.
-#: Não é lista de perdão permanente: é o que precisa de resposta da equipe.
+#: KPIs que divergem do R **porque o R está errado**. Ver `excecoes.md` §3.
+#:
+#: Já foi "divergência ainda não explicada, à espera da equipe parceira". O
+#: Boletim Epidemiológico de TB 2026 do Ministério da Saúde fechou a questão em
+#: 11/ago/2026: para o Brasil em 2024 ele publica 86.204 casos novos e
+#: incidência 40,6 — nós damos 85.932 e 40,42 (−0,32%), o painel em R dá
+#: 113.651 e 53,46 (+31,8%).
+#:
+#: A lista continua existindo porque a divergência continua existindo, e
+#: `test_divergentes_continuam_divergindo` avisa se algum deles passar a bater
+#: — o que significaria que a equipe corrigiu a origem.
 DIVERGENTES = {"casos", "incid", "cura", "letalidade"}
 
 

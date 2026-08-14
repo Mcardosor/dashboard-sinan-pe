@@ -8,8 +8,17 @@ deles, em `referencia_r.json`, e prende as divergências nos dois sentidos: se
 algo hoje idêntico regredir, falha; se um divergente passar a bater, também
 falha, pedindo que a linha correspondente saia daqui.
 
-**Estado em 08/ago/2026:** três KPIs idênticos, duas divergências intencionais
-fechadas, uma aberta que depende da equipe parceira.
+**Estado em 11/ago/2026:** três KPIs idênticos e **nenhuma divergência
+aberta**. Duas são intencionais e fechadas por decisão nossa (§2); a terceira,
+que estava em aberto desde a semana 1, fechou contra fonte externa — o
+Boletim Epidemiológico do Ministério da Saúde confirma o nosso número e não o
+deles (§3).
+
+Vale registrar por que a paridade com o R nunca bastou como validação: em §2
+está o caso em que **os dois painéis exibiam o mesmo número errado**, e a
+comparação entre eles não tinha como perceber. Fonte externa é o que fecha
+essa lacuna, e é por isso que `referencia_ms.json` existe ao lado de
+`referencia_r.json`.
 
 ---
 
@@ -43,7 +52,7 @@ Os denominadores exibidos passam a ser metade dos deles, de propósito:
 | Encerramentos (PE, 2024) | 4.350 | 8.700 |
 | Testados para HIV (PE, 2024) | 4.125 | 8.250 |
 
-## 3. Aberto — depende da equipe parceira
+## 3. Resolvido por fonte externa — o painel em R está errado
 
 | Item | Campo | Nosso | R | Razão |
 |---|---|---:|---:|---|
@@ -56,18 +65,37 @@ Os denominadores exibidos passam a ser metade dos deles, de propósito:
 Os campos acima são exatamente os de `DIVERGENTES`, em
 `test_referencia_r.py` — um teste confere que os dois não se separem.
 
-O fator não é constante entre recortes, então não é escala nem duplicação de
-linhas. E não é escolha de dataset do nosso lado: `incidence`, `cases_new` e
-`_cache_ts` concordam entre si em torno de 85,9 mil para o Brasil — nenhum
-chega perto de 113 mil.
+**Fechado em 2026-08-11 pelo Boletim Epidemiológico de Tuberculose 2026**
+(Ministério da Saúde, número especial de março/2026, Figura 1). O boletim
+publica a série oficial de casos novos e coeficiente de incidência do Brasil,
+e para 2024 dá **86.204 casos** e **40,6 por 100 mil**:
 
-A hipótese que resta é que o card deles inclua recidiva e reingresso após
-abandono. Não dá para testar aqui: os parquets que recebemos só trazem três
-tipos de entrada em `TRATAMENTO` — Caso Novo, Pós-óbito e Não Sabe.
+| Fonte | Casos novos (BR, 2024) | Incidência | Desvio vs MS |
+|---|---:|---:|---:|
+| **Boletim do MS** | **86.204** | **40,6** | — |
+| Nosso painel | 85.932 | 40,42 | **−0,32%** |
+| Dashboard em R | 113.651 | 53,46 | **+31,8%** |
 
-**O que falta:** resposta à pergunta 5 de `docs/perguntas-equipe-r.md`. Sem
-ela não dá para classificar como bug nosso ou divergência intencional, e por
-isso a linha continua aqui em vez de ser fechada de um lado ou do outro.
+Os 272 casos que nos separam do oficial são 0,32% e têm explicação natural: o
+boletim foi extraído em fevereiro/2026 e o SINAN é atualizado retroativamente,
+então nossa extração, anterior, tem alguns casos a menos. É o desvio esperado
+entre duas fotografias da mesma base em datas diferentes.
+
+Os 27.447 casos que separam o painel em R do oficial não têm explicação desse
+tipo. **A divergência é deles.**
+
+Isso não invalida a investigação anterior, só a conclui. Continua valendo que
+o fator não é constante entre recortes — logo não é escala nem duplicação de
+linhas — e que não é escolha de dataset do nosso lado: `incidence`,
+`cases_new` e `_cache_ts` concordam entre si em torno de 85,9 mil, e nenhum
+chega perto de 113 mil. A hipótese de que o card deles some recidiva e
+reingresso após abandono segue sendo a mais provável, e agora é a explicação
+de um erro conhecido em vez de uma dúvida sobre quem está certo.
+
+**O que muda na prática:** a pergunta 5 de `docs/perguntas-equipe-r.md` deixa
+de ser bloqueio e passa a ser aviso à equipe parceira. `DIVERGENTES` continua
+com os quatro campos, porque eles de fato divergem do R e o teste que prende
+isso continua sendo útil — o que mudou é que a divergência está explicada.
 
 ## 4. Divergências visuais
 
