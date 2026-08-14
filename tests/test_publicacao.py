@@ -45,11 +45,19 @@ def test_pacote_inclui_geometria_e_apoio() -> None:
     assert "support" in destinos, "sem data/support somem os recortes de PE"
 
 
-def test_pacote_leva_os_centroides_e_nao_o_cache_inteiro() -> None:
-    """683 MB de GeoJSON bruto iam junto; a aplicação lê um arquivo de lá."""
+def test_pacote_nao_leva_nada_do_geo_cache() -> None:
+    """683 MB de GeoJSON bruto do pipeline não vão para o servidor.
+
+    Por um tempo o pacote levava um arquivo de lá, o de centroides, porque
+    `geo.centroides()` o lia. Descobriu-se que essa função não era chamada por
+    nenhum caminho de produção; as duas saíram em 14/ago/2026 e o `_geo_cache`
+    deixou de entrar por qualquer via.
+
+    O teste é sobre o diretório inteiro, e não sobre aquele arquivo: assim ele
+    continua valendo se alguém voltar a precisar de um dado de lá e for pelo
+    caminho errado — copiar do cache bruto em vez de converter para GeoParquet
+    em `data/geo`.
+    """
     destinos = [str(rel) for _, rel in itens()]
     cache = [d for d in destinos if "_geo_cache" in d]
-    esperado = str(Path("parquet/dashboard/_geo_cache/municipios_centroids.parquet"))
-    assert cache == [esperado], (
-        f"o `_geo_cache` deve entrar só pelo arquivo de centroides, veio: {cache}"
-    )
+    assert cache == [], f"o `_geo_cache` não deve entrar no pacote, veio: {cache}"

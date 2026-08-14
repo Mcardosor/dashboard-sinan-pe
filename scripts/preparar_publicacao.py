@@ -3,7 +3,9 @@
 Em disco há 892 MB, mas a aplicação lê 213 MB. A diferença quase toda é o
 ``_geo_cache``: 683 MB de GeoJSON gzipado que o pipeline da equipe parceira
 usou para gerar a geometria e que nós já convertemos para GeoParquet em
-``data/geo`` (3,7 MB). Dele sobra em uso um único arquivo, o de centroides.
+``data/geo`` (3,7 MB). **Nada de lá entra no pacote** — o último arquivo que
+entrava, o de centroides, saiu em 14/ago/2026 junto com a função morta que o
+lia.
 
 Copiar os 892 MB funcionaria e seria três vezes mais lento para subir, três
 vezes mais caro em disco e deixaria no servidor uma cópia de dado bruto que
@@ -46,8 +48,13 @@ DATASETS = (
     "sinan_landing",
 )
 
-#: O único arquivo aproveitado do `_geo_cache`. Ver `src/data/geo.centroides`.
-CENTROIDES = Path("_geo_cache") / "municipios_centroids.parquet"
+# O pacote levava também `_geo_cache/municipios_centroids.parquet`, o único
+# arquivo daquele diretório que a aplicação lia. Saiu em 14/ago/2026: quem o
+# lia era `geo.centroides()`, que nenhum caminho de produção chamava. Mesmo
+# caso do dataset `obitos` logo acima — dado morto viajando para o servidor.
+#
+# Com isso o `_geo_cache` deixa de entrar no pacote por qualquer via, e
+# `test_publicacao` passa a prender essa ausência.
 
 
 def _tamanho(caminho: Path) -> int:
@@ -67,10 +74,6 @@ def itens() -> list[tuple[Path, Path]]:
         origem = painel / nome
         if origem.is_dir():
             pares.append((origem, relativo / nome))
-
-    centroides = painel / CENTROIDES
-    if centroides.is_file():
-        pares.append((centroides, relativo / CENTROIDES))
 
     for nome in ("geo", "support"):
         origem = dados / nome

@@ -67,25 +67,20 @@ def regioes(uf: str = "PE", nivel: str = "macro") -> gpd.GeoDataFrame:
     return _ler(geo_dir() / f"{sigla.lower()}_{chave}.parquet")
 
 
-@lru_cache(maxsize=1)
-def centroides() -> gpd.GeoDataFrame:
-    """Centroides dos municípios, para rótulos e para posicionar marcadores."""
-    import pandas as pd
-
-    caminho = config.dashboard_dir() / "_geo_cache" / "municipios_centroids.parquet"
-    if not caminho.exists():
-        raise FileNotFoundError(f"Centroides não encontrados: {caminho}")
-
-    df = pd.read_parquet(caminho)
-    df["cod_mun6"] = df["cod_mun7"].astype(str).str[:6]
-    return gpd.GeoDataFrame(
-        df[["cod_mun6", "nome_mun", "uf"]],
-        geometry=gpd.points_from_xy(df["lon"], df["lat"]),
-        crs=4326,
-    )
+# Houve aqui um `centroides()`, que lia
+# `_geo_cache/municipios_centroids.parquet` e nunca foi chamado por nenhum
+# caminho de produção — só pelo próprio teste. Saiu em 14/ago/2026, junto com o
+# arquivo no pacote de publicação, pelo mesmo motivo que o dataset `obitos`
+# saiu de `preparar_publicacao.DATASETS`: dado morto que ia para o servidor.
+#
+# Quem precisar de um ponto por polígono use `representative_point()` da própria
+# geometria, como faz `mapa._camada_rotulos`. Além de dispensar o arquivo, ele
+# funciona em qualquer nível — UF, macro, região de saúde — e garante um ponto
+# **dentro** do polígono, coisa que o centroide não garante: em forma côncava
+# ele cai fora, e o rótulo vai parar no vizinho.
 
 
 def limpar_cache() -> None:
     """Descarta a geometria em memória. Útil após regerar as camadas."""
-    for fn in (municipios, ufs, pais, regioes, centroides):
+    for fn in (municipios, ufs, pais, regioes):
         fn.cache_clear()

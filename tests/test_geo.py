@@ -130,10 +130,19 @@ def test_recortes_de_pe(nivel: str, esperado: int) -> None:
     assert camada["regiao"].notna().all()
 
 
-def test_centroides_cobrem_os_municipios() -> None:
-    pontos = geo.centroides()
-    assert pontos["cod_mun6"].str.len().eq(6).all()
-    assert len(pontos) > 5000
+def test_nao_ha_leitura_de_centroides() -> None:
+    """`geo.centroides()` saiu, e não deve voltar por hábito.
+
+    Ela lia `_geo_cache/municipios_centroids.parquet` e nunca foi chamada em
+    produção — só por este arquivo. O teste passou meses verde apenas porque a
+    função existia, o que é o oposto de cobertura.
+
+    Quem precisar de um ponto por polígono usa `representative_point()`, como
+    `mapa._camada_rotulos`: dispensa o arquivo, funciona em qualquer nível e
+    garante um ponto dentro do polígono — o centroide de forma côncava cai
+    fora, e o rótulo vai parar no vizinho.
+    """
+    assert not hasattr(geo, "centroides")
 
 
 def test_uf_desconhecida_falha_claramente() -> None:
