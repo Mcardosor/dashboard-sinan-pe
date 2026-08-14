@@ -264,19 +264,53 @@ def _camada_rotulos(pydeck, dados):
 
     Sem rótulo para quem não tem dado: "—" sobre o mapa é ruído, e a ausência
     já é comunicada pela cor neutra e pela legenda.
+
+    **Rótulo que colide não é exibido.** Na primeira versão todos entravam, e
+    no Brasil isso produzia `13,914,8` — dois números encavalados lendo como
+    um só — mais sete rótulos empilhados no Nordeste. O deck.gl não faz
+    *declutter*, então é feito aqui: os polígonos entram do maior para o
+    menor, cada um reserva a área do seu rótulo, e quem cair sobre área já
+    reservada fica de fora.
+
+    A ordem por área é o que decide bem o desempate: o rótulo sobrevive onde
+    há espaço para lê-lo. O valor de quem ficou de fora continua no tooltip.
+
+    Cortar por limiar de área seria mais simples e pior — derrubaria o Rio de
+    Janeiro, que é pequeno no mapa e dos mais relevantes na doença, mesmo
+    quando ninguém disputa aquele espaço.
     """
     com_valor = dados[dados["valor"].notna()]
     if com_valor.empty:
         return None
 
-    pontos = com_valor.geometry.representative_point()
-    fonte = [
-        {
-            "posicao": [float(p.x), float(p.y)],
-            "texto": t,
-        }
-        for p, t in zip(pontos, com_valor["exibicao"])
-    ]
+    minx, miny, maxx, maxy = dados.total_bounds
+    largura, altura = (maxx - minx) or 1.0, (maxy - miny) or 1.0
+
+    # Área que um rótulo ocupa, em fração da extensão do mapa — a placa branca
+    # conta, não só o texto. Calibrado contra a geometria real do Brasil: com
+    # 0,045 x 0,022 nenhum par era detectado (Alagoas e Sergipe distam 1,0° na
+    # vertical e a caixa tinha 0,86°), e todos os 27 continuavam colidindo na
+    # tela. Com os valores abaixo ficam 23, e saem AL, PB, RN e DF — que é
+    # exatamente o aglomerado ilegível. Rio de Janeiro, Sergipe e Piauí são
+    # pequenos mas sobrevivem, porque ninguém disputa o espaço deles.
+    meia_larg = largura * 0.070 / 2
+    meia_alt = altura * 0.034 / 2
+
+    ordem = com_valor.geometry.envelope.area.sort_values(ascending=False).index
+
+    fonte: list[dict] = []
+    ocupados: list[tuple[float, float, float, float]] = []
+    for idx in ordem:
+        ponto = com_valor.geometry.loc[idx].representative_point()
+        x, y = float(ponto.x), float(ponto.y)
+        caixa = (x - meia_larg, y - meia_alt, x + meia_larg, y + meia_alt)
+        if any(
+            caixa[0] < ox2 and caixa[2] > ox1 and caixa[1] < oy2 and caixa[3] > oy1
+            for ox1, oy1, ox2, oy2 in ocupados
+        ):
+            continue
+        ocupados.append(caixa)
+        fonte.append({"posicao": [x, y], "texto": com_valor["exibicao"].loc[idx]})
 
     return pydeck.Layer(
         "TextLayer",
