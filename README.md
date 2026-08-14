@@ -89,7 +89,7 @@ git clone https://github.com/Mcardosor/dashboard-sinan-pe.git
 cd dashboard-sinan-pe
 
 python -m venv .venv
-.venv\Scriptsctivate          # Linux/macOS: source .venv/bin/activate
+.venv\Scriptsactivate          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 
 streamlit run app.py
