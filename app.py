@@ -69,17 +69,24 @@ ENTRADAS_PESADAS = 256  # até 31 KB: valores do mapa
 ENTRADAS_GEOMETRIA = 48
 
 #: Altura da primeira linha da grade. O mapa manda: é ele que tem altura fixa,
-#: e a série ao lado precisa fechar no mesmo ponto. Sem isto a coluna do mapa
+#: e o painel ao lado precisa fechar no mesmo ponto. Sem isto a coluna do mapa
 #: ficava com mais de 1.000px de vazio embaixo.
 #:
 #: Desconta a barra de controles que fica acima do gráfico, para os dois
-#: painéis terminarem juntos e não só começarem juntos.
-#:
-#: Os 46px são o quanto a barra de controles da direita — rádio de horizonte
-#: mais toggle — excede o cabeçalho de uma linha do mapa. Medido no
-#: navegador; `tests/test_app.py` confere que o valor deriva de `mapa.ALTURA`,
-#: e a conferência final é olhar se os dois painéis fecham no mesmo pixel.
+#: painéis terminarem juntos e não só começarem juntos. Os 46px são o quanto
+#: essa barra excede o cabeçalho de uma linha do mapa, medido no navegador;
+#: `tests/test_app.py` confere que o valor deriva de `mapa.ALTURA`, e a
+#: conferência final é olhar se os dois fecham no mesmo pixel.
 ALTURA_LINHA_1 = mapa.ALTURA - 46
+
+#: Altura da série temporal, agora que ela ocupa a largura inteira.
+#:
+#: Antes a série dividia a linha 1 com o mapa e herdava os 520px dele — 12
+#: barras esticadas em meio metro de altura, que não acrescenta informação
+#: nenhuma, só tinta. O ranking trocou de lugar com ela porque as duas
+#: precisam de eixos opostos: 12 meses pedem **largura**, e 15 barras
+#: horizontais empilhadas pedem **altura**. Estavam nos slots trocados.
+ALTURA_SERIE = 280
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
@@ -481,76 +488,8 @@ with esquerda, resiliencia.painel("Mapa"):
                     nav.entrar_municipio(alvo, nome=nomes[alvo])
                     st.rerun()
 
+
 with direita:
-    with resiliencia.painel("Evolução temporal"):
-        # 3 para 2, e não 2 para 1: com um terço da largura o rótulo do
-        # toggle quebrava em duas linhas e desalinhava a barra.
-        controle_h, controle_d = st.columns([3, 2])
-        horizonte = controle_h.radio(
-            "Evolução temporal",
-            ["meses", "anos"],
-            format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
-            horizontal=True,
-            key="horizonte",
-            help=(
-                "Meses do ano mostra o ano selecionado mês a mês; Todos os anos "
-                "mostra a série histórica completa."
-            ),
-        )
-        # Casos e incidência juntos é o gráfico que o original mostra para
-        # tuberculose. Fica como opção, não como padrão, porque só faz sentido
-        # para essas duas métricas.
-        duplo = controle_d.toggle(
-            "Casos + incidência",
-            key="serie_dupla",
-            help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
-        )
-
-        if duplo:
-            serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
-            figura_serie = graficos.evolucao_dupla(
-                serie,
-                altura=ALTURA_LINHA_1,
-                cor_barra=pack.cor("casos"),
-                cor_linha=pack.cor("incid"),
-                eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
-            )
-        else:
-            serie = _serie(
-                pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
-            )
-            rotulo = pack.rotulo(nav.metrica)
-            if serie.empty:
-                figura_serie = graficos.sem_dado(
-                    f"{rotulo} ainda não tem série temporal"
-                )
-            elif horizonte == "meses":
-                figura_serie = graficos.evolucao_mensal(
-                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica),
-                    altura=ALTURA_LINHA_1,
-                )
-            else:
-                figura_serie = graficos.evolucao_anual(
-                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano,
-                    altura=ALTURA_LINHA_1,
-                )
-
-        st.altair_chart(figura_serie, use_container_width=True)
-
-        # A série mensal vem por notificação e os KPIs por residência — ver
-        # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
-        # usuário descobrir somando as barras.
-        if horizonte == "meses":
-            st.caption(graficos.AVISO_NOTIFICACAO)
-
-st.divider()
-
-# Segunda linha da grade: ranking e pirâmide lado a lado.
-# Sem isto, a coluna do mapa ficava com mais de 1.000px de vazio
-# enquanto a da direita empilhava três painéis.
-baixo_esq, baixo_dir = st.columns(2, gap="small")
-
-with baixo_esq:
     with resiliencia.painel("Ranking"):
 
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
@@ -573,6 +512,7 @@ with baixo_esq:
                 rotulo=pack.rotulo(nav.metrica),
                 cor=pack.cor(nav.metrica),
                 selecao=escolha,
+                altura=ALTURA_LINHA_1,
             ),
             use_container_width=True,
             on_select="rerun",
@@ -591,9 +531,77 @@ with baixo_esq:
                     nav.entrar_municipio(clicado, nome=nomes[clicado])
                     st.rerun()
 
-    st.divider()
 
-with baixo_dir:
+
+st.divider()
+
+with resiliencia.painel("Evolução temporal"):
+    # 3 para 2, e não 2 para 1: com um terço da largura o rótulo do
+    # toggle quebrava em duas linhas e desalinhava a barra.
+    controle_h, controle_d = st.columns([3, 2])
+    horizonte = controle_h.radio(
+        "Evolução temporal",
+        ["meses", "anos"],
+        format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
+        horizontal=True,
+        key="horizonte",
+        help=(
+            "Meses do ano mostra o ano selecionado mês a mês; Todos os anos "
+            "mostra a série histórica completa."
+        ),
+    )
+    # Casos e incidência juntos é o gráfico que o original mostra para
+    # tuberculose. Fica como opção, não como padrão, porque só faz sentido
+    # para essas duas métricas.
+    duplo = controle_d.toggle(
+        "Casos + incidência",
+        key="serie_dupla",
+        help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
+    )
+
+    if duplo:
+        serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
+        figura_serie = graficos.evolucao_dupla(
+            serie,
+            altura=ALTURA_SERIE,
+            cor_barra=pack.cor("casos"),
+            cor_linha=pack.cor("incid"),
+            eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
+        )
+    else:
+        serie = _serie(
+            pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
+        )
+        rotulo = pack.rotulo(nav.metrica)
+        if serie.empty:
+            figura_serie = graficos.sem_dado(
+                f"{rotulo} ainda não tem série temporal"
+            )
+        elif horizonte == "meses":
+            figura_serie = graficos.evolucao_mensal(
+                serie, rotulo=rotulo, cor=pack.cor(nav.metrica),
+                altura=ALTURA_SERIE,
+            )
+        else:
+            figura_serie = graficos.evolucao_anual(
+                serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano,
+                altura=ALTURA_SERIE,
+            )
+
+    st.altair_chart(figura_serie, use_container_width=True)
+
+    # A série mensal vem por notificação e os KPIs por residência — ver
+    # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
+    # usuário descobrir somando as barras.
+    if horizonte == "meses":
+        st.caption(graficos.AVISO_NOTIFICACAO)
+
+
+st.divider()
+
+baixo_esq, baixo_dir = st.columns(2, gap="small")
+
+with baixo_esq:
     with resiliencia.painel("Pirâmide etária"):
 
         # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em
@@ -633,30 +641,30 @@ with baixo_dir:
                 "divergir dos demais painéis."
             )
 
-st.divider()
-with resiliencia.painel("Composição"):
-    st.caption("Composição por variável do SINAN")
+with baixo_dir:
+    with resiliencia.painel("Composição"):
+        st.caption("Composição por variável do SINAN")
 
-    _rotulos_var = pack.variaveis_planas()
-    variavel = st.selectbox(
-        "Variável",
-        list(_rotulos_var),
-        format_func=lambda c: f"{pack.grupo_da(c)} · {_rotulos_var[c]}",
-        key="variavel_composicao",
-    )
+        _rotulos_var = pack.variaveis_planas()
+        variavel = st.selectbox(
+            "Variável",
+            list(_rotulos_var),
+            format_func=lambda c: f"{pack.grupo_da(c)} · {_rotulos_var[c]}",
+            key="variavel_composicao",
+        )
 
-    composto = _composicao(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, variavel)
-    st.altair_chart(
-        graficos.composicao(
-            composto, rotulo=_rotulos_var[variavel], cor=pack.cor(nav.metrica)
-        ),
-        use_container_width=True,
-    )
+        composto = _composicao(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, variavel)
+        st.altair_chart(
+            graficos.composicao(
+                composto, rotulo=_rotulos_var[variavel], cor=pack.cor(nav.metrica)
+            ),
+            use_container_width=True,
+        )
 
-    # Base pequena não vira percentual — a decisão vem de `leitura.composicao`,
-    # aqui só se explica ao usuário por que o eixo mudou.
-    if not composto.empty and composto["pct"].isna().all():
-        st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
+        # Base pequena não vira percentual — a decisão vem de `leitura.composicao`,
+        # aqui só se explica ao usuário por que o eixo mudou.
+        if not composto.empty and composto["pct"].isna().all():
+            st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
 
 st.divider()
 with resiliencia.painel("Indicadores do programa"):

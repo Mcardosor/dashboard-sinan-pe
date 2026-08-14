@@ -132,12 +132,24 @@ def evolucao_anual(dados: pd.DataFrame, *, rotulo: str, cor: str, altura: int = 
     )
 
 
-def ranking(dados: pd.DataFrame, *, rotulo: str, cor: str, selecao: alt.Parameter) -> alt.Chart:
+def ranking(
+    dados: pd.DataFrame,
+    *,
+    rotulo: str,
+    cor: str,
+    selecao: alt.Parameter,
+    altura: int | None = None,
+) -> alt.Chart:
     """Barras horizontais das maiores geografias, clicáveis.
 
     Horizontal e não vertical: nome de município não cabe num eixo x sem
     rotacionar, e rótulo rotacionado é mais difícil de ler que uma barra a
     mais de altura.
+
+    ``altura`` sobrescreve o cálculo por número de barras. Serve para o
+    ranking dividir a linha com o mapa, que tem altura fixa: sem isso a
+    coluna da direita termina antes e sobra um vão. Deixando ``None``, cada
+    barra recebe 22px e o painel cresce com a lista.
     """
     if dados.empty:
         return sem_dado("Sem dados para ranquear neste recorte")
@@ -158,7 +170,7 @@ def ranking(dados: pd.DataFrame, *, rotulo: str, cor: str, selecao: alt.Paramete
             ],
         )
         .add_params(selecao),
-        altura=max(180, 22 * len(dados)),
+        altura=altura if altura is not None else max(180, 22 * len(dados)),
     )
 
 

@@ -91,7 +91,20 @@ def test_as_tres_series_recebem_a_mesma_altura() -> None:
     Uma delas ficou sem o argumento na primeira tentativa — a indentação
     mudara com a reorganização e o `replace` não casou, em silêncio.
     """
-    assert FONTE.count("altura=ALTURA_LINHA_1") == 3
+    assert FONTE.count("altura=ALTURA_SERIE") == 3
+
+
+def test_quem_divide_a_linha_com_o_mapa_fecha_com_ele() -> None:
+    """`ALTURA_LINHA_1` existe para o painel ao lado do mapa terminar junto.
+
+    Quem ocupa esse lugar mudou: era a série temporal, virou o ranking. As
+    duas precisam de eixos opostos — 12 meses pedem largura, 15 barras
+    horizontais pedem altura —, e estavam nos slots trocados. A regra de
+    fechar junto continua; o que mudou foi a quem ela se aplica.
+    """
+    assert FONTE.count("altura=ALTURA_LINHA_1") == 1, (
+        "exatamente um painel divide a linha 1 com o mapa"
+    )
 
 
 def test_a_grade_tem_duas_linhas_de_duas_colunas() -> None:
