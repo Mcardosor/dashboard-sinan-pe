@@ -245,7 +245,23 @@ ufs = sorted(config.CODIGO_POR_UF)
 with st.sidebar:
     st.title(pack.TITULO)
 
-    nav.ano = st.select_slider("Ano", options=anos, value=nav.ano)
+    # `key` e **sem** `value`: o Streamlit é o dono do valor do slider.
+    #
+    # Com `value=nav.ano` era preciso arrastar duas vezes para o ano mudar.
+    # Widget sem `key` tem identidade derivada dos argumentos, então devolver
+    # o valor novo em `value` no rerun seguinte recria o widget e descarta a
+    # interação que acabou de acontecer; só a segunda pegava.
+    #
+    # Só o slider mexe no ano — `nav.reset()` preserva por padrão, e o clique
+    # no mapa muda geografia, não tempo. Sem ninguém mais escrevendo, o estado
+    # do widget pode ser a fonte da verdade, e `nav.ano` vira reflexo dele.
+    #
+    # Os seletores de UF e de município abaixo continuam com `index` dinâmico
+    # de propósito: aqueles são espelho da navegação e precisam acompanhar o
+    # clique no mapa, que é outro dono do mesmo estado.
+    if "ano" not in st.session_state:
+        st.session_state.ano = nav.ano
+    nav.ano = st.select_slider("Ano", options=anos, key="ano")
 
     # Ano em andamento precisa dizer que está em andamento. Sem isto o painel
     # mente por omissão: em 2025 a incidência aparece como 0,83 contra 40,42
