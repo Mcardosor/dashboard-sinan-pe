@@ -242,6 +242,63 @@ def _compactar(mapa_deck) -> None:
     mapa_deck.to_json = lambda: compacto
 
 
+def _camada_rotulos(pydeck, dados):
+    """Valor impresso sobre cada polígono, como no boletim do Ministério.
+
+    O tooltip cobre a leitura interativa, mas some em toque e não sobrevive a
+    uma captura de tela — que é como painel de vigilância circula em reunião e
+    em relatório. O boletim do MS imprime o número em cada UF justamente por
+    isso.
+
+    Três decisões que não são óbvias:
+
+    - **`representative_point`, não `centroid`.** O centroide de um polígono
+      côncavo cai fora dele; o Amapá e o Maranhão põem o rótulo no vizinho.
+      `representative_point` garante um ponto interno.
+    - **`pickable=False`.** Sem isso a camada de texto intercepta o clique e
+      mata o drill-down bem no meio de cada estado, que é onde as pessoas
+      clicam.
+    - **Placa branca sob o texto**, em vez de contorno. A rampa vai de laranja
+      claro a marrom, e texto escuro sem placa some no topo da escala
+      enquanto texto claro some na base.
+
+    Sem rótulo para quem não tem dado: "—" sobre o mapa é ruído, e a ausência
+    já é comunicada pela cor neutra e pela legenda.
+    """
+    com_valor = dados[dados["valor"].notna()]
+    if com_valor.empty:
+        return None
+
+    pontos = com_valor.geometry.representative_point()
+    fonte = [
+        {
+            "posicao": [float(p.x), float(p.y)],
+            "texto": t,
+        }
+        for p, t in zip(pontos, com_valor["exibicao"])
+    ]
+
+    return pydeck.Layer(
+        "TextLayer",
+        data=fonte,
+        get_position="posicao",
+        get_text="texto",
+        # Nada de `size_units="pixels"`: o pydeck converte string solta em
+        # acessor de dados (`@@=pixels`), o deck.gl recebe unidade inválida e
+        # o texto passa a escalar com o zoom, virando garrafal. O default do
+        # deck.gl já é pixels. Quando um literal for mesmo necessário, ele vai
+        # entre aspas internas — como em `get_text_anchor` abaixo.
+        get_size=11,
+        get_color=[17, 24, 39],
+        background=True,
+        get_background_color=[255, 255, 255, 225],
+        background_padding=[3, 1, 3, 1],
+        get_text_anchor="'middle'",
+        get_alignment_baseline="'center'",
+        pickable=False,
+    )
+
+
 def deck(
     camada,
     valores: pd.Series,
@@ -253,6 +310,7 @@ def deck(
     decimais: int = 1,
     altura: int = ALTURA,
     geometrias: list | None = None,
+    rotulos_valor: bool = False,
 ):
     """Mapa em pydeck, para o drill-down por clique.
 
@@ -310,8 +368,15 @@ def deck(
         highlight_color=[255, 255, 255, 60],
     )
 
+    camadas = [camada_geo]
+
+    if rotulos_valor:
+        rotulos = _camada_rotulos(pydeck, dados)
+        if rotulos is not None:
+            camadas.append(rotulos)
+
     mapa_deck = pydeck.Deck(
-        layers=[camada_geo],
+        layers=camadas,
         initial_view_state=pydeck.ViewState(
             latitude=quadro["center"]["lat"],
             longitude=quadro["center"]["lon"],

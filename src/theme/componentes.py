@@ -266,16 +266,35 @@ def css_layout() -> str:
 <style>
 /* Barra lateral com a largura do original — mas só quando há espaço. O
    original fixava 380px sem media query, e em telas estreitas isso espremia
-   o conteúdo até os rótulos quebrarem no meio da palavra. */
-section[data-testid="stSidebar"] {{
+   o conteúdo até os rótulos quebrarem no meio da palavra.
+
+   Recolher a barra deixava o conteúdo preso a 66% da janela, com uma faixa
+   morta à esquerda e os rótulos quebrando letra a letra — o mesmo defeito que
+   a media query acima existe para evitar, por outro caminho.
+
+   A causa: o Streamlit recolhe deslizando com `transform: translateX(-100%)`
+   e **mantém `width: 300px` inline** na seção. O elemento some da vista mas
+   continua reservando a largura. Sem uma regra que zere isso, o buraco fica —
+   e o `min-width` fixo daqui só piorava, porque também vencia qualquer
+   tentativa do próprio Streamlit de encolher.
+
+   Por isso as duas regras. Prender a largura ao estado aberto evita que ela
+   valha na barra recolhida; zerar explicitamente no estado fechado é o que de
+   fato recupera o espaço. Medido: sem a segunda regra o conteúdo continua em
+   66% da janela mesmo com a primeira aplicada. */
+section[data-testid="stSidebar"][aria-expanded="true"] {{
   width: {tokens.LARGURA_SIDEBAR} !important;
   min-width: {tokens.LARGURA_SIDEBAR} !important;
 }}
 @media (max-width: 1200px) {{
-  section[data-testid="stSidebar"] {{
+  section[data-testid="stSidebar"][aria-expanded="true"] {{
     width: 300px !important;
     min-width: 300px !important;
   }}
+}}
+section[data-testid="stSidebar"][aria-expanded="false"] {{
+  width: 0 !important;
+  min-width: 0 !important;
 }}
 
 /* O `st.columns` é uma linha flex que não quebra. Deixando quebrar, e com um
@@ -301,7 +320,17 @@ section[data-testid="stSidebar"] {{
   background: linear-gradient(180deg, var(--superficie-topo), var(--superficie));
   box-shadow: {tokens.SOMBRA_REPOUSO};
 }}
-.sinan-intro-titulo {{
+/* O seletor precisa do `h1` e do ancestral: o título é um `<h1>`, e o
+   Streamlit estiliza `.st-emotion-cache-… h1` com `font-size: 2.75rem`. Esse
+   seletor tem especificidade (0,1,1) e vencia `.sinan-intro-titulo` (0,1,0) —
+   o `clamp` abaixo estava declarado e nunca chegava à tela, com o título
+   fixo em 44px contra os 30px de teto. Era o que fazia "Tuberculose" quebrar
+   em duas ou três linhas em janela estreita.
+
+   `.sinan-intro h1.sinan-intro-titulo` dá (0,2,1) e ganha com folga, sem
+   precisar de `!important` — que aqui seria pior, porque calaria também
+   qualquer ajuste futuro do próprio pack de doença. */
+.sinan-intro h1.sinan-intro-titulo {{
   margin: 0;
   grid-column: 1;
   font-family: var(--fonte);
@@ -313,28 +342,36 @@ section[data-testid="stSidebar"] {{
   text-wrap: balance;
   color: inherit;
 }}
-.sinan-intro-logo {{
-  display: block;
-  width: auto;
-  object-fit: contain;
-  max-height: 66px;
-  max-width: min(33vw, 290px);
-}}
+/* A marca é texto, não imagem.
 
-/* Os arquivos de marca são JPEG, sem canal alfa: no tema escuro o fundo
-   branco viraria um bloco. Em vez de recortar a transparência — que mexeria
-   na marca e deixaria halo nas bordas —, a imagem ganha uma placa branca
-   explícita, que é o tratamento padrão para logotipo sem alfa e fica igual
-   nos dois temas. */
+   Era um JPEG sobre uma placa branca explícita. A placa existia porque JPEG
+   não tem canal alfa: sem ela, o fundo branco do arquivo virava um bloco no
+   tema escuro. Só que a placa resolvia um problema criando outro — um
+   retângulo branco recortado contra a superfície da faixa, visível nos dois
+   temas e mais chamativo que a própria marca.
+
+   Como palavra, a marca não tem fundo para esconder: herda o tema, fica
+   nítida em qualquer tamanho, não pesa no payload e não depende de arquivo
+   presente em disco. As cores saem do próprio logotipo, amostradas do
+   `assets/cenarios_logo_full.jpeg`: azul #0092C3 e o "+" em terracota
+   #CA6F43. */
 .sinan-intro-marca {{
-  display: inline-flex;
-  align-items: center;
   justify-self: end;
-  width: fit-content;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(2,6,23,.10);
+  align-self: center;
+  font-family: var(--fonte);
+  /* Degrau da escala, não número solto: `TEXTO_XL` é o mesmo do valor de KPI.
+     Escrevi 22px aqui na primeira versão e o `test_nenhum_tamanho_de_fonte_fixo`
+     pegou — que é o teste fazendo exatamente o trabalho dele. */
+  font-size: {tokens.TEXTO_XL};
+  font-weight: 800;
+  letter-spacing: -.005em;
+  line-height: 1;
+  white-space: nowrap;
+  color: #0092C3;
+}}
+.sinan-intro-marca-mais {{
+  color: #CA6F43;
+  font-weight: 900;
 }}
 .indicador-programa {{
   padding: 14px 16px;
@@ -373,7 +410,6 @@ section[data-testid="stSidebar"] {{
 .indicador-detalhe {{ font-size: {tokens.TEXTO_XS}; opacity: .65; }}
 
 /* Sem logotipo não há segunda coluna: o título ocupa a faixa toda. */
-.sinan-intro.marcas-0 {{ grid-template-columns: 1fr; }}
 
 /* Linha principal: mapa à esquerda, gráficos à direita.
    O original travava `height` em 520px e 760px, o que quebra em telas baixas;
@@ -428,25 +464,24 @@ section[data-testid="stSidebar"] {{
 """
 
 
-def faixa_intro(titulo: str, logo: str | None = None) -> str:
-    """Faixa de identificação: título à esquerda, logotipo à direita.
+def faixa_intro(titulo: str) -> str:
+    """Faixa de identificação: título à esquerda, marca à direita.
 
     O original tinha três colunas, com a bandeira de Pernambuco à esquerda e o
     título ao centro. A bandeira saiu: os dados são nacionais e ela lia como
-    recorte geográfico, não como emissor. Sem ela sobra um cabeçalho, e sem
-    logotipo nenhum o título ocupa a faixa toda.
+    recorte geográfico, não como emissor.
 
-    ``logo`` é um URI de dados (``data:image/...``).
+    A marca é **texto**, não imagem — ver o comentário de `.sinan-intro-marca`
+    em :func:`css_layout`. Por isso a função não recebe mais `logo`: não há
+    arquivo a carregar, nada a fazer se ele faltar, e o painel não tem mais um
+    modo "sem logotipo".
     """
-    classe = f"sinan-intro marcas-{1 if logo else 0}"
-    titulo_html = f'<h1 class="sinan-intro-titulo">{escape(titulo)}</h1>'
-
-    if not logo:
-        return f'<div class="{classe}">{titulo_html}</div>'
     return (
-        f'<div class="{classe}">{titulo_html}'
-        f'<span class="sinan-intro-marca">'
-        f'<img class="sinan-intro-logo" src="{escape(logo)}" alt=""></span></div>'
+        '<div class="sinan-intro">'
+        f'<h1 class="sinan-intro-titulo">{escape(titulo)}</h1>'
+        '<span class="sinan-intro-marca">Cenários'
+        '<span class="sinan-intro-marca-mais">+</span></span>'
+        "</div>"
     )
 
 

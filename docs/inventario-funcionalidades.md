@@ -10,10 +10,21 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 > verificados em tela, mas seguiam desmarcados. Numa checklist de paridade
 > isso é pior que inútil: apaga a diferença entre "não fizemos" e "não
 > anotamos", e some com a lista curta do que falta de verdade.
+>
+> **Revisto em 2026-08-11**, agora com o app rodando e medição no navegador.
+> A seção de KPIs descrevia o card como clicável e navegável por teclado; isso
+> saiu do código em 08/ago e a lista não acompanhou. O risco aqui é o inverso
+> do de 08/ago: a checklist mandava reimplementar um comportamento que foi
+> **removido de propósito**. Também entrou aqui o primeiro item marcado como
+> declarado-mas-sem-efeito (o `clamp` do título), categoria que faltava —
+> "está no código" e "chega na tela" não são a mesma coisa quando o CSS
+> disputa especificidade com o Streamlit.
 
 **Ainda aberto:** o mapa por clique tem um *zoom* travado de propósito (ver
-Transversal), a pirâmide não tem CURA por falta de fonte, e a decisão sobre a
-metodologia do abandono depende da equipe parceira.
+Transversal), a pirâmide não tem CURA por falta de fonte, a decisão sobre a
+metodologia do abandono depende da equipe parceira, e o `clamp` do título da
+faixa de intro está declarado mas perde em especificidade para o Streamlit
+(ver Faixa de intro).
 
 ## Sidebar (380px)
 
@@ -30,7 +41,13 @@ metodologia do abandono depende da equipe parceira.
   colunas, com a bandeira de Pernambuco à esquerda. Removida — os dados são
   nacionais, e ao lado de um mapa do Brasil a bandeira lia como recorte
   geográfico em vez de emissor. Sem logotipo, o título ocupa a faixa toda
-- [x] Título com `clamp(18px, 2.1vw, 30px)`
+- [ ] Título com `clamp(18px, 2.1vw, 30px)` — **declarado e sem efeito.** O
+      token existe (`tokens.TEXTO_TITULO`) e a regra `.sinan-intro-titulo`
+      também, mas o elemento é um `<h1>` e o seletor do Streamlit
+      (`.st-emotion-cache-…  h1`, `2.75rem`) tem especificidade maior e vence.
+      Medido no navegador: **44px**, contra os 30px de teto. É o que faz o
+      título quebrar em telas estreitas. Corrigir exige subir a
+      especificidade, ex.: `.sinan-intro h1.sinan-intro-titulo`
 
 ## KPIs
 
@@ -52,13 +69,21 @@ Grid responsivo: `repeat(auto-fit, minmax(180px, 1fr))`, com quebras em 1240px,
 Comportamento:
 
 - [x] `KPI_LAYOUT` do *disease pack* controla quais aparecem e em que ordem
-- [x] Card clicável troca a métrica ativa, repintando mapa e gráficos
 - [x] Delta vs ano anterior
 - [x] Semântica de cor **invertida para cura** — queda é ruim; nas demais, queda é boa
 - [x] Acento lateral na cor da métrica, via `--kpi-accent` inline
-- [x] Estados de hover, foco e seleção
-- [x] Navegação por teclado (Enter / Espaço) — via `<button>` nativo, e não
-      um `div` com `role="button"` como no original
+- [x] Estados de hover e seleção — o card espelha a métrica ativa por
+      `.is-selected`, o que é leitura, não interação
+- [x] Troca da métrica do mapa. **Divergência intencional:** no original é o
+      próprio card que é clicável; aqui quem troca é um `st.radio` ao lado do
+      mapa (`app.py:374`). O card é um `<div>` sem `tabindex` nem `role` —
+      não é focável e não responde a teclado. Decidido em 08/ago/2026, depois
+      de quatro rodadas de conserto do `<button>` transparente que ficava
+      esticado por cima. Ver a docstring de `componentes.card_kpi` e
+      `excecoes.md` §4
+- [x] Ajuda por card — atributo `title`, já que sem botão não há `help` do
+      Streamlit para receber. **Limitação conhecida:** tooltip nativo não
+      aparece em toque
 
 ## Mapa
 

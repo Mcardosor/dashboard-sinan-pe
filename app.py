@@ -17,7 +17,6 @@ from src.doencas import tuberculose as pack
 from src import resiliencia
 from src.estado import RECORTES, Navegacao, nivel_agregado
 from src.theme import componentes as ui
-from src.theme import marcas
 
 st.set_page_config(page_title=f"SINAN — {pack.TITULO}", layout="wide")
 
@@ -308,20 +307,9 @@ with st.sidebar:
     st.caption(f"Escopo: {nav.trilha()}")
     st.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
 
-    if ausentes := marcas.faltando():
-        st.caption(
-            "Faixa de identificação sem imagem: "
-            + ", ".join(f"`{nome}`" for nome in ausentes)
-            + " não veio na entrega do projeto em R. "
-            "Basta colocá-lo em `data/support/`."
-        )
-
 
 # --- KPIs ------------------------------------------------------------------
-st.markdown(
-    ui.faixa_intro(pack.TITULO, logo=marcas.logo()),
-    unsafe_allow_html=True,
-)
+st.markdown(ui.faixa_intro(pack.TITULO), unsafe_allow_html=True)
 
 escopo = nav.escopo
 atual = _kpis(pack.DOENCA, escopo.ano, escopo.nivel, escopo.uf, escopo.mun)
@@ -429,10 +417,20 @@ with esquerda, resiliencia.painel("Mapa"):
             rampa=pack.rampa_mapa(nav.metrica),
             rotulo_metrica=pack.rotulo(nav.metrica),
             coluna_nome="nome_mun" if chave == "cod_mun6" else chave,
-            decimais=0 if nav.metrica in ("casos", "obitos", "pop") else 1,
+            # Casa decimal só em taxa. A regra sai de `pack.TAXAS`, a mesma
+            # que formata os KPIs, e não de uma lista de contagens escrita à
+            # mão aqui — `cura` tinha ficado de fora dela e o mapa exibia
+            # "13.315,0 curas", meia pessoa inclusa. Invertendo a pergunta,
+            # métrica nova nasce como contagem até ser declarada taxa.
+            decimais=1 if nav.metrica in pack.TAXAS else 0,
             geometrias=_geojson(
                 nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro
             ),
+            # Rótulo de valor só onde ele cabe. Com 27 UFs o mapa fica como o
+            # do boletim do MS, legível em captura de tela e sem depender de
+            # hover — que não existe em toque. Nos 5.570 municípios, ou nas
+            # centenas de um estado, os rótulos se sobrepõem e viram mancha.
+            rotulos_valor=(chave == "uf"),
         )
 
         # pydeck, e não Plotly: o coroplético do Plotly não emite evento de
@@ -694,6 +692,20 @@ with resiliencia.painel("Indicadores do programa"):
             f"não fechou. Não compare com os cartões do topo."
         )
 
+# Procedência à vista, no formato que o Boletim Epidemiológico do MS usa sob
+# cada figura. Não é formalidade: um painel de vigilância circula em captura de
+# tela e em relatório, longe desta página, e dois números tirados em meses
+# diferentes viram discussão sobre quem errou quando ninguém sabe de quando é
+# cada um. O SINAN é atualizado retroativamente — o mesmo ano encolhe ou cresce
+# conforme a data da extração.
 st.caption(
-    "Divergências conhecidas entre fontes de dados: ver docs/contrato-dados.md."
+    f"Fonte: Sinan/Ministério da Saúde; população IBGE. Óbitos: SIM. "
+    f"Série exibida: {_anos()[0]}–{_anos()[-1]}. "
+    f"Dados preliminares, sujeitos a alteração — o Sinan é atualizado "
+    f"retroativamente.  \n"
+    f"Conferido contra o Boletim Epidemiológico de Tuberculose 2026 "
+    f"(Ministério da Saúde, março/2026): casos novos e incidência do Brasil "
+    f"batem dentro de 1,4% em todos os anos de 2014 a 2024 — ver "
+    f"tests/paridade/referencia_ms.json.  \n"
+    f"Divergências conhecidas entre fontes de dados: ver docs/contrato-dados.md."
 )
