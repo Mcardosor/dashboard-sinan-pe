@@ -1,0 +1,52 @@
+# Painel SINAN — multi-agravo, nacional.
+#
+# Nomes: o repositório se chama `dashboard-sinan-pe` por herança, mas o painel
+# é **nacional e multi-agravo**. Container e URL usam `sinan`, sem o "pe", para
+# não repetir a armadilha do `tbpe` — que tem quatro nomes diferentes em cinco
+# lugares. Ver INDEX.md na raiz de Painéis_Cenários.
+services:
+  dashboard:
+    build: .
+    image: dashboard-sinan:latest
+    container_name: dashboard-sinan
+    restart: unless-stopped
+    ports:
+      # 8501 a 8506 já estão ocupadas na VM; 8507 é a primeira livre.
+      - 8507:8501
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SINAN_DATA_DIR=/app/data
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    volumes:
+      # Código montado do repositório: `git pull` + restart aplica mudança sem
+      # rebuild. A imagem já tem uma cópia, então o container sobe mesmo se o
+      # volume faltar.
+      - ./app.py:/app/app.py:ro
+      - ./src:/app/src:ro
+      - ./.streamlit:/app/.streamlit:ro
+      - ./assets:/app/assets:ro
+      # Os 209 MB de parquet, geometria e apoio. Somente leitura: a aplicação
+      # nunca escreve no dado, e o `ro` transforma um bug de escrita em erro
+      # na hora em vez de corrupção silenciosa.
+      - ./data:/app/data:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "3.0"
+          # Mais folga que o irmão nacional (1.5G): aqui há geopandas e shapely
+          # carregando malha de 5.570 municípios, e o cache de geometria tem
+          # teto de 48 camadas, ~17 MB no pior caso.
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: [CMD, curl, -f, http://localhost:8501/cenarios/sinan/_stcore/health]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
