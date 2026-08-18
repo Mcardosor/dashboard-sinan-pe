@@ -54,6 +54,14 @@ class Kpis:
     casos: float | None = None
     obitos: float | None = None
     cura: float | None = None
+    #: Curas sobre casos novos do **mesmo ano**, em %.
+    #:
+    #: É aproximação, e a tela diz isso. Tratamento de TB leva cerca de seis
+    #: meses, então o desfecho dos casos de um ano só se conhece no seguinte —
+    #: o boletim do MS reporta coorte fechada, e nós não temos como fechar a
+    #: coorte com os agregados que recebemos. `letalidade` já convive com a
+    #: mesma aproximação, pelo mesmo motivo.
+    cura_pct: float | None = None
     pop: float | None = None
     incid: float | None = None
     mortalidade: float | None = None
@@ -88,6 +96,7 @@ def calcular(esc: Escopo, regra_interrupcao: str | None = None) -> Kpis:
         incid=_div(casos, pop, POR_100K),
         mortalidade=_div(obitos, pop, POR_100K),
         letalidade=_div(obitos, casos, 100),
+        cura_pct=_div(cura, casos, 100),
         casos_0_14=_num(casos_0_14),
         pop_0_14=_num(pop_0_14),
         taxa_det_0_14=_div(casos_0_14, pop_0_14, POR_100K),

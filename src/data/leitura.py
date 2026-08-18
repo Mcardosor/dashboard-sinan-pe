@@ -329,6 +329,9 @@ _COLUNA_DIRETA = {
 #: Métricas derivadas de óbitos do SIM, que `incidence` não tem.
 _DERIVADA_DE_OBITO = {"obitos", "mortalidade", "letalidade"}
 
+#: Razões que saem de duas colunas do próprio `incidence`, sem outra fonte.
+_RAZAO_EM_INCIDENCE = {"cura_pct": ("casos_cura", "casos_total")}
+
 
 def valores_por_geografia(esc: Escopo, metrica: str) -> pd.Series:
     """Valor da métrica para cada geografia dentro do escopo, para o mapa.
@@ -361,6 +364,16 @@ def valores_por_geografia(esc: Escopo, metrica: str) -> pd.Series:
         sql = f"SELECT {chave}, {coluna} AS valor FROM read_parquet('{fonte}', hive_partitioning=true){onde}"
         df = conectar().execute(sql, params).fetchdf()
         return df.set_index(chave)["valor"]
+
+    if metrica in _RAZAO_EM_INCIDENCE:
+        num, den = _RAZAO_EM_INCIDENCE[metrica]
+        df = conectar().execute(
+            f"SELECT {chave}, {num} AS num, {den} AS den "
+            f"FROM read_parquet('{fonte}', hive_partitioning=true){onde}",
+            params,
+        ).fetchdf()
+        valor = df["num"] / df["den"].replace(0, pd.NA) * 100
+        return pd.Series(valor.values, index=df[chave])
 
     if metrica in _DERIVADA_DE_OBITO:
         base = conectar().execute(

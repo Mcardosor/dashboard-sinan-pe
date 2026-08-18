@@ -377,11 +377,24 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
     for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
         valor = getattr(atual, chave)
         taxa = chave in pack.TAXAS
+
+        # Proporção sem denominador engana: "Curas 49.114, queda de 6.004"
+        # omite que os casos também caíram. Onde o pack declara a fração, ela
+        # aparece sob o valor.
+        subtitulo = None
+        if par := pack.FRACAO_KPI.get(chave):
+            num, den = (getattr(atual, campo) for campo in par)
+            if num is not None and den:
+                subtitulo = (
+                    f"{ui.formatar_inteiro(num)} de {ui.formatar_inteiro(den)}"
+                )
+
         coluna.markdown(
             ui.kpi_card(
                 pack.rotulo(chave),
                 ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
                 cor=pack.cor(chave),
+                subtitulo=subtitulo,
                 selecionado=(chave == nav.metrica),
                 badge_delta=ui.delta(
                     valor,

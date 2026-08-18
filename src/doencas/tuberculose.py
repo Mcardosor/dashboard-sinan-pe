@@ -18,6 +18,7 @@ CORES = {
     "casos": "#C1440A",
     "obitos": "#DC2626",
     "cura": "#16A34A",
+    "cura_pct": "#16A34A",
     # Cinza médio e não quase-preto: `pop` em #111827 dava 2,4:1 de contraste
     # no tema escuro. Não é exibido como card hoje, mas a rampa do mapa usa a
     # cor da métrica.
@@ -35,6 +36,7 @@ ROTULOS = {
     "casos": "Casos novos",
     "obitos": "Óbitos",
     "cura": "Curas",
+    "cura_pct": "Proporção de cura (%)",
     "pop": "População",
     "incid": "Incidência (por 100 mil hab.)",
     "mortalidade": "Taxa de mortalidade (por 100 mil hab.)",
@@ -52,8 +54,15 @@ LAYOUT_KPI = (
     "mortalidade",
     "interrupcao_trat_pct",
     "hiv_pos_pct",
-    "cura",
+    "cura_pct",
 )
+
+#: KPIs de proporção que mostram a fração de onde saem, sob o valor.
+#:
+#: "Curas: 49.114 ↓ 6.004 vs ano anterior" engana sem o denominador — os casos
+#: também caíram. Com a fração à vista, o card diz a proporção e não esconde os
+#: absolutos, que é o que o card antigo entregava.
+FRACAO_KPI = {"cura_pct": ("cura", "casos")}
 
 #: Métricas que o mapa e o ranking sabem desenhar.
 #:
@@ -62,7 +71,14 @@ LAYOUT_KPI = (
 #: card, não para pintar 27 UFs de uma vez. Enquanto isso não mudar, elas não
 #: entram no seletor, porque oferecer uma opção que leva a um painel vazio é
 #: pior que não oferecer.
-METRICAS_MAPA = ("incid", "casos", "mortalidade", "cura")
+#: Métricas oferecidas no mapa.
+#:
+#: `cura_pct` e não `cura`: coroplético pinta **área**, e área não tem relação
+#: com população. Com a contagem crua, São Paulo ficava no tom mais escuro por
+#: ser São Paulo — o mapa de curas era, na prática, um mapa de população.
+#: Proporção é comparável entre lugares de tamanhos diferentes, que é a razão
+#: de existir de um coroplético. A contagem continua no card, com denominador.
+METRICAS_MAPA = ("incid", "casos", "mortalidade", "cura_pct")
 
 
 #: Métricas em que uma queda é boa. `cura` fica de fora de propósito.
@@ -74,7 +90,7 @@ BOM_SE_CAI = frozenset(
 #: Métricas exibidas com casas decimais.
 TAXAS = frozenset(
     {"incid", "mortalidade", "letalidade", "taxa_det_0_14",
-     "hiv_pos_pct", "interrupcao_trat_pct"}
+     "hiv_pos_pct", "interrupcao_trat_pct", "cura_pct"}
 )
 
 #: Paletas explícitas do mapa, herdadas do original. Quando existem, têm
@@ -202,6 +218,13 @@ DESCRICOES = {
     "casos": "Total de casos novos notificados no ano, por UF de residência.",
     "obitos": "Óbitos com a doença como causa básica, vindos do SIM.",
     "cura": "Encerramentos por cura no ano.",
+    "cura_pct": (
+        "Encerramentos por cura sobre os casos novos do mesmo ano. "
+        "É aproximação: o tratamento leva cerca de seis meses, então parte "
+        "dos casos de um ano só encerra no seguinte. O boletim do MS usa "
+        "coorte fechada e publica 65,5% para 2024, sobre um subconjunto — "
+        "só os casos confirmados por critério laboratorial."
+    ),
     "pop": "População estimada do recorte.",
     "mortalidade": (
         "Óbitos por 100 mil habitantes. A fonte é o SIM, não o SINAN — "

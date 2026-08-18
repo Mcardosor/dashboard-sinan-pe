@@ -120,6 +120,31 @@ a comparação não parecer omissa.
   O dado veio nos parquets e não é exibido em nenhum dos dois painéis deles.
 - **Pirâmide de óbitos**: a deles só mostra CASOS.
 - **Aviso de ano incompleto**, nomeando o último mês com dado.
+- **Proporção de cura (%)**, que nenhum dos dois painéis tem. Curas sobre
+  casos novos do mesmo ano. Entrou em 18/ago/2026 e **substituiu a contagem
+  de curas no mapa**, mantendo-a no card como fração ("49.114 de 85.932").
+
+  A troca no mapa não é estética. Coroplético pinta **área**, e área não tem
+  relação com população: com a contagem crua, São Paulo ficava no tom mais
+  escuro por ser São Paulo, e o mapa de curas era na prática um mapa de
+  população. Com a proporção, o Acre (78,8%) aparece à frente e a Bahia
+  (42,5%) atrás — o mapa passa a mostrar desfecho de tratamento, que é o que
+  o rótulo promete. O boletim do MS mapeia só taxas, nunca contagens, pela
+  mesma razão.
+
+  **Não é comparável ao 65,5% do boletim sem ajuste.** O número deles é sobre
+  casos novos *confirmados por critério laboratorial*, um subconjunto; o nosso
+  é sobre todos os casos novos, e dá 57,15% no Brasil em 2024. Igualar a
+  população antes de comparar — é a mesma armadilha da interrupção de
+  tratamento. O que corrobora é a direção: o boletim aponta o Acre como maior
+  proporção de cura do país, e nós chegamos ao mesmo lugar por outro caminho.
+
+  **É aproximação de coorte**, e a tela diz isso na ajuda do card. Tratamento
+  de TB leva cerca de seis meses, então parte dos casos de um ano só encerra
+  no seguinte; o boletim usa coorte fechada e nós não temos como fechar a
+  coorte com os agregados que recebemos. `letalidade` convive com a mesma
+  aproximação desde o início, pelo mesmo motivo.
+
 - **Composição por 24 variáveis**, contra 9 no painel de PE e 7 no nacional.
 
 ---
