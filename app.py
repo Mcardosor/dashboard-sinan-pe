@@ -505,7 +505,19 @@ with esquerda, resiliencia.painel("Mapa"):
                     st.rerun()
 
 
-with direita:
+@st.fragment
+def _painel_ranking() -> None:
+    """Ranking, isolado num fragmento.
+
+    O `top_n` é local: mudar quantas posições aparecem não altera mapa, série
+    nem pirâmide. Sem o fragmento, arrastar esse slider reconstruía a página
+    inteira e reenviava o mapa — 0,19 MB no Brasil, 0,70 MB em Minas Gerais.
+
+    **O clique numa barra é o oposto e por isso usa `scope="app"`.** Dentro de
+    um fragmento o `st.rerun()` padrão recarrega só o fragmento, e a navegação
+    morreria em silêncio: a barra ficaria destacada, o mapa continuaria no
+    recorte antigo e ninguém veria erro nenhum.
+    """
     with resiliencia.painel("Ranking"):
 
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
@@ -540,84 +552,109 @@ with direita:
             # máquina de estados, não tem navegação própria.
             if nav.nivel == "BR" and clicado != nav.uf:
                 nav.entrar_uf(clicado)
-                st.rerun()
+                st.rerun(scope="app")
             elif nav.nivel != "BR" and clicado != nav.mun:
                 nomes = _municipios(nav.uf)
                 if clicado in nomes:
                     nav.entrar_municipio(clicado, nome=nomes[clicado])
-                    st.rerun()
+                    st.rerun(scope="app")
+
+
+with direita:
+    _painel_ranking()
 
 
 
 st.divider()
 
-with resiliencia.painel("Evolução temporal"):
-    # 3 para 2, e não 2 para 1: com um terço da largura o rótulo do
-    # toggle quebrava em duas linhas e desalinhava a barra.
-    controle_h, controle_d = st.columns([3, 2])
-    horizonte = controle_h.radio(
-        "Evolução temporal",
-        ["meses", "anos"],
-        format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
-        horizontal=True,
-        key="horizonte",
-        help=(
-            "Meses do ano mostra o ano selecionado mês a mês; Todos os anos "
-            "mostra a série histórica completa."
-        ),
-    )
-    # Casos e incidência juntos é o gráfico que o original mostra para
-    # tuberculose. Fica como opção, não como padrão, porque só faz sentido
-    # para essas duas métricas.
-    duplo = controle_d.toggle(
-        "Casos + incidência",
-        key="serie_dupla",
-        help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
-    )
+@st.fragment
+def _painel_evolucao() -> None:
+    """Evolução temporal, isolada num fragmento.
 
-    if duplo:
-        serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
-        figura_serie = graficos.evolucao_dupla(
-            serie,
-            altura=ALTURA_SERIE,
-            cor_barra=pack.cor("casos"),
-            cor_linha=pack.cor("incid"),
-            eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
+    Os dois controles daqui — horizonte e casos+incidência — não saem deste
+    painel. Antes, alternar entre "meses do ano" e "todos os anos" redesenhava
+    o mapa, o ranking, a pirâmide e a composição junto.
+
+    Não há navegação aqui, então nenhum `st.rerun` precisa escapar do escopo.
+    """
+    with resiliencia.painel("Evolução temporal"):
+        # 3 para 2, e não 2 para 1: com um terço da largura o rótulo do
+        # toggle quebrava em duas linhas e desalinhava a barra.
+        controle_h, controle_d = st.columns([3, 2])
+        horizonte = controle_h.radio(
+            "Evolução temporal",
+            ["meses", "anos"],
+            format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
+            horizontal=True,
+            key="horizonte",
+            help=(
+                "Meses do ano mostra o ano selecionado mês a mês; Todos os anos "
+                "mostra a série histórica completa."
+            ),
         )
-    else:
-        serie = _serie(
-            pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
+        # Casos e incidência juntos é o gráfico que o original mostra para
+        # tuberculose. Fica como opção, não como padrão, porque só faz sentido
+        # para essas duas métricas.
+        duplo = controle_d.toggle(
+            "Casos + incidência",
+            key="serie_dupla",
+            help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
         )
-        rotulo = pack.rotulo(nav.metrica)
-        if serie.empty:
-            figura_serie = graficos.sem_dado(
-                f"{rotulo} ainda não tem série temporal"
-            )
-        elif horizonte == "meses":
-            figura_serie = graficos.evolucao_mensal(
-                serie, rotulo=rotulo, cor=pack.cor(nav.metrica),
+
+        if duplo:
+            serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
+            figura_serie = graficos.evolucao_dupla(
+                serie,
                 altura=ALTURA_SERIE,
+                cor_barra=pack.cor("casos"),
+                cor_linha=pack.cor("incid"),
+                eixo_x="mes_nome:N" if horizonte == "meses" else "ano:O",
             )
         else:
-            figura_serie = graficos.evolucao_anual(
-                serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano,
-                altura=ALTURA_SERIE,
+            serie = _serie(
+                pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte, nav.metrica
             )
+            rotulo = pack.rotulo(nav.metrica)
+            if serie.empty:
+                figura_serie = graficos.sem_dado(
+                    f"{rotulo} ainda não tem série temporal"
+                )
+            elif horizonte == "meses":
+                figura_serie = graficos.evolucao_mensal(
+                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica),
+                    altura=ALTURA_SERIE,
+                )
+            else:
+                figura_serie = graficos.evolucao_anual(
+                    serie, rotulo=rotulo, cor=pack.cor(nav.metrica), ano=nav.ano,
+                    altura=ALTURA_SERIE,
+                )
 
-    st.altair_chart(figura_serie, use_container_width=True)
+        st.altair_chart(figura_serie, use_container_width=True)
 
-    # A série mensal vem por notificação e os KPIs por residência — ver
-    # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
-    # usuário descobrir somando as barras.
-    if horizonte == "meses":
-        st.caption(graficos.AVISO_NOTIFICACAO)
+        # A série mensal vem por notificação e os KPIs por residência — ver
+        # docs/contrato-dados.md, armadilha 7. Avisar é melhor que deixar o
+        # usuário descobrir somando as barras.
+        if horizonte == "meses":
+            st.caption(graficos.AVISO_NOTIFICACAO)
+
+
+_painel_evolucao()
 
 
 st.divider()
 
 baixo_esq, baixo_dir = st.columns(2, gap="small")
 
-with baixo_esq:
+@st.fragment
+def _painel_piramide() -> None:
+    """Pirâmide etária, isolada num fragmento.
+
+    `tipo` (casos ou óbitos) e `taxa` (por 100 mil) são locais. Marcar "por
+    100 mil habitantes" reconstruía o mapa inteiro, que é o exemplo que mais
+    incomodava: dois cliques de leitura numa ponta da página custavam o
+    redesenho da outra.
+    """
     with resiliencia.painel("Pirâmide etária"):
 
         # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em
@@ -657,7 +694,18 @@ with baixo_esq:
                 "divergir dos demais painéis."
             )
 
-with baixo_dir:
+
+with baixo_esq:
+    _painel_piramide()
+
+@st.fragment
+def _painel_composicao() -> None:
+    """Composição por variável do SINAN, isolada num fragmento.
+
+    São 24 variáveis no seletor, e trocar entre elas é a interação mais
+    repetida do painel — quem investiga um recorte percorre várias. Cada troca
+    reenviava o mapa.
+    """
     with resiliencia.painel("Composição"):
         st.caption("Composição por variável do SINAN")
 
@@ -681,6 +729,10 @@ with baixo_dir:
         # aqui só se explica ao usuário por que o eixo mudou.
         if not composto.empty and composto["pct"].isna().all():
             st.caption(graficos.AVISO_BASE_PEQUENA.format(n=int(composto["total"].iloc[0])))
+
+
+with baixo_dir:
+    _painel_composicao()
 
 st.divider()
 with resiliencia.painel("Indicadores do programa"):

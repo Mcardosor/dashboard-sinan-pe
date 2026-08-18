@@ -111,3 +111,58 @@ def test_a_grade_tem_duas_linhas_de_duas_colunas() -> None:
     """Mapa | série em cima, ranking | pirâmide embaixo."""
     assert "esquerda, direita = st.columns(2" in FONTE
     assert "baixo_esq, baixo_dir = st.columns(2" in FONTE
+
+
+def _fragmentos() -> dict[str, ast.FunctionDef]:
+    return {
+        no.name: no
+        for no in ARVORE.body
+        if isinstance(no, ast.FunctionDef)
+        and any(
+            isinstance(d, ast.Attribute) and d.attr == "fragment"
+            for d in no.decorator_list
+        )
+    }
+
+
+def test_os_paineis_locais_sao_fragmentos() -> None:
+    """Painel cujos controles não saem dele não redesenha a página inteira.
+
+    Antes disso, arrastar o `top_n` do ranking ou marcar "por 100 mil" na
+    pirâmide reconstruía e reenviava o mapa: 0,19 MB no Brasil e 0,70 MB em
+    Minas Gerais, por clique.
+    """
+    esperados = {
+        "_painel_ranking",
+        "_painel_evolucao",
+        "_painel_piramide",
+        "_painel_composicao",
+    }
+    assert esperados <= set(_fragmentos()), (
+        f"deixaram de ser fragmento: {sorted(esperados - set(_fragmentos()))}"
+    )
+
+
+def test_navegacao_dentro_de_fragmento_recarrega_a_pagina_toda() -> None:
+    """`st.rerun()` num fragmento recarrega **só o fragmento**.
+
+    O ranking navega: clicar numa barra entra na UF ou no município. Sem
+    `scope="app"` isso falha em silêncio — a barra destaca, o mapa continua no
+    recorte antigo e nenhum erro aparece. É o pior tipo de regressão, e por
+    isso está preso aqui em vez de confiado à memória de quem editar.
+    """
+    faltando = []
+    for nome, no in _fragmentos().items():
+        for chamada in ast.walk(no):
+            if not isinstance(chamada, ast.Call):
+                continue
+            alvo = chamada.func
+            if isinstance(alvo, ast.Attribute) and alvo.attr == "rerun":
+                escopos = [k.arg for k in chamada.keywords]
+                if "scope" not in escopos:
+                    faltando.append(f"{nome}:{chamada.lineno}")
+
+    assert not faltando, (
+        "st.rerun() sem `scope` dentro de fragmento — a navegação não sairá do "
+        f"painel: {faltando}"
+    )
