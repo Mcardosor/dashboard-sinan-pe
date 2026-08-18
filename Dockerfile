@@ -24,7 +24,6 @@ RUN pip install --no-cache-dir -r requirements.lock.txt
 
 COPY app.py .
 COPY src/ src/
-COPY assets/ assets/
 COPY .streamlit/ .streamlit/
 
 EXPOSE 8501

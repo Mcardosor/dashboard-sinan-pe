@@ -74,9 +74,16 @@ Em `data/support/` ficam os arquivos de apoio de PE — os shapefiles de
 macrorregião e região de saúde e o `municipios.csv`. Também não são
 versionados, e são a única fonte dos recortes de saúde.
 
-O logotipo da faixa de identificação fica em **`assets/`** e **é
-versionado**: é identidade visual, não dado, não muda quando o SINAN atualiza.
-Sem ele a faixa mostra só o título e a barra lateral avisa o que falta.
+A marca da faixa de identificação é **texto**, não imagem. Era um JPEG sobre
+uma placa branca — necessária porque JPEG não tem canal alfa e o fundo do
+arquivo viraria um bloco no tema escuro —, mas a placa resolvia um problema
+criando outro: um retângulo recortado contra a superfície da faixa, mais
+chamativo que a própria marca. Como palavra, ela herda o tema e não depende de
+arquivo em disco.
+
+O `assets/cenarios_logo_full.jpeg` continua versionado, mas fora do caminho da
+aplicação: é a **fonte das cores da marca** (azul `#0092C3`, "+" em terracota
+`#CA6F43`), amostradas dele e fixadas no CSS.
 
 A bandeira de Pernambuco que o original exibe ao lado do título foi removida:
 os dados aqui são nacionais e, ao lado de um mapa do Brasil, ela lia como
@@ -145,7 +152,7 @@ com base em `.env.exemplo`.
 ## Estrutura
 
 ```
-assets/         logotipo da faixa de identificação (versionado)
+assets/         logotipo de referência — origem das cores da marca, não lido pelo app
 src/
   data/         camada DuckDB: conexão, readers por dataset, KPIs
   theme/        tokens de design, gerador de rampa de cor, componentes visuais

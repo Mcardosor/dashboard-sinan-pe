@@ -24,7 +24,6 @@ services:
       - ./app.py:/app/app.py:ro
       - ./src:/app/src:ro
       - ./.streamlit:/app/.streamlit:ro
-      - ./assets:/app/assets:ro
       # Os 209 MB de parquet, geometria e apoio. Somente leitura: a aplicação
       # nunca escreve no dado, e o `ro` transforma um bug de escrita em erro
       # na hora em vez de corrupção silenciosa.
