@@ -157,8 +157,35 @@ def css_base() -> str:
 .kpi-ruim {{ color: {tokens.RUIM}; }}
 .kpi-igual {{ opacity: {tokens.NEUTRO_OPACIDADE}; }}
 
+/* Conteúdo redesenhado entra com fade, em vez de piscar no lugar.
+
+   Isto só passou a fazer sentido depois dos fragmentos. Antes, qualquer
+   clique redesenhava a página inteira e um fade universal seria ruído — tudo
+   pulsando a cada interação. Agora só o painel que mudou é reconstruído, e o
+   fade vira **informação**: marca onde a mudança aconteceu, que é o que a
+   pessoa quer saber ao mexer num controle.
+
+   180ms é curto de propósito. Acima de ~250ms a animação deixa de suavizar e
+   passa a parecer lentidão, e este painel responde em menos de 20ms na camada
+   de dados — não há espera real a disfarçar.
+
+   Sem `transform`: mover o gráfico ao aparecer disputaria com a leitura do
+   eixo. Só opacidade. */
+@keyframes sinan-surgir {{
+  from {{ opacity: 0; }}
+  to   {{ opacity: 1; }}
+}}
+[data-testid="stVegaLiteChart"],
+[data-testid="stDeckGlJsonChart"] {{
+  animation: sinan-surgir .18s ease-out;
+}}
+
 @media (prefers-reduced-motion: reduce) {{
   .kpi-card {{ transition: none !important; transform: none !important; }}
+  /* Quem pediu menos movimento não recebe nem o fade. Vestibular é o motivo:
+     animação repetida a cada interação é gatilho, e aqui ela é decoração. */
+  [data-testid="stVegaLiteChart"],
+  [data-testid="stDeckGlJsonChart"] {{ animation: none !important; }}
 }}
 </style>
 """
