@@ -328,7 +328,19 @@ with st.sidebar:
     coluna_reset.button("Reset", use_container_width=True, on_click=nav.reset)
 
     st.caption(f"Escopo: {nav.trilha()}")
-    st.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
+
+    # Reservado agora, preenchido depois do rádio que define a métrica.
+    #
+    # Quem escolhe a métrica é um controle dentro do painel do mapa, umas 50
+    # linhas abaixo. Escrevendo a legenda aqui, ela mostrava o valor da
+    # interação **anterior**: trocar para "Casos novos" deixava a barra
+    # dizendo "Incidência" até o clique seguinte.
+    #
+    # `st.empty()` guarda o lugar na barra lateral e aceita conteúdo mais
+    # tarde no script, então a posição visual não muda e o valor deixa de
+    # atrasar. Mover o rádio para cá resolveria também, mas separaria o
+    # controle do mapa que ele comanda.
+    espaco_metrica = st.empty()
 
 
 # --- KPIs ------------------------------------------------------------------
@@ -393,6 +405,7 @@ with esquerda, resiliencia.painel("Mapa"):
         key="metrica_mapa",
         help="Define o que o mapa pinta e o que o ranking ordena.",
     )
+    espaco_metrica.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
 
     st.caption(
         "Mapa — "
