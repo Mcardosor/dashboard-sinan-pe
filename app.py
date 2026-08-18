@@ -344,7 +344,25 @@ with st.sidebar:
 
 
 # --- KPIs ------------------------------------------------------------------
-st.markdown(ui.faixa_intro(pack.TITULO), unsafe_allow_html=True)
+# O escopo vai na faixa, e não só na barra lateral: recolhida — que é como o
+# painel é projetado — não sobrava nada na tela dizendo de que ano e de que
+# território são os números.
+#
+# Montado aqui, e não com `nav.trilha()`, porque a trilha é o breadcrumb da
+# barra lateral e traz "Ano: " por extenso mais os níveis de recorte. Na faixa
+# cabe o resumo; o detalhe continua ao lado.
+_local = (
+    "Brasil" if nav.nivel == "BR"
+    else (nav.nome_mun or config.NOME_POR_UF.get(nav.uf, nav.uf))
+)
+st.markdown(
+    ui.faixa_intro(
+        pack.TITULO,
+        escopo=f"{_local} · {nav.ano} · Sinan/MS",
+        cor=pack.cor("primary"),
+    ),
+    unsafe_allow_html=True,
+)
 
 escopo = nav.escopo
 atual = _kpis(pack.DOENCA, escopo.ano, escopo.nivel, escopo.uf, escopo.mun)
@@ -435,13 +453,18 @@ with esquerda, resiliencia.painel("Mapa"):
     else:
         # Voltar dentro do mapa, como no original: quem navega clicando não
         # deveria ter de procurar o controle na barra lateral.
-        if nav.pode_voltar:
-            st.button(
-                "◀ Voltar",
-                key="voltar-mapa",
-                on_click=nav.voltar,
-                help="Desfaz um passo da navegação no mapa",
-            )
+        #
+        # `disabled` e não `if`: escondendo o botão, entrar numa UF empurrava o
+        # mapa uns 48px para baixo — exatamente onde o usuário acabara de
+        # clicar, e no instante seguinte ao clique. A barra lateral já fazia
+        # assim; era o mapa que destoava.
+        st.button(
+            "◀ Voltar",
+            key="voltar-mapa",
+            disabled=not nav.pode_voltar,
+            on_click=nav.voltar,
+            help="Desfaz um passo da navegação no mapa",
+        )
 
         camada = _camada(
             nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro
@@ -693,11 +716,21 @@ def _painel_piramide() -> None:
 
         dados_pir = _piramide(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, tipo)
 
-        # Só casos trazem população, então só eles podem virar taxa.
-        taxa = tipo == "CASOS" and st.toggle(
-            "Por 100 mil habitantes", key="piramide_taxa",
-            help="Desconta o tamanho de cada faixa etária na população.",
+        # Só casos trazem população, então só eles podem virar taxa. O
+        # controle continua na tela desabilitado em vez de sumir: alternar
+        # entre casos e óbitos fazia a pirâmide subir e descer, e um controle
+        # que desaparece não explica por que desapareceu.
+        por_100mil = st.toggle(
+            "Por 100 mil habitantes",
+            key="piramide_taxa",
+            disabled=tipo != "CASOS",
+            help=(
+                "Desconta o tamanho de cada faixa etária na população. "
+                "Indisponível para óbitos: eles vêm do SIM, que não traz "
+                "população por faixa."
+            ),
         )
+        taxa = tipo == "CASOS" and por_100mil
 
         st.altair_chart(
             graficos.piramide(

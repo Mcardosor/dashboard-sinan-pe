@@ -170,3 +170,19 @@ def test_codigo_de_municipio_e_unico_no_pais() -> None:
         [geo.municipios(uf)["cod_mun6"] for uf in config.CODIGO_POR_UF]
     )
     assert codigos.is_unique
+
+
+def test_toda_uf_tem_nome_por_extenso() -> None:
+    """`NOME_POR_UF` e `CODIGO_POR_UF` precisam cobrir as mesmas 27 UFs.
+
+    São duas listas escritas à mão sobre o mesmo domínio. Faltando uma
+    entrada, a faixa de identificação cai no `.get(uf, uf)` e mostra a sigla
+    para aquele estado só — um "AM" no meio de "Pernambuco" e "São Paulo",
+    que ninguém nota até alguém navegar justo para lá.
+    """
+    from src.data import config
+
+    faltando = set(config.CODIGO_POR_UF) - set(config.NOME_POR_UF)
+    sobrando = set(config.NOME_POR_UF) - set(config.CODIGO_POR_UF)
+    assert not faltando, f"UF sem nome por extenso: {sorted(faltando)}"
+    assert not sobrando, f"nome por extenso de UF inexistente: {sorted(sobrando)}"

@@ -144,6 +144,25 @@ UF_POR_CODIGO = {
 
 CODIGO_POR_UF = {sigla: codigo for codigo, sigla in UF_POR_CODIGO.items()}
 
+#: Nome por extenso, para rótulo lido por gente.
+#:
+#: A sigla serve para filtro e para o seletor, onde a lista precisa ser
+#: escaneável. Na faixa de identificação, não: ali o escopo é lido de longe,
+#: às vezes projetado, e "Amazonas" é melhor que "AM". Sem isto a faixa ficava
+#: incoerente consigo mesma — mostrava o município por extenso ("Manaus") e a
+#: UF em sigla.
+NOME_POR_UF = {
+    "AC": "Acre", "AL": "Alagoas", "AM": "Amazonas", "AP": "Amapá",
+    "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal",
+    "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão",
+    "MG": "Minas Gerais", "MS": "Mato Grosso do Sul", "MT": "Mato Grosso",
+    "PA": "Pará", "PB": "Paraíba", "PE": "Pernambuco", "PI": "Piauí",
+    "PR": "Paraná", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte",
+    "RO": "Rondônia", "RR": "Roraima", "RS": "Rio Grande do Sul",
+    "SC": "Santa Catarina", "SE": "Sergipe", "SP": "São Paulo",
+    "TO": "Tocantins",
+}
+
 
 def codigo_uf(sigla: str) -> str:
     """Código IBGE de 2 dígitos a partir da sigla."""

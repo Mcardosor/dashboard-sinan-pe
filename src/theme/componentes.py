@@ -282,6 +282,36 @@ def css_layout() -> str:
    valha na barra recolhida; zerar explicitamente no estado fechado é o que de
    fato recupera o espaço. Medido: sem a segunda regra o conteúdo continua em
    66% da janela mesmo com a primeira aplicada. */
+/* Conteúdo recalculando esmaece — mas só se demorar.
+
+   O Streamlit marca `data-stale="true"` nos elementos enquanto o script
+   roda. Sem estilo, a troca é seca: o valor antigo fica firme e é
+   substituído de repente, sem sinal nenhum de que algo estava acontecendo.
+
+   **O atraso é o ponto todo.** Trocar de ano custa 87 ms no servidor; um
+   fade que comece imediatamente estaria ainda correndo quando o conteúdo já
+   chegou, e faria a interação parecer mais lenta do que é. Com 150 ms de
+   espera, tudo que responde rápido não pisca — o esmaecimento só aparece nos
+   casos que realmente demoram, como entrar numa UF com centenas de
+   municípios.
+
+   A volta é imediata, sem atraso: assim que o dado chega, ele aparece.
+   Esconder a chegada seria o inverso do que se quer.
+
+   Isto substitui o overlay que cobre a tela por 3 s no painel em R — ver
+   `excecoes.md` §4. O sinal existe, mas não bloqueia e não anuncia uma
+   lentidão que não temos. */
+[data-stale] {{
+  transition: opacity .12s ease;
+}}
+[data-stale="true"] {{
+  opacity: .45;
+  transition-delay: .15s;
+}}
+@media (prefers-reduced-motion: reduce) {{
+  [data-stale] {{ transition: none; }}
+}}
+
 /* Respiro da página. O padrão do Streamlit é `96px 80px 160px`, medida de
    página de documento: 144px de nada antes do título e 160px depois do último
    gráfico, num painel aberto para ler número. Os 80px laterais ainda custavam
@@ -350,17 +380,62 @@ section[data-testid="stSidebar"][aria-expanded="false"] {{
 }}
 
 .sinan-intro {{
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
-  padding: 10px 12px;
+  padding: 12px 14px 12px 22px;
   margin-bottom: {tokens.GAP};
   border-radius: {tokens.RAIO_PAINEL};
   border: var(--borda);
   background: linear-gradient(180deg, var(--superficie-topo), var(--superficie));
   box-shadow: {tokens.SOMBRA_REPOUSO};
 }}
+/* Acento na cor da doença, colado na borda esquerda.
+
+   Reaproveita a linguagem que os cards de KPI já estabeleceram — barra
+   colorida à esquerda, valor à direita. Sem ele a faixa era um retângulo
+   cinza com uma palavra dentro, e não parecia parte do mesmo sistema.
+
+   A cor entra por variável inline (`--intro-accent`), como em `--kpi-accent`:
+   um bloco de CSS serve qualquer doença do pack. */
+.sinan-intro::before {{
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--intro-accent, currentColor);
+}}
+
+.sinan-intro-texto {{
+  grid-column: 1;
+  min-width: 0;
+}}
+
+/* Escopo do recorte, na própria faixa.
+
+   Com a barra lateral recolhida — que é como o painel é projetado — não havia
+   **nada na tela** dizendo de que ano e de que território eram os números. O
+   mesmo layout serve Brasil/2024 e Pernambuco/2018, e uma captura de tela não
+   se explicava sozinha. Num painel de vigilância isso é procedência, não
+   enfeite.
+
+   É dinâmico de propósito: vira "Pernambuco · 2018" ao navegar. Foi por isso
+   que o título ficou só "Tuberculose" — pôr "nacional" nele seria mentira no
+   instante em que alguém clica numa UF, que é a interação principal. */
+.sinan-intro-escopo {{
+  margin-top: 2px;
+  font-family: var(--fonte);
+  font-size: {tokens.TEXTO_SM};
+  font-weight: 400;
+  opacity: .68;
+  line-height: 1.35;
+}}
+
 /* O seletor precisa do `h1` e do ancestral: o título é um `<h1>`, e o
    Streamlit estiliza `.st-emotion-cache-… h1` com `font-size: 2.75rem`. Esse
    seletor tem especificidade (0,1,1) e vencia `.sinan-intro-titulo` (0,1,0) —
@@ -373,12 +448,14 @@ section[data-testid="stSidebar"][aria-expanded="false"] {{
    qualquer ajuste futuro do próprio pack de doença. */
 .sinan-intro h1.sinan-intro-titulo {{
   margin: 0;
-  grid-column: 1;
   font-family: var(--fonte);
   font-size: {tokens.TEXTO_TITULO};
   font-weight: 900;
   line-height: 1.08;
-  letter-spacing: .01em;
+  /* Negativo, e não positivo: em peso 900 o espaçamento aberto espalha a
+     palavra e ela perde solidez. Fechar um pouco faz o título ler como bloco,
+     que é o que se quer de um nome de painel. */
+  letter-spacing: -.015em;
   text-align: left;
   text-wrap: balance;
   color: inherit;
@@ -515,7 +592,7 @@ def titulo_painel(texto: str) -> str:
     return f'<div class="titulo-painel">{escape(texto)}</div>'
 
 
-def faixa_intro(titulo: str) -> str:
+def faixa_intro(titulo: str, *, escopo: str, cor: str) -> str:
     """Faixa de identificação: título à esquerda, marca à direita.
 
     O original tinha três colunas, com a bandeira de Pernambuco à esquerda e o
@@ -528,8 +605,11 @@ def faixa_intro(titulo: str) -> str:
     modo "sem logotipo".
     """
     return (
-        '<div class="sinan-intro">'
+        f'<div class="sinan-intro" style="--intro-accent:{escape(cor)};">'
+        '<div class="sinan-intro-texto">'
         f'<h1 class="sinan-intro-titulo">{escape(titulo)}</h1>'
+        f'<div class="sinan-intro-escopo">{escape(escopo)}</div>'
+        "</div>"
         '<span class="sinan-intro-marca">Cenários'
         '<span class="sinan-intro-marca-mais">+</span></span>'
         "</div>"
