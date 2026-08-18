@@ -296,12 +296,27 @@ def _camada_rotulos(pydeck, dados):
     meia_larg = largura * 0.070 / 2
     meia_alt = altura * 0.034 / 2
 
-    ordem = com_valor.geometry.envelope.area.sort_values(ascending=False).index
+    # Tudo de uma vez, e não um `representative_point()` por iteração: em
+    # polígono de UF a operação é cara, e chamada 27 vezes dentro do laço ela
+    # sozinha levava o tempo de montar o mapa do Brasil de 203 ms para 528 ms
+    # — mais que o mapa de Minas Gerais inteiro, com 853 municípios.
+    pontos = com_valor.geometry.representative_point()
+    # Ordena por área do bounding box calculada dos próprios limites, e não
+    # por `.area` da geometria: em CRS geográfico o geopandas emite um aviso a
+    # cada chamada ("results are likely incorrect"), e o mapa é redesenhado a
+    # cada interação — o log de produção viraria só isso. Aqui a área serve só
+    # para desempatar quem fica com o rótulo, então grau ao quadrado basta.
+    lim = com_valor.geometry.bounds
+    ordem = (
+        ((lim["maxx"] - lim["minx"]) * (lim["maxy"] - lim["miny"]))
+        .sort_values(ascending=False)
+        .index
+    )
 
     fonte: list[dict] = []
     ocupados: list[tuple[float, float, float, float]] = []
     for idx in ordem:
-        ponto = com_valor.geometry.loc[idx].representative_point()
+        ponto = pontos.loc[idx]
         x, y = float(ponto.x), float(ponto.y)
         caixa = (x - meia_larg, y - meia_alt, x + meia_larg, y + meia_alt)
         if any(
