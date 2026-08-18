@@ -1,116 +1,104 @@
 # Publicação
 
-Estado: **moldes prontos e subcaminho verificado; falta o servidor.**
+Estado: **em produção desde 18/ago/2026**, na VM `wrdocker2`, porta 8507.
+Falta um passo — o bloco do nginx, que exige sudo — e por isso o painel hoje
+responde só por VPN.
 
-O que já foi provado localmente e o que ainda depende de decisão está separado
-abaixo de propósito — o segundo bloco é curto e é onde o processo para.
+| | |
+|---|---|
+| Por VPN, funcionando | `http://10.20.10.64:8507/cenarios/sinan/` |
+| Público, **pendente** | `https://painel.cenarios.unb.br/cenarios/sinan` |
+| Container | `dashboard-sinan` |
+| Pasta na VM | `~/dashboard-sinan-pe` |
 
-## O que já está verificado
+Este documento descrevia systemd, porta 8506 e o slug `sinanpe`. As três
+informações estavam erradas: foram escritas antes de alguém ter acesso à VM.
+O histórico do que se supunha está no git; aqui fica só o que é verdade.
 
-**A aplicação funciona sob subcaminho.** Testado em
-`http://localhost:8511/cenarios/sinanpe/`, que é o formato dos painéis irmãos
-(`/cenarios/tbpe`). Confirmado nesse modo:
+## Por que Docker, e não systemd
 
-- a página carrega e o tema escuro funciona;
-- o clique no mapa navega (BR → UF), com reenquadramento;
-- o bloqueio de zoom por roda do mouse continua ativo — importa porque ele
-  depende de um `components.v1.html`, que vira um iframe e acessa
-  `window.parent`; sob subcaminho isso poderia falhar por origem, e não falha.
+Os cinco painéis irmãos rodam em `docker compose`, e a receita de deploy da
+família é uma linha só. Subir este com systemd faria dele o único fora do
+padrão — outro jeito de subir, outro de reiniciar, outro lugar de log — e
+nenhuma automação da família serviria.
 
-Reproduzir::
+## Deploy de uma mudança de código
 
-    streamlit run app.py --server.port 8511 --server.baseUrlPath cenarios/sinanpe
-
-**O pacote de dados cabe em 209 MB**, contra 927 MB em disco. A diferença é
-quase toda `_geo_cache`: GeoJSON gzipado que o pipeline da equipe parceira usou
-e que já convertemos para GeoParquet em `data/geo` (3,7 MB). Sobra em uso um
-único arquivo de lá, o de centroides.
-
-Montar o pacote::
-
-    python -m scripts.preparar_publicacao --conferir            # só mede
-    python -m scripts.preparar_publicacao --destino /tmp/pacote
-
-O manifesto é conferido por `tests/test_publicacao.py` contra
-`conexao.PARTICOES`: dataset novo sem entrada no pacote quebra o teste, não a
-produção.
-
-## O que falta decidir
-
-Três respostas, e nenhuma delas eu tenho:
-
-1. **Qual servidor.** Os painéis irmãos rodam em algum host com nginx servindo
-   `/cenarios/<nome>`. Preciso do endereço e de acesso.
-2. **Porta e caminho.** As ocupadas que conheço: 8501, 8503, 8504, 8505, 8512.
-   Sugestão: **8506** e `/cenarios/sinanpe`.
-3. **Como o dado chega lá.** São 209 MB que não estão no git — de propósito.
-   `scp` de uma vez, ou tem processo de sincronização?
-
-## Moldes
-
-Trocar `PORTA`, `CAMINHO` e os diretórios conforme as respostas acima.
-
-### systemd
-
-```ini
-# /etc/systemd/system/sinan-pe.service
-[Unit]
-Description=Dashboard SINAN — Tuberculose
-After=network.target
-
-[Service]
-Type=simple
-User=SEU_USUARIO
-WorkingDirectory=/opt/dashboard-sinan-pe
-Environment="SINAN_DATA_DIR=/opt/dashboard-sinan-pe/data"
-ExecStart=/opt/dashboard-sinan-pe/.venv/bin/streamlit run app.py \
-  --server.port 8506 \
-  --server.address 127.0.0.1 \
-  --server.baseUrlPath cenarios/sinanpe \
-  --server.headless true
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+```bash
+ssh cenarios-vm 'cd ~/dashboard-sinan-pe && git pull && docker compose up -d --build'
 ```
 
-`--server.address 127.0.0.1` não é detalhe: sem isso o Streamlit escuta em
-todas as interfaces e a porta fica acessível por fora, contornando o nginx.
+O container antigo continua no ar se o build falhar: o Docker só troca depois
+de construir com sucesso.
 
-### nginx
+Mudança apenas em `app.py`, `src/`, `.streamlit/` ou `assets/` dispensa
+rebuild — esses caminhos são montados como volume somente-leitura, então
+basta `docker compose restart`. Rebuild só é necessário quando muda
+`requirements.lock.txt` ou o próprio `Dockerfile`.
+
+## Troca de dados
+
+Os 209 MB **não estão no git**, de propósito. Chegam por fluxo único de `tar`
+— e não por `scp` arquivo a arquivo, que com 2.176 arquivos pequenos paga o
+custo por arquivo 2.176 vezes:
+
+```bash
+python -m scripts.preparar_publicacao --destino /tmp/pacote
+tar -C /tmp/pacote -cf - . | ssh cenarios-vm 'tar -C ~/dashboard-sinan-pe/data -xf -'
+```
+
+Sem `-z`: parquet já vem comprimido, e gzipar de novo gasta CPU sem encolher.
+A primeira carga levou 2 minutos.
+
+Depois, `docker compose restart` — o cache do Streamlit tem TTL de um dia, e
+reiniciar é o que garante que o dado novo apareça na hora.
+
+## O que falta: nginx
+
+Precisa entrar em `/etc/nginx/sites-enabled/telessaude`, junto dos outros
+`location`:
 
 ```nginx
-location /cenarios/sinanpe/ {
-    proxy_pass http://127.0.0.1:8506/cenarios/sinanpe/;
-    proxy_http_version 1.1;
-
-    # O Streamlit fala por WebSocket. Sem estes dois cabeçalhos a página
-    # carrega e congela: os widgets não respondem e nada explica por quê.
-    proxy_set_header Upgrade    $http_upgrade;
-    proxy_set_header Connection "upgrade";
-
-    proxy_set_header Host              $host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-
-    # A primeira leitura de parquet de um recorte novo pode passar do padrão
-    # de 60 s enquanto o cache está frio.
-    proxy_read_timeout 300s;
-}
+    location /cenarios/sinan {
+        proxy_pass         http://localhost:8507;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection $connection_upgrade;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+    }
 ```
 
-O `proxy_pass` **mantém** o prefixo, porque o Streamlit já está servindo sob
-ele via `baseUrlPath`. Estripar o caminho aqui é o erro clássico: os assets
-respondem 404 e sobra uma tela em branco.
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
 
-## Depois de subir
+**O `nginx -t` antes do reload não é zelo excessivo:** erro de sintaxe nesse
+arquivo derruba os seis painéis, não só este.
 
-- [ ] Abrir a URL pública e navegar BR → UF → município
-- [ ] Conferir o aviso de ano incompleto em 2025
-- [ ] **Medir o tempo de resposta pela rede** e comparar com o painel em R —
-      é a única forma de sustentar a meta de performance. O que temos hoje
-      (754 ms nosso contra mediana de 1.020 ms deles) não vale, porque o
-      nosso não pagou rede.
-- [ ] Conferir o tema escuro, que ninguém testa em produção e sempre quebra
+**Sem barra final**, nos dois lados. O bloco do `Leprosy` usa barra em ambos e
+funciona porque aquele painel não declara `baseUrlPath`; aqui o Streamlit roda
+com `--server.baseUrlPath=cenarios/sinan` e espera receber o prefixo. Com
+barra, o nginx o cortaria e o Streamlit devolveria 404.
+
+## Como o acesso ao repositório foi resolvido
+
+O repositório é privado e a VM não tinha credencial nenhuma do GitHub. A saída
+foi uma **deploy key somente-leitura**, gerada na VM — a privada nunca sai de
+lá — e apontada por `core.sshCommand` **no próprio repositório**, não no
+`~/.ssh/config` global. Assim cada painel fica com a chave dele, e uma chave
+não consegue falar pelos outros.
+
+A receita completa está no `INDEX.md`, na raiz de `Painéis_Cenários`.
+
+## Uma armadilha que custou um susto
+
+**O healthcheck do Streamlit não sabe se a aplicação funciona.**
+`/_stcore/health` responde assim que o servidor sobe, e ignora se o script
+levantou exceção. No teste local o container ficou `healthy` enquanto a página
+exibia `FileNotFoundError` — o dado não estava montado.
+
+Depois de qualquer deploy, **abra a página** e confira um número conhecido.
+Container verde não é painel funcionando. Para 2024, Brasil: incidência 40,42
+e 85.932 casos novos.
