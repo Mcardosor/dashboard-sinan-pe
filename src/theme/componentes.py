@@ -282,6 +282,23 @@ def css_layout() -> str:
    valha na barra recolhida; zerar explicitamente no estado fechado é o que de
    fato recupera o espaço. Medido: sem a segunda regra o conteúdo continua em
    66% da janela mesmo com a primeira aplicada. */
+/* Respiro da página. O padrão do Streamlit é `96px 80px 160px`, medida de
+   página de documento: 144px de nada antes do título e 160px depois do último
+   gráfico, num painel aberto para ler número. Os 80px laterais ainda custavam
+   160px de largura, e largura é o que falta ao mapa.
+
+   `!important` porque a regra que estamos sobrescrevendo é do próprio
+   Streamlit e tem especificidade de classe gerada, que muda a cada versão. */
+[data-testid="stMainBlockContainer"] {{
+  padding: {tokens.PAGINA_TOPO} {tokens.PAGINA_LADOS} {tokens.PAGINA_BASE} !important;
+}}
+@media (max-width: 640px) {{
+  [data-testid="stMainBlockContainer"] {{
+    padding-left: {tokens.PAGINA_LADOS_ESTREITO} !important;
+    padding-right: {tokens.PAGINA_LADOS_ESTREITO} !important;
+  }}
+}}
+
 section[data-testid="stSidebar"][aria-expanded="true"] {{
   width: {tokens.LARGURA_SIDEBAR} !important;
   min-width: {tokens.LARGURA_SIDEBAR} !important;
@@ -306,6 +323,30 @@ section[data-testid="stSidebar"][aria-expanded="false"] {{
 }}
 [data-testid="stHorizontalBlock"]:has(.kpi-card) > [data-testid="stColumn"] {{
   min-width: 200px;
+}}
+
+/* Título de painel — o degrau que faltava entre o título da página e o
+   corpo.
+
+   Estas linhas ("Mapa — unidades da federação", "Ranking — UFs, por
+   incidência") são o que identifica cada painel, mas saíam como `st.caption`:
+   14px peso 400, exatamente o mesmo que um rótulo de widget e que a nota de
+   rodapé. Sem contraste de peso, o olho não encontrava onde um painel começa
+   e o outro termina — a página tinha seis blocos e nenhum cabeçalho.
+
+   Peso, e não tamanho: subir para 16px ou 18px competiria com o valor dos
+   KPIs, que é o que precisa saltar primeiro. Peso 700 com opacidade alta
+   separa sem disputar.
+
+   Caixa alta foi descartada: "Ranking — UFs, por incidência (por 100 mil
+   hab.)" em maiúsculas fica pior de ler, e é justamente o rótulo mais longo. */
+.titulo-painel {{
+  font-family: var(--fonte);
+  font-size: {tokens.TEXTO_SM};
+  font-weight: 700;
+  opacity: .85;
+  line-height: 1.3;
+  margin: 0 0 6px;
 }}
 
 .sinan-intro {{
@@ -462,6 +503,16 @@ section[data-testid="stSidebar"][aria-expanded="false"] {{
 }}
 </style>
 """
+
+
+def titulo_painel(texto: str) -> str:
+    """Cabeçalho de um painel.
+
+    Existe porque `st.caption` não distingue papéis: o mesmo 14px peso 400
+    servia para identificar um painel, rotular um widget e escrever a nota de
+    procedência no rodapé. Ver `.titulo-painel` em :func:`css_layout`.
+    """
+    return f'<div class="titulo-painel">{escape(texto)}</div>'
 
 
 def faixa_intro(titulo: str) -> str:

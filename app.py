@@ -407,7 +407,8 @@ with esquerda, resiliencia.painel("Mapa"):
     )
     espaco_metrica.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
 
-    st.caption(
+    st.markdown(
+        ui.titulo_painel(
         "Mapa — "
         + {
             "UF": "unidades da federação" if nav.nivel == "BR" else f"municípios de {nav.uf}",
@@ -415,6 +416,8 @@ with esquerda, resiliencia.painel("Mapa"):
             "MICRO": f"regiões de saúde de {nav.uf}",
             "MUN": f"municípios de {nav.uf}",
         }[nivel_mapa]
+        ),
+        unsafe_allow_html=True,
     )
     valores = _valores_mapa(
         pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, recorte
@@ -536,7 +539,10 @@ def _painel_ranking() -> None:
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
         # UFs, numa UF os municípios dela.
         alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
-        st.caption(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}")
+        st.markdown(
+            ui.titulo_painel(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}"),
+            unsafe_allow_html=True,
+        )
 
         top_n = st.slider(
         "Quantos exibir", 5, 30, 15, step=5, key="top_n",
@@ -672,7 +678,7 @@ def _painel_piramide() -> None:
 
         # Casos vêm do SINAN; óbitos, do SIM. Cura não tem quebra por idade em
         # nenhum parquet — a coluna existe só por sexo. Ver leitura.FONTE_PIRAMIDE.
-        st.caption("Pirâmide etária")
+        st.markdown(ui.titulo_painel("Pirâmide etária"), unsafe_allow_html=True)
         tipo = st.radio(
             "O que exibir",
             ["CASOS", "OBITOS"],
@@ -720,7 +726,9 @@ def _painel_composicao() -> None:
     reenviava o mapa.
     """
     with resiliencia.painel("Composição"):
-        st.caption("Composição por variável do SINAN")
+        st.markdown(
+            ui.titulo_painel("Composição por variável do SINAN"), unsafe_allow_html=True
+        )
 
         _rotulos_var = pack.variaveis_planas()
         variavel = st.selectbox(
@@ -749,7 +757,9 @@ with baixo_dir:
 
 st.divider()
 with resiliencia.painel("Indicadores do programa"):
-    st.caption("Indicadores do programa de tuberculose")
+    st.markdown(
+        ui.titulo_painel("Indicadores do programa de tuberculose"), unsafe_allow_html=True
+    )
 
     indicadores = _indicadores_programa(
         pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun
