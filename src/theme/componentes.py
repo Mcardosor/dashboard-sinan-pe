@@ -16,12 +16,6 @@ from . import tokens
 
 def css_base() -> str:
     """Folha de estilo da aplicação. Injetar uma única vez, no início da página."""
-    faixas = "\n".join(
-        f"@media (max-width: {px}px) {{ .kpi-grid {{ grid-template-columns:"
-        f" repeat(auto-fit, minmax({larg}, 1fr)); }} }}"
-        for px, larg in tokens.GRID_KPI
-        if px
-    )
     return f"""
 <style>
 /* As superfícies são derivadas de `currentColor`, nunca declaradas.
@@ -46,15 +40,11 @@ def css_base() -> str:
   --superficie-topo: color-mix(in srgb, currentColor {tokens.MISTURA_CARD_TOPO}, transparent);
 }}
 
-.kpi-grid {{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax({tokens.GRID_KPI[0][1]}, 1fr));
-  gap: .75rem;
-  align-items: stretch;
-  width: 100%;
-}}
-{faixas}
-@media (max-width: 460px) {{ .kpi-grid {{ grid-template-columns: 1fr; }} }}
+/* Havia aqui `.kpi-grid`, um grid CSS com quebras em 1240, 860 e 460px, e a
+ * função `grade_kpis()` que o emitia. Saíram em 2026-08-20 sem uso: os cards
+ * são dispostos por `st.columns` desde que os botões de navegação entraram, e
+ * quem os faz quebrar é a regra `stHorizontalBlock:has(.kpi-card)` em
+ * `css_layout`. O grid ficou declarado e nunca emitido. */
 
 .kpi-card {{
   --kpi-accent: #0F766E;
@@ -276,11 +266,6 @@ def kpi_card(
         f"{sub}{badge_delta}"
         f"</div></div></div>"
     )
-
-
-def grade_kpis(cards: list[str]) -> str:
-    return f'<div class="kpi-grid">{"".join(cards)}</div>'
-
 
 def css_layout() -> str:
     """Estrutura da página: barra lateral, faixa de intro e as linhas.

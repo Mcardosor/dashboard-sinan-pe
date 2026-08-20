@@ -111,15 +111,16 @@ def _canon(doenca: str) -> str:
 # ---------------------------------------------------------------------------
 # Anos
 # ---------------------------------------------------------------------------
-ANO_MIN = 2010
+#: Havia aqui `ANO_MIN = 2010`, `ANO_MIN_POR_DOENCA = {ZIKA: 2016}` e a função
+#: `ano_min()`. Saíram em 2026-08-20: nada os lia. A faixa de anos vem de
+#: `leitura.anos_disponiveis()`, que pergunta ao disco em vez de declarar.
+#:
+#: O fato que morava ali — zika só existe no SINAN a partir de 2016 — fica
+#: registrado neste comentário e no histórico. Quando o pack de zika entrar, ele
+#: declara a própria cobertura, que é onde isso pertence.
 ANO_MAX = 2025
 
 #: Zika só tem registro a partir de 2016.
-ANO_MIN_POR_DOENCA = {ZIKA: 2016}
-
-
-def ano_min(doenca: str) -> int:
-    return ANO_MIN_POR_DOENCA.get(_canon(doenca), ANO_MIN)
 
 
 # ---------------------------------------------------------------------------

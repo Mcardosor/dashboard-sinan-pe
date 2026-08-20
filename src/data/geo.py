@@ -80,7 +80,7 @@ def regioes(uf: str = "PE", nivel: str = "macro") -> gpd.GeoDataFrame:
 # ele cai fora, e o rótulo vai parar no vizinho.
 
 
-def limpar_cache() -> None:
-    """Descarta a geometria em memória. Útil após regerar as camadas."""
-    for fn in (municipios, ufs, pais, regioes):
-        fn.cache_clear()
+# Havia aqui `limpar_cache()`, para descartar a geometria em memória depois de
+# regerar as camadas. Nunca foi chamado — nem pela aplicação, nem pelos
+# scripts. Regerar geometria exige reiniciar o serviço de qualquer forma, e o
+# reinício limpa o cache sozinho.

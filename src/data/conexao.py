@@ -125,16 +125,9 @@ def caminho(dataset: str, arquivo: str | None = None, **particoes) -> str:
     return (base / "**" / "*.parquet").as_posix()
 
 
-def ler(dataset: str, where: str = "", params: list | None = None, **particoes):
-    """``SELECT *`` de um dataset com filtro opcional, devolvido como DataFrame."""
-    fonte = caminho(dataset, **particoes)
-    sql = f"SELECT * FROM read_parquet('{fonte}', hive_partitioning=true)"
-    if where:
-        sql += f" WHERE {where}"
-    return conectar().execute(sql, params or []).fetchdf()
-
-
-def escalar(sql: str, params: list | None = None):
-    """Executa uma query que devolve uma única célula. ``None`` se vazia."""
-    linha = conectar().execute(sql, params or []).fetchone()
-    return None if linha is None else linha[0]
+# Havia aqui `ler()` e `escalar()`, helpers genéricos de consulta. Saíram em
+# 2026-08-20 sem nunca terem sido chamados: todo leitor em `leitura.py` monta o
+# próprio SQL, porque cada dataset precisa de poda de partição e de tratamento
+# próprio — um `SELECT *` genérico não servia a nenhum deles.
+#
+# `caminho()` e `conectar()` são a interface real deste módulo.

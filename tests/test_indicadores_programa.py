@@ -98,3 +98,47 @@ def test_spec_dos_indicadores_vive_no_pack() -> None:
         assert {"chave", "leitor", "rotulo", "numerador", "denominador",
                 "cor", "descricao"} <= set(spec)
         assert hasattr(leitura, spec["leitor"]), spec["leitor"]
+
+
+def test_leitor_citado_por_string_existe_em_leitura() -> None:
+    """Os leitores dos indicadores são resolvidos por nome, não importados.
+
+    `leitura.indicadores_programa` faz `globals()[spec["leitor"]](esc)`, com o
+    nome vindo do pack. Isso é o que permite uma doença nova declarar seus
+    indicadores sem tocar no core — mas cria um vínculo que **nenhuma análise
+    estática enxerga**.
+
+    O risco é concreto, não hipotético. Numa varredura de código morto em
+    2026-08-20, `indicador_tb_cultura` apareceu como "definida e nunca
+    referenciada" e quase foi apagada junto com seis funções que de fato eram
+    mortas. Só não foi porque um `grep` mostrou o nome dentro de uma string.
+
+    Este teste é a trava: quem apagar um leitor ainda citado no pack quebra
+    aqui, e não em produção quando alguém abrir o painel de indicadores.
+    """
+    faltando = [
+        spec["leitor"]
+        for spec in pack.INDICADORES_PROGRAMA
+        if not callable(getattr(leitura, spec["leitor"], None))
+    ]
+    assert not faltando, (
+        f"o pack cita leitores que não existem em `leitura`: {faltando}. "
+        f"São chamados por nome em `indicadores_programa`, então análise "
+        f"estática não os vê — confira antes de apagar."
+    )
+
+
+def test_todo_leitor_de_leitura_citado_no_pack_esta_coberto() -> None:
+    """O contrário: nome no pack que ninguém mais cita continua vivo.
+
+    Sem isto, a trava acima protegeria só o que já está declarado hoje. Aqui a
+    lista sai do pack, então acrescentar um indicador novo passa a exigir que o
+    leitor exista — a proteção acompanha o crescimento do *disease pack*.
+    """
+    nomes = {spec["leitor"] for spec in pack.INDICADORES_PROGRAMA}
+    assert nomes, "o pack de tuberculose deixou de declarar indicadores"
+    for nome in nomes:
+        assert nome.startswith("indicador_"), (
+            f"{nome!r} foge da convenção `indicador_*`, que é o que torna o "
+            f"vínculo por string reconhecível numa busca"
+        )

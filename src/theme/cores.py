@@ -58,21 +58,6 @@ def rampa(base: str) -> list[str]:
     return [*claros, base.upper(), *escuros]
 
 
-def contraste_texto(fundo: str) -> str:
-    """Preto ou branco, o que tiver mais contraste sobre o fundo dado.
-
-    Usa luminância relativa (WCAG), não o brilho ingênuo — a diferença importa
-    nos tons de verde e amarelo, onde o cálculo simples erra.
-    """
-
-    def canal(c: float) -> float:
-        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-    r, g, b = (canal(c) for c in hex_para_rgb(fundo))
-    luminancia = 0.2126 * r + 0.7152 * g + 0.0722 * b
-    return "#111827" if luminancia > 0.179 else "#FFFFFF"
-
-
 #: Fundo do tema escuro, de `.streamlit/config.toml`.
 FUNDO_ESCURO = "#0B1220"
 
