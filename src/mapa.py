@@ -123,9 +123,24 @@ def _mercator_inverso(y: float) -> float:
     return float(np.degrees(2 * np.arctan(np.exp(radianos)) - np.pi / 2))
 
 
-#: Tamanho do painel do mapa, em pixels. A largura é a de uma coluna da grade
-#: num monitor comum; a altura é :data:`ALTURA`.
-LARGURA_PAINEL = 463
+#: Largura assumida do painel do mapa, em pixels — o **pior caso**, não o
+#: comum. A altura é :data:`ALTURA`.
+#:
+#: O Streamlit não informa ao servidor a largura da janela, então o zoom é
+#: calculado contra um número fixo e a coluna real varia bastante: medido no
+#: navegador, 397px num notebook de 1280 com a barra lateral aberta e 747px a
+#: 1600 com ela recolhida.
+#:
+#: Antes eram 463, escolhidos como "uma coluna num monitor comum". Errar para
+#: cima **corta a geometria**: a 1280 o Acre saía pela borda. Errar para baixo
+#: só deixa margem. Entre um mapa incompleto e um mapa pequeno, o incompleto é
+#: pior num painel de vigilância — margem se vê, recorte não.
+#:
+#: 430 cabe nos 437px que sobram no pior caso depois de a barra lateral encolher
+#: para 300px em telas de até 1440px. O preço é margem em telas largas, e a
+#: correção de verdade seria medir a largura no cliente e devolvê-la ao
+#: servidor — ver `docs/deploy.md`.
+LARGURA_PAINEL = 430
 
 
 def enquadrar(

@@ -345,7 +345,14 @@ section[data-testid="stSidebar"][aria-expanded="true"] {{
   width: {tokens.LARGURA_SIDEBAR} !important;
   min-width: {tokens.LARGURA_SIDEBAR} !important;
 }}
-@media (max-width: 1200px) {{
+/* 1440 e não 1200. O corte antigo deixava o notebook de 1280 no pior dos
+   mundos: barra de 380px — 30% da tela — e as duas colunas da grade com 397px
+   cada. Medido no navegador, o mapa era desenhado a 463px nesse espaço e o
+   Acre saía pela borda esquerda.
+
+   1440 cobre 1280 e 1366, que é onde a maioria dos notebooks está. Acima
+   disso a barra volta aos 380px do original, onde ela cabe sem espremer. */
+@media (max-width: 1440px) {{
   section[data-testid="stSidebar"][aria-expanded="true"] {{
     width: 300px !important;
     min-width: 300px !important;
