@@ -190,15 +190,17 @@ def css_base() -> str:
    inalterada, o Streamlit nem dispara rerun. Ver `app.py`, na montagem do
    `st.pydeck_chart`.
 
-   Então o que se faz é perceptivo, não espacial: 0,985 para 1 sugere
-   aprofundamento sem prometer continuidade que não existe. Ficar abaixo de
-   ~0,97 vira "pop" e chama atenção para si; acima de 0,99 não se percebe.
+   Então o que se faz é perceptivo, não espacial: 0,975 para 1 sugere
+   aprofundamento sem prometer continuidade que não existe. Começou em 0,985 e
+   subiu para 0,975 depois de olhar em tela — sutil demais para se notar.
+   Abaixo de ~0,97 vira "pop" e chama atenção para si; acima de 0,99 não se
+   percebe. O valor é de calibragem visual, não de cálculo.
 
    Duração maior que a dos gráficos (260ms contra 180ms) porque aqui há uma
    troca de contexto a acompanhar, não só um redesenho. `ease-out` para a
    chegada desacelerar, que é o que dá a sensação de assentar. */
 @keyframes sinan-aproximar {{
-  from {{ opacity: 0; transform: scale(.985); }}
+  from {{ opacity: 0; transform: scale(.975); }}
   to   {{ opacity: 1; transform: scale(1); }}
 }}
 [data-testid="stDeckGlJsonChart"] {{
