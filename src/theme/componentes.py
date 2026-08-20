@@ -140,6 +140,13 @@ def css_base() -> str:
   font-size: {tokens.TEXTO_XS};
   opacity: .70;
   margin-top: 3px;
+  /* Reserva exatamente uma linha, mesmo vazia: div sem conteúdo colapsa para
+     zero e o desalinhamento voltaria.
+     `line-height` e `min-height` são declarados juntos e com o mesmo valor de
+     propósito — separados, eles divergem. A primeira tentativa usou 1.15em
+     contra um line-height herdado de 1.6, e sobraram 5px de desalinhamento. */
+  line-height: 1.6;
+  min-height: 1.6em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }}
 .kpi-delta {{ margin-top: 5px; font-size: {tokens.TEXTO_XS}; font-weight: 800; }}
@@ -248,11 +255,17 @@ def kpi_card(
     classes = "kpi-card is-selected" if selecionado else "kpi-card"
     # A explicação vive no `title`, agora que não há botão para receber `help`.
     titulo_ajuda = f' title="{escape(ajuda)}"' if ajuda else ""
-    sub = (
-        f'<div class="kpi-sub">{escape(subtitulo)}</div>'
-        if subtitulo
-        else ""
-    )
+    # A linha do subtítulo existe sempre, vazia quando não há texto.
+    #
+    # Só um card a usa hoje — "Proporção de cura" mostra "49.114 de 85.932" —
+    # e isso o deixava 22px mais alto que os vizinhos, quebrando o alinhamento
+    # da linha inteira. Reservar a altura é o mesmo tratamento que `.kpi-title`
+    # já recebe para títulos de duas linhas.
+    #
+    # Esticar o card com `height: 100%` não funciona: a coluna do Streamlit
+    # tem altura automática, então não há contra o que esticar.
+    sub = f'<div class="kpi-sub">{escape(subtitulo) if subtitulo else ""}</div>'
+
     return (
         f'<div class="{classes}" '
         f'style="--kpi-accent:{escape(cor)};'

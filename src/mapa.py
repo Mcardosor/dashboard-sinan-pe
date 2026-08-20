@@ -26,7 +26,14 @@ CLASSES = 6
 SEM_DADO = "#F3F4F6"
 
 #: Altura do mapa, em pixels. O painel reserva `ALTURA_MIN_MAPA`.
-ALTURA = 520
+#: 460 e não 520. O Brasil é quase quadrado — 45,1 graus de largura por 41,2
+#: em Mercator — e o zoom é limitado pela **largura**, não pela altura. Com
+#: `LARGURA_PAINEL` em 430, o mapa desenha 430x392: num painel de 520 sobravam
+#: **128px de vazio vertical**, visíveis como uma faixa morta abaixo do mapa.
+#:
+#: 460 deixa 68px de folga, que é o espaço da legenda e do botão Voltar. Baixar
+#: mais apertaria o ranking, que divide a linha e recebe `ALTURA - 46`.
+ALTURA = 460
 
 ROTULO_SEM_DADO = "sem dado"
 
