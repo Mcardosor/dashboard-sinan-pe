@@ -1,7 +1,8 @@
-# Painel SINAN — multi-agravo, nacional.
+# Painel SINAN — tuberculose, nacional.
 #
 # Nomes: o repositório se chama `dashboard-sinan-pe` por herança, mas o painel
-# é **nacional e multi-agravo**. Container e URL usam `sinan`, sem o "pe", para
+# cobre o **Brasil inteiro**, não só Pernambuco. Container e URL usam `sinan`,
+# sem o "pe", para
 # não repetir a armadilha do `tbpe` — que tem quatro nomes diferentes em cinco
 # lugares. Ver INDEX.md na raiz de Painéis_Cenários.
 services:
