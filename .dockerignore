@@ -13,6 +13,8 @@ __pycache__/
 # Nada disso roda em produção.
 tests/
 scripts/
+# ...menos este, que roda no build para injetar as metatags de prévia de link.
+!scripts/preparar_metatags.py
 docs/
 .pytest_cache/
 

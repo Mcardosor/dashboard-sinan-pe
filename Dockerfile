@@ -22,6 +22,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.lock.txt .
 RUN pip install --no-cache-dir -r requirements.lock.txt
 
+# Prévia de link: título, descrição e Open Graph.
+#
+# O Streamlit serve `<title>Streamlit</title>` e nenhuma meta. O `page_title`
+# do `set_page_config` entra por JavaScript depois da carga, e rastreador de
+# prévia — WhatsApp, Slack, Teams — não espera JS: lê o HTML cru. Compartilhar
+# o link mostrava "Streamlit" e o domínio, parecendo projeto inacabado.
+#
+# O script reescreve o `index.html` do pacote e **falha o build** se a âncora
+# sumir numa versão nova do Streamlit, em vez de gerar em silêncio uma imagem
+# que volta a se anunciar errado.
+COPY scripts/preparar_metatags.py /tmp/
+RUN python /tmp/preparar_metatags.py && rm /tmp/preparar_metatags.py
+
+# A imagem da prévia precisa ser servida pelo mesmo caminho do painel, então
+# vai para o diretório estático do Streamlit — é de lá que sai tudo sob
+# `/cenarios/sinan/`.
+COPY assets/preview.png /usr/local/lib/python3.13/site-packages/streamlit/static/preview.png
+
 COPY app.py .
 COPY src/ src/
 COPY .streamlit/ .streamlit/
