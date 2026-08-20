@@ -18,7 +18,8 @@
       "casos_0_14": 2534.0,
       "taxa_det_0_14": 6.025484852385252,
       "hiv_pos_pct": 13.07089952698316,
-      "interrupcao_trat_pct": 14.911675773168533,
+      "interrupcao_trat_pct": 15.520396795925945,
+      "interrupcao_trat_pct_paridade": 14.911675773168533,
       "interrupcao_trat_pct_ms": 17.195121951219512
     }
   },
@@ -41,7 +42,8 @@
       "casos_0_14": 1509.0,
       "taxa_det_0_14": 3.446093674691635,
       "hiv_pos_pct": 10.217360965738608,
-      "interrupcao_trat_pct": 12.468682019353388,
+      "interrupcao_trat_pct": 13.107793863926187,
+      "interrupcao_trat_pct_paridade": 12.468682019353388,
       "interrupcao_trat_pct_ms": 14.068563515450139
     }
   },
@@ -64,7 +66,8 @@
       "casos_0_14": 1774.0,
       "taxa_det_0_14": 3.898753289023658,
       "hiv_pos_pct": 12.656224417398898,
-      "interrupcao_trat_pct": 9.449192782526115,
+      "interrupcao_trat_pct": 10.070793404126738,
+      "interrupcao_trat_pct_paridade": 9.449192782526115,
       "interrupcao_trat_pct_ms": 11.196250319938573
     }
   },
@@ -87,7 +90,8 @@
       "casos_0_14": 205.0,
       "taxa_det_0_14": 10.4127142796916,
       "hiv_pos_pct": 13.89090909090909,
-      "interrupcao_trat_pct": 11.885057471264368,
+      "interrupcao_trat_pct": 12.229885057471265,
+      "interrupcao_trat_pct_paridade": 11.885057471264368,
       "interrupcao_trat_pct_ms": 14.753189129229062
     }
   },
@@ -110,7 +114,8 @@
       "casos_0_14": 201.0,
       "taxa_det_0_14": 10.041504886865711,
       "hiv_pos_pct": 14.22110552763819,
-      "interrupcao_trat_pct": 11.620668188420835,
+      "interrupcao_trat_pct": 12.201701597841875,
+      "interrupcao_trat_pct_paridade": 11.620668188420835,
       "interrupcao_trat_pct_ms": 14.35897435897436
     }
   },
@@ -133,7 +138,8 @@
       "casos_0_14": 117.0,
       "taxa_det_0_14": 5.605190502220278,
       "hiv_pos_pct": 12.433687002652519,
-      "interrupcao_trat_pct": 9.810959559703278,
+      "interrupcao_trat_pct": 10.24168461354391,
+      "interrupcao_trat_pct_paridade": 9.810959559703278,
       "interrupcao_trat_pct_ms": 11.564442042691164
     }
   },
@@ -156,7 +162,8 @@
       "casos_0_14": 92.0,
       "taxa_det_0_14": 4.153648890253373,
       "hiv_pos_pct": 15.19028871391076,
-      "interrupcao_trat_pct": 8.887886307241146,
+      "interrupcao_trat_pct": 9.090909090909092,
+      "interrupcao_trat_pct_paridade": 8.887886307241146,
       "interrupcao_trat_pct_ms": 10.378573268091682
     }
   },
@@ -179,7 +186,8 @@
       "casos_0_14": 615.0,
       "taxa_det_0_14": 7.140902310482485,
       "hiv_pos_pct": 10.43830217819673,
-      "interrupcao_trat_pct": 16.85823754789272,
+      "interrupcao_trat_pct": 16.86355896126011,
+      "interrupcao_trat_pct_paridade": 16.85823754789272,
       "interrupcao_trat_pct_ms": 17.40252608456892
     }
   },
@@ -203,6 +211,7 @@
       "taxa_det_0_14": 3.5317593459181693,
       "hiv_pos_pct": 4.563492063492063,
       "interrupcao_trat_pct": 9.671179883945841,
+      "interrupcao_trat_pct_paridade": 9.671179883945841,
       "interrupcao_trat_pct_ms": 9.84251968503937
     }
   },
@@ -225,7 +234,8 @@
       "casos_0_14": 59.0,
       "taxa_det_0_14": 21.10142273660417,
       "hiv_pos_pct": 15.762834417932032,
-      "interrupcao_trat_pct": 16.62286465177398,
+      "interrupcao_trat_pct": 17.345597897503286,
+      "interrupcao_trat_pct_paridade": 16.62286465177398,
       "interrupcao_trat_pct_ms": 20.045558086560366
     }
   },
@@ -248,7 +258,8 @@
       "casos_0_14": 28.0,
       "taxa_det_0_14": 9.448765754973257,
       "hiv_pos_pct": 14.869466515323497,
-      "interrupcao_trat_pct": 13.255813953488373,
+      "interrupcao_trat_pct": 14.031007751937985,
+      "interrupcao_trat_pct_paridade": 13.255813953488373,
       "interrupcao_trat_pct_ms": 15.60344827586207
     }
   },
@@ -272,6 +283,7 @@
       "taxa_det_0_14": 2.0562169720148873,
       "hiv_pos_pct": 6.8493150684931505,
       "interrupcao_trat_pct": 10.0,
+      "interrupcao_trat_pct_paridade": 10.0,
       "interrupcao_trat_pct_ms": 10.9375
     }
   }

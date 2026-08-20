@@ -30,13 +30,9 @@ Conferido contra a tela, PE e Brasil, ano fixado em 2024.
 |---|---:|---:|---|
 | Taxa de mortalidade | 4,98 | 5,0 | Fonte comum: SIM |
 | HIV positivo na testagem | 13,89% | 13,9% | |
-| Interrupção de tratamento | 11,89% | 11,9% | |
 
-A regra do abandono estava em aberto desde a semana 1 e **fecha aqui**: nosso
-padrão (`SITUA_ENCE=2` sobre todos os encerramentos, incluindo não avaliados)
-reproduz o deles. O critério do Ministério da Saúde segue disponível em
-`REGRA_INTERRUPCAO="ms"`, que soma abandono primário e retira os não
-avaliados do denominador, e dá cerca de 4 pontos a mais.
+A **interrupção de tratamento** batia aqui — 11,89% contra 11,9% — e saiu
+desta seção em 20/ago/2026, por decisão, não por defeito. Ver §2.
 
 ## 2. Divergência intencional — decidida e fechada
 
@@ -51,6 +47,32 @@ Os denominadores exibidos passam a ser metade dos deles, de propósito:
 |---|---:|---:|
 | Encerramentos (PE, 2024) | 4.350 | 8.700 |
 | Testados para HIV (PE, 2024) | 4.125 | 8.250 |
+
+### Interrupção de tratamento (`interrupcao_trat_pct`) — mudou por decisão conjunta
+
+| | Numerador | Denominador | PE/2024 |
+|---|---|---|---:|
+| Painel em R | `SITUA_ENCE = 2` | todos os encerramentos | 11,9% |
+| **Nosso, desde 20/ago** | `2` + `10` | todos os encerramentos | **12,23%** |
+
+Perguntamos à responsável pelo painel em R como ela chegava ao número. A
+resposta foi *"eu conto só o 2"*, confirmando a regra que reproduzíamos. Ela
+levou a questão ao **José Mário**, que definiu: **o correto é somar abandono
+(2) e abandono primário (10)** — quem nunca chegou a iniciar o tratamento
+também interrompeu.
+
+O painel passou a fazer isso (`REGRA_INTERRUPCAO = "boletim"`). O de R ainda
+conta só o 2, então os dois se separaram **até ele acompanhar** — e aí esta
+entrada sai daqui e volta para a §1.
+
+**Por que `boletim` e não `ms`.** As duas somam `2` + `10`; a diferença é o
+denominador. A decisão do José Mário foi sobre o numerador e não mencionou o
+resto. Escolhemos o denominador completo porque é o que reproduz o número
+**publicado**: a Tabela 9 do Boletim de TB 2026 traz 15,2% para casos novos
+no Brasil em 2024, e `boletim` dá 15,52% — os 0,32 pontos restantes são a
+defasagem de extração. A regra `ms`, que exclui os não avaliados, daria
+17,20% e não corresponde a nada publicado. Se o José Mário quiser o outro
+denominador, é trocar uma constante.
 
 ## 3. Resolvido por fonte externa — o painel em R está errado
 

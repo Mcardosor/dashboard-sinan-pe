@@ -70,7 +70,7 @@ def _sem_acento(texto) -> str:
 # Qual exibir continua sendo decisão com a equipe de R, e agora com três
 # opções em vez de duas. Ver tests/paridade/excecoes.md.
 
-REGRA_INTERRUPCAO = "paridade"
+REGRA_INTERRUPCAO = "boletim"
 
 #: Códigos de SITUA_ENCE contados como interrupção. O MS soma abandono (2) e
 #: abandono primário (10) — quem nunca chegou a iniciar também interrompeu.
@@ -179,14 +179,18 @@ def hiv_pos_pct(esc: Escopo) -> float | None:
 def interrupcao_trat_pct(esc: Escopo, regra: str | None = None) -> float | None:
     """Interrupção de tratamento a partir de SITUA_ENCE (tuberculose).
 
-    Duas regras disponíveis — ver docs/contrato-dados.md, armadilha 4:
+    Três regras disponíveis — ver docs/contrato-dados.md, armadilha 4:
 
     ``paridade``
         Reproduz o dashboard em R: conta apenas o código 2 e usa todos os
-        encerramentos no denominador.
+        encerramentos no denominador. Confirmado pela responsável pelo painel
+        em R em 20/ago/2026: "eu conto só o 2".
     ``ms``
-        Soma abandono (2) e abandono primário (10), e tira os não avaliados
-        (0, 5, 7, 8) do denominador.
+        Indicador de monitoramento do Ministério: soma abandono (2) e abandono
+        primário (10), e tira os não avaliados (0, 5, 7, 8) do denominador.
+    ``boletim``
+        Como a Tabela 9 do Boletim Epidemiológico apresenta: mesmo numerador
+        que ``ms``, mas com todos os encerramentos no denominador.
 
     Filtra por **código**, nunca por rótulo: ``valor_lbl`` vem reagrupado e
     põe abandono, óbito e falência todos como "Desfavorável".
@@ -196,7 +200,9 @@ def interrupcao_trat_pct(esc: Escopo, regra: str | None = None) -> float | None:
 
     regra = (regra or REGRA_INTERRUPCAO).strip().lower()
     if regra not in _ABANDONO:
-        raise ValueError(f"Regra inválida: {regra!r}. Esperado 'paridade' ou 'ms'.")
+        raise ValueError(
+            f"Regra inválida: {regra!r}. Esperado uma de {sorted(_ABANDONO)}."
+        )
 
     df = leitura.variavel_sinan(esc, "SITUA_ENCE")
     if df.empty:

@@ -56,7 +56,24 @@ hoje — a diferença é que agora ela está medida.
 
 ---
 
-## 2. A regra do abandono — CONFIRMADA na fonte, decisão pendente
+## 2. A regra do abandono — RESPONDIDA pela equipe, decisão com o Zé Mário
+
+> **Atualização (20/ago), por conversa direta com a responsável pelo painel em
+> R.** Perguntado como ela chega ao número do abandono na KPI, a resposta foi
+> literal: **"eu conto só o 2"**.
+>
+> Confirma a regra `paridade`. O denominador ela não mencionou, mas está
+> implícito: o número dela bate com o nosso em PE/2024 (11,9%), e o nosso usa
+> todos os encerramentos.
+>
+> Ela levou a questão adiante por conta própria — *"já que o do ministério tá
+> de outro jeito, vou perguntar pro zé mario qual é mais correto"* — e avisará
+> a resposta. **É essa resposta que decide qual regra o painel exibe.** As três
+> estão implementadas; trocar é mudar `REGRA_INTERRUPCAO` em
+> `src/data/kpis.py`.
+>
+> Na mesma conversa, confirmou que **só o óbito vem do SIM** — cura sai do
+> SINAN. Era suposição nossa registrada na seção de avisos; virou resposta.
 
 O `mod_kpis.R` calcula `interrupcao_trat_pct` contando apenas `SITUA_ENCE = 2`
 e usando **todos** os encerramentos no denominador, incluindo `5`

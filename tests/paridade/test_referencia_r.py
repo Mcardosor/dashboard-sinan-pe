@@ -28,7 +28,14 @@ REFERENCIA = json.loads(
 #: nosso 2,9993 —, então a comparação é do valor exibido, não do float.
 TOLERANCIA = 0.01
 
-#: KPIs que divergem do R **porque o R está errado**. Ver `excecoes.md` §3.
+#: KPIs que hoje divergem do painel em R. Ver `excecoes.md`.
+#:
+#: `casos`, `incid`, `cura` e `letalidade` divergem **porque o R está errado**
+#: — ver §3. Já `interrupcao_trat_pct` diverge por **decisão conjunta**: em
+#: 20/ago/2026 o José Mário definiu que o correto é somar abandono (2) e
+#: abandono primário (10), e o painel passou a fazer isso. O de R ainda conta
+#: só o 2, então os dois se separaram até ele acompanhar — e aí esta entrada
+#: sai daqui.
 #:
 #: Já foi "divergência ainda não explicada, à espera da equipe parceira". O
 #: Boletim Epidemiológico de TB 2026 do Ministério da Saúde fechou a questão em
@@ -39,7 +46,7 @@ TOLERANCIA = 0.01
 #: A lista continua existindo porque a divergência continua existindo, e
 #: `test_divergentes_continuam_divergindo` avisa se algum deles passar a bater
 #: — o que significaria que a equipe corrigiu a origem.
-DIVERGENTES = {"casos", "incid", "cura", "letalidade"}
+DIVERGENTES = {"casos", "incid", "cura", "letalidade", "interrupcao_trat_pct"}
 
 
 def _recortes():

@@ -138,7 +138,14 @@ def referencias_de(con, nivel, uf, mun6, ano) -> dict:
         "casos_0_14": c14 and float(c14),
         "taxa_det_0_14": taxa(c14, p14, 1e5),
         "hiv_pos_pct": hiv and float(hiv),
-        "interrupcao_trat_pct": pct({"2"}, set()),
+        # `interrupcao_trat_pct` acompanha o padrão de `kpis.REGRA_INTERRUPCAO`,
+        # hoje "boletim": soma abandono (2) e abandono primário (10) sobre
+        # todos os encerramentos. Trocar o padrão lá exige trocar aqui — e o
+        # teste avisa quando alguém esquece, que foi o que aconteceu em
+        # 20/ago/2026. A fórmula é escrita à mão de propósito: importar a regra
+        # de `kpis` destruiria a independência que faz este arquivo valer.
+        "interrupcao_trat_pct": pct({"2", "10"}, set()),
+        "interrupcao_trat_pct_paridade": pct({"2"}, set()),
         "interrupcao_trat_pct_ms": pct({"2", "10"}, {"0", "5", "7", "8"}),
     }
 
