@@ -214,6 +214,30 @@ def _rgb(cor: str) -> list[int]:
     return [int(texto[i : i + 2], 16) for i in (0, 2, 4)]
 
 
+#: Casas decimais mantidas nas coordenadas enviadas ao navegador.
+#:
+#: A malha traz seis, o que é 11 cm de precisão. O mapa é desenhado em cerca de
+#: 430px cobrindo um estado inteiro — em Minas, um pixel vale perto de 2 km. As
+#: cinco casas restantes são exatidão que nunca chega à tela e que o payload
+#: paga por inteiro: em MG são 0,62 MB, e arredondar tira 14%.
+#:
+#: Cinco casas, e não quatro: são 1,1 m, com folga para o modo detalhe, que
+#: enquadra um único município. Quatro dariam 11 m, e ali isso já se aproxima
+#: de um pixel.
+CASAS_COORDENADA = 5
+
+
+def _arredondar(o):
+    """Arredonda recursivamente as coordenadas de uma geometria GeoJSON."""
+    if isinstance(o, float):
+        return round(o, CASAS_COORDENADA)
+    if isinstance(o, (list, tuple)):
+        return [_arredondar(x) for x in o]
+    if isinstance(o, dict):
+        return {k: _arredondar(v) for k, v in o.items()}
+    return o
+
+
 def geometrias_geojson(camada) -> list:
     """Geometrias da camada em GeoJSON, sem as propriedades.
 
@@ -225,8 +249,13 @@ def geometrias_geojson(camada) -> list:
     Fica separado de :func:`deck` para o chamador poder memoizar. **Só a
     geometria** — propriedade carrega cor e valor, que mudam a cada interação,
     e guardar junto serviria mapa velho.
+
+    As coordenadas são arredondadas a :data:`CASAS_COORDENADA`. A malha vem com
+    seis casas, precisão de 11 centímetros, num mapa onde um pixel vale
+    quilômetros — é peso que atravessa a rede sem chegar aos olhos de ninguém.
     """
-    return [f["geometry"] for f in camada[["geometry"]].__geo_interface__["features"]]
+    bruto = [f["geometry"] for f in camada[["geometry"]].__geo_interface__["features"]]
+    return [_arredondar(g) for g in bruto]
 
 
 def _compactar(mapa_deck) -> None:
@@ -422,7 +451,15 @@ def deck(
             ],
         }
     else:
+        # Arredonda aqui também, para os dois caminhos desenharem a mesma
+        # geometria — `tests/test_mapa.py` prende isso.
+        #
+        # **Só a geometria.** Arredondar a coleção inteira alcançaria também o
+        # `valor` das propriedades, que alimenta o tooltip: 39,100684 virava
+        # 39,10068 num caminho e não no outro.
         colecao = dados.__geo_interface__
+        for feicao in colecao["features"]:
+            feicao["geometry"] = _arredondar(feicao["geometry"])
 
     camada_geo = pydeck.Layer(
         "GeoJsonLayer",

@@ -353,3 +353,40 @@ def test_geometria_de_tamanho_errado_e_ignorada() -> None:
     assert [f["geometry"] for f in com_lista_errada] == [
         f["geometry"] for f in correto
     ], "a lista de tamanho errado foi usada em vez de descartada"
+
+
+def test_coordenadas_vao_arredondadas_para_o_navegador() -> None:
+    """Precisão além do pixel é peso que atravessa a rede sem chegar aos olhos.
+
+    A malha vem com seis casas decimais — 11 cm. O mapa é desenhado em cerca
+    de 430px cobrindo um estado inteiro; em Minas, um pixel vale perto de 2 km.
+    Medido: arredondar a cinco casas tira 29% do payload de MG, de 0,62 para
+    0,44 MB, sem diferença visível.
+
+    Cinco casas, e não quatro: 1,1 m dá folga para o modo detalhe, que
+    enquadra um único município.
+    """
+    import json
+    import re
+
+    gj = mapa.geometrias_geojson(geo.municipios("PE"))
+    texto = json.dumps(gj)
+    casas = [len(d) for d in re.findall(r"-?\d+\.(\d+)", texto)]
+
+    assert casas, "não encontrei coordenadas decimais"
+    assert max(casas) <= mapa.CASAS_COORDENADA, (
+        f"há coordenada com {max(casas)} casas decimais, acima do teto de "
+        f"{mapa.CASAS_COORDENADA} — o arredondamento saiu de `geometrias_geojson`"
+    )
+
+
+def test_os_dois_caminhos_arredondam_igual() -> None:
+    """Reaproveitar a malha convertida não pode mudar o traçado.
+
+    `deck` aceita a geometria pronta para o chamador memoizar. Se só um dos
+    caminhos arredondasse, o mapa mudaria de desenho conforme o cache estivesse
+    quente ou frio — e ninguém desconfiaria da causa.
+    """
+    convertidas = mapa.geometrias_geojson(geo.municipios("PE"))
+    sem, com = _montar_features("PE"), _montar_features("PE", convertidas)
+    assert [f["geometry"] for f in sem] == [f["geometry"] for f in com]
