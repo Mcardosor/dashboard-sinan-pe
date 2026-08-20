@@ -172,9 +172,40 @@ def css_base() -> str:
   from {{ opacity: 0; }}
   to   {{ opacity: 1; }}
 }}
-[data-testid="stVegaLiteChart"],
-[data-testid="stDeckGlJsonChart"] {{
+[data-testid="stVegaLiteChart"] {{
   animation: sinan-surgir .18s ease-out;
+}}
+
+/* O mapa entra crescendo de leve, e só ele.
+
+   Ao navegar de Brasil para um estado, o Streamlit **remonta** o widget: a
+   chave inclui `nivel` e `uf`. O Brasil some e o estado aparece já
+   enquadrado, sem continuidade espacial nenhuma — parece troca de slide, não
+   aproximação.
+
+   O certo seria um `FlyToInterpolator` do deck.gl, mas ele exige que o
+   componente sobreviva à navegação, ou seja, chave estável. E chave estável
+   custa caro aqui: reabre o laço de rerun que a seleção anterior provoca, e
+   quebra o clique repetido que abre o modo detalhe — com a seleção
+   inalterada, o Streamlit nem dispara rerun. Ver `app.py`, na montagem do
+   `st.pydeck_chart`.
+
+   Então o que se faz é perceptivo, não espacial: 0,985 para 1 sugere
+   aprofundamento sem prometer continuidade que não existe. Ficar abaixo de
+   ~0,97 vira "pop" e chama atenção para si; acima de 0,99 não se percebe.
+
+   Duração maior que a dos gráficos (260ms contra 180ms) porque aqui há uma
+   troca de contexto a acompanhar, não só um redesenho. `ease-out` para a
+   chegada desacelerar, que é o que dá a sensação de assentar. */
+@keyframes sinan-aproximar {{
+  from {{ opacity: 0; transform: scale(.985); }}
+  to   {{ opacity: 1; transform: scale(1); }}
+}}
+[data-testid="stDeckGlJsonChart"] {{
+  animation: sinan-aproximar .26s ease-out;
+  /* Sem isto o canvas do deck.gl pode piscar na borda durante a escala. */
+  transform-origin: center center;
+  will-change: transform, opacity;
 }}
 
 @media (prefers-reduced-motion: reduce) {{
@@ -182,7 +213,10 @@ def css_base() -> str:
   /* Quem pediu menos movimento não recebe nem o fade. Vestibular é o motivo:
      animação repetida a cada interação é gatilho, e aqui ela é decoração. */
   [data-testid="stVegaLiteChart"],
-  [data-testid="stDeckGlJsonChart"] {{ animation: none !important; }}
+  [data-testid="stDeckGlJsonChart"] {{
+    animation: none !important;
+    transform: none !important;
+  }}
 }}
 </style>
 """
