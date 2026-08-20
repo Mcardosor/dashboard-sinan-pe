@@ -96,6 +96,32 @@ Para TB/PE/2024: **11,89% pela regra do R, 14,75% pelo padrão do MS.**
 Não é bug de programação, é escolha metodológica — mas precisa ser decidida antes
 de fixar as referências de paridade. Ver `tests/paridade/excecoes.md`.
 
+**Atualização de 2026-08-20 — há duas regras do MS, não uma.** O Boletim
+Epidemiológico de TB 2026 publica, na Tabela 9, a interrupção como **coluna
+irmã** de cura e de "não avaliados", as três sobre a mesma base — o que só
+fecha com o denominador completo. Isso não contradiz o parágrafo acima: o
+indicador de monitoramento do Ministério exclui os não avaliados, e a tabela
+apresenta distribuição de desfechos. São perguntas diferentes.
+
+O código passou a ter as três:
+
+| Regra | Numerador | Denominador | Brasil 2024 |
+|---|---|---|---:|
+| `paridade` | `{2}` | todos | 14,91% |
+| `ms` | `{2,10}` | avaliados | 17,20% |
+| `boletim` | `{2,10}` | todos | 15,52% |
+
+A Tabela 9 publica **15,2%**, e é `boletim` que a reproduz. Os 0,32 pontos
+restantes são a defasagem de extração: nosso denominador tem 75.404
+encerramentos e as porcentagens do MS implicam 77.467, com a diferença
+concentrada em "não avaliados" — 9,7% aqui contra 12,6% lá.
+
+**Cuidado com a população.** A Tabela 9 traz três: todos os casos novos de TB
+(86.204), só pulmonar (74.885) e pulmonar confirmada em laboratório (56.388),
+com interrupção de 15,2%, 15,9% e 16,5%. A nossa é a primeira. Comparar o
+nosso número com 16,5% é comparar populações diferentes — engano que já se
+cometeu aqui e custou uma investigação.
+
 ### 5. `SITUA_ENCE` já vem reagrupado
 
 Os rótulos foram achatados em Favorável / Desfavorável / Não avaliado. Os códigos

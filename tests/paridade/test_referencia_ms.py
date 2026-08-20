@@ -119,3 +119,80 @@ def test_o_registro_nomeia_a_fonte() -> None:
     fonte = REFERENCIA["_fonte"]
     for campo in ("documento", "emissor", "edicao", "figura", "lido_em"):
         assert fonte.get(campo), f"referencia_ms.json sem `_fonte.{campo}`"
+
+
+# ---------------------------------------------------------------------------
+# Interrupção de tratamento
+# ---------------------------------------------------------------------------
+
+#: Tabela 9 do boletim — "Indicadores operacionais de encerramento do
+#: tratamento dos casos novos de tuberculose", Brasil, 2024. A tabela publica
+#: três populações: TB (todos os casos novos), TB pulmonar, e TB pulmonar
+#: confirmada por critério laboratorial. **A nossa é a primeira.**
+#:
+#: Confundi-las custou uma investigação: os 16,5% que pareciam nossa meta são
+#: a terceira coluna, um subconjunto de 56.388 casos contra os 86.204 do
+#: total.
+MS_INTERRUPCAO_BR_2024 = 15.2
+
+#: Quanto aceitamos divergir. Medido: `{2,10}` sobre todos os encerramentos dá
+#: 15,52% aqui contra 15,20% publicados. A diferença é a mesma defasagem de
+#: extração que separa nossos casos novos dos do boletim — nosso denominador
+#: tem 75.404 encerramentos e as porcentagens do MS implicam 77.467, com a
+#: diferença concentrada em "não avaliados".
+MARGEM_INTERRUPCAO = 0.6
+
+
+def test_a_regra_boletim_reproduz_a_tabela_9() -> None:
+    """A regra "boletim" existe para render o número que o MS publica.
+
+    Ela nasceu de um engano meu que quase virou estrago: eu ia **corrigir** a
+    regra "ms" para bater com a Tabela 9, sem notar que as duas respondem
+    perguntas diferentes. "ms" é o indicador de monitoramento do Ministério,
+    que exclui os não avaliados do denominador — está documentado na armadilha
+    4 do contrato de dados. A Tabela 9 é apresentação de distribuição, e ali
+    cura, interrupção e "não avaliados" são três colunas da mesma base.
+
+    Sobrescrever uma pela outra teria apagado uma escolha metodológica
+    documentada e quebrado treze testes de referência. As duas convivem.
+    """
+    from src.data import kpis
+
+    esc = Escopo(pack.DOENCA, 2024, "BR")
+    nosso = kpis.interrupcao_trat_pct(esc, "boletim")
+    assert nosso is not None
+
+    desvio = abs(nosso - MS_INTERRUPCAO_BR_2024)
+    assert desvio <= MARGEM_INTERRUPCAO, (
+        f'a regra "boletim" dá {nosso:.2f}% contra {MS_INTERRUPCAO_BR_2024}% '
+        f"da Tabela 9 ({desvio:.2f} pontos de diferença). Se o denominador "
+        f'passou a excluir os não avaliados, virou a regra "ms" — que é outro '
+        f"indicador, e dá ~17,2%."
+    )
+
+
+def test_as_tres_regras_nao_se_confundem() -> None:
+    """"paridade" e "ms" precisam continuar dando números diferentes.
+
+    Se convergirem, alguém igualou as duas sem querer — e aí o painel estaria
+    exibindo uma regra achando que exibe a outra. A diferença é o abandono
+    primário, código 10: quem nunca chegou a iniciar o tratamento também
+    interrompeu, e o MS conta, o painel em R não.
+    """
+    from src.data import kpis
+
+    esc = Escopo(pack.DOENCA, 2024, "BR")
+    v = {r: kpis.interrupcao_trat_pct(esc, r) for r in ("paridade", "ms", "boletim")}
+    assert all(x is not None for x in v.values())
+
+    # As duas do MS somam o abandono primário, então superam a do R.
+    assert v["boletim"] > v["paridade"], (
+        f"esperado boletim > paridade, veio {v['boletim']:.2f} e {v['paridade']:.2f}"
+    )
+    # E "ms" supera "boletim" porque encolhe o denominador.
+    assert v["ms"] > v["boletim"], (
+        f"esperado ms > boletim, veio {v['ms']:.2f} e {v['boletim']:.2f}"
+    )
+    assert len({round(x, 2) for x in v.values()}) == 3, (
+        f"as três regras convergiram — alguém igualou definições sem querer: {v}"
+    )
