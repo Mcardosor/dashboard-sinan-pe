@@ -31,7 +31,6 @@ ROTULO_RECORTE = {
     "MICRO": "Regiões de saúde",
 }
 
-BRASIL = "— Brasil —"
 TODA_A_UF = "— toda a UF —"
 
 
@@ -87,6 +86,15 @@ ALTURA_LINHA_1 = mapa.ALTURA - 46
 #: precisam de eixos opostos: 12 meses pedem **largura**, e 15 barras
 #: horizontais empilhadas pedem **altura**. Estavam nos slots trocados.
 ALTURA_SERIE = 280
+
+#: Desnível entre as duas colunas da linha principal, medido no navegador.
+#:
+#: A da esquerda gasta o bloco "Métrica do mapa" — 60px de rótulo mais botões,
+#: e 16px de respiro até o título — antes de chegar ao "Mapa — …". A da
+#: direita começa direto no "Ranking — …", 76px acima. O espaçador devolve os
+#: 76 inteiros: o respiro entra na conta porque o Streamlit não põe gap depois
+#: de um markdown sem conteúdo visível, então ele não vem de graça.
+DESNIVEL_LINHA_1 = 76
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
@@ -238,124 +246,141 @@ st.components.v1.html(ui.script_travar_zoom(), height=0)
 
 nav = _navegacao()
 anos = _anos()
-ufs = sorted(config.CODIGO_POR_UF)
 
 
-# --- Barra lateral ---------------------------------------------------------
-with st.sidebar:
-    st.title(pack.TITULO)
+# --- Faixa e barra de controles --------------------------------------------
+# A faixa é escrita depois da barra, mas aparece antes dela: o `st.empty()`
+# guarda o topo da página. A ordem tem que ser essa porque é a barra que
+# define ano, UF e município, e é deles que sai o escopo que a faixa anuncia.
+espaco_faixa = st.empty()
 
-    # `key` e **sem** `value`: o Streamlit é o dono do valor do slider.
-    #
-    # Com `value=nav.ano` era preciso arrastar duas vezes para o ano mudar.
-    # Widget sem `key` tem identidade derivada dos argumentos, então devolver
-    # o valor novo em `value` no rerun seguinte recria o widget e descarta a
-    # interação que acabou de acontecer; só a segunda pegava.
-    #
-    # Só o slider mexe no ano — `nav.reset()` preserva por padrão, e o clique
-    # no mapa muda geografia, não tempo. Sem ninguém mais escrevendo, o estado
-    # do widget pode ser a fonte da verdade, e `nav.ano` vira reflexo dele.
-    #
-    # Os seletores de UF e de município abaixo continuam com `index` dinâmico
-    # de propósito: aqueles são espelho da navegação e precisam acompanhar o
-    # clique no mapa, que é outro dono do mesmo estado.
-    if "ano" not in st.session_state:
-        st.session_state.ano = nav.ano
-    nav.ano = st.select_slider("Ano", options=anos, key="ano")
+# Os controles moravam numa barra lateral de 380px que não fazia mais nada —
+# ano, UF, município e dois botões, e o resto vazio. Sobrava largura à
+# esquerda e faltava no mapa, que era desenhado a 463px num notebook de 1280 e
+# deixava o Acre fora da borda. Numa linha no topo, as duas colunas da grade
+# ganham ~150px cada em toda largura de tela.
+with st.container(border=True):
+    # A conta das larguras mantém "Ano" e "UF" do mesmo tamanho em qualquer
+    # estado e os botões sempre colados na direita. Sem a coluna de folga, os
+    # controles se esticavam e encolhiam a cada navegação: entrar numa UF faz
+    # aparecer o seletor de município, e em PE também o de recorte.
+    tem_uf = nav.uf is not None
+    mostrar_recorte = tem_uf and nav.tem_recortes_de_saude
 
-    # Ano em andamento precisa dizer que está em andamento. Sem isto o painel
-    # mente por omissão: em 2025 a incidência aparece como 0,83 contra 40,42
-    # em 2024, e a leitura natural é queda, não ano pela metade.
-    if (meses := _meses_com_dado(pack.DOENCA, nav.ano)) < 12:
-        st.warning(
-            f"**{nav.ano} está incompleto** — dado até {MESES[meses - 1] if meses else '—'}"
-            f" ({meses} de 12 meses). Não compare o total com anos fechados.",
-            icon=":material/schedule:",
-        )
+    # A conta das larguras mantém "Ano" do mesmo tamanho em qualquer estado.
+    # Sem a coluna de folga, o slider se esticava e encolhia a cada navegação:
+    # entrar numa UF faz aparecer o seletor de município, e em PE também o de
+    # recorte.
+    larguras = [3]
+    ocupado = 0
+    if mostrar_recorte:
+        # 4 e não 3: com 3, "Regiões de saúde" não cabia ao lado das outras
+        # duas e o segmentado quebrava em duas linhas, engordando a barra.
+        larguras.append(4)
+        ocupado += 4
+    if tem_uf:
+        larguras.append(4)
+        ocupado += 4
+    if folga := 8 - ocupado:
+        larguras.append(folga)
 
-    st.divider()
-
-    # Enquanto o mapa não existe, estes seletores fazem o papel do clique nele.
-    # Na semana 3 passam a ser espelho da navegação, não a origem dela.
-    destino = st.selectbox(
-        "Unidade da federação",
-        [BRASIL, *ufs],
-        index=0 if nav.uf is None else ufs.index(nav.uf) + 1,
+    # `bottom` porque o slider é mais alto que o selectbox: alinhando pelo
+    # topo, os rótulos ficam na mesma linha e os controles não.
+    colunas = iter(
+        st.columns(larguras, gap="medium", vertical_alignment="bottom")
     )
-    if destino == BRASIL:
-        if nav.nivel != "BR":
-            nav.reset()
-    elif destino != nav.uf:
-        nav.entrar_uf(destino)
 
-    if nav.uf:
-        if nav.tem_recortes_de_saude:
-            recorte = st.radio(
-                "Recorte",
+    with next(colunas):
+        # `key` e **sem** `value`: o Streamlit é o dono do valor do slider.
+        #
+        # Com `value=nav.ano` era preciso arrastar duas vezes para o ano
+        # mudar. Widget sem `key` tem identidade derivada dos argumentos,
+        # então devolver o valor novo em `value` no rerun seguinte recria o
+        # widget e descarta a interação que acabou de acontecer; só a segunda
+        # pegava.
+        #
+        # Só o slider mexe no ano — `nav.reset()` preserva por padrão, e o
+        # clique no mapa muda geografia, não tempo. Sem ninguém mais
+        # escrevendo, o estado do widget pode ser a fonte da verdade, e
+        # `nav.ano` vira reflexo dele.
+        if "ano" not in st.session_state:
+            st.session_state.ano = nav.ano
+        nav.ano = st.select_slider("Ano", options=anos, key="ano")
+
+    # Quem decide o que desenhar em cada coluna é a mesma condição que decidiu
+    # a largura, guardada acima. Ler `nav` de novo aqui encaixaria o controle
+    # na coluna do vizinho até as colunas acabarem, se algo tivesse mudado a
+    # geografia no meio da linha.
+    if mostrar_recorte:
+        with next(colunas):
+            # Segmentado como a métrica do mapa, e pela mesma razão: são
+            # poucas opções, sempre uma ativa, e o rádio gastava três linhas.
+            recorte = st.segmented_control(
+                "Recorte do mapa",
                 RECORTES,
+                default=nav.recorte,
                 format_func=ROTULO_RECORTE.get,
-                index=RECORTES.index(nav.recorte),
-                horizontal=True,
+                key="recorte_mapa",
+                help="Em que divisão o mapa reparte a UF.",
             )
-            if recorte != nav.recorte:
+            # Mesma guarda do seletor de métrica: clicar no item já ativo
+            # devolve `None`, e sem isto o recorte viraria nulo.
+            if recorte and recorte != nav.recorte:
                 nav.definir_recorte(recorte)
 
-        nomes = _municipios(nav.uf)
-        rotulos = _rotulos_busca(nav.uf)
-        opcoes = [TODA_A_UF, *sorted(nomes, key=lambda c: rotulos[c])]
-        selecionado = nav.mun if nav.mun in nomes else None
-        municipio = st.selectbox(
-            "Buscar município",
-            opcoes,
-            index=0 if selecionado is None else opcoes.index(selecionado),
-            format_func=lambda c: c if c == TODA_A_UF else rotulos[c],
-        )
-        if municipio == TODA_A_UF:
-            if nav.nivel == "MUN":
-                nav.voltar()
-        elif municipio != nav.mun:
-            nav.entrar_municipio(municipio, nome=nomes[municipio])
+    if tem_uf:
+        with next(colunas):
+            # A busca por nome fica porque o mapa não a substitui: achar um
+            # município de 8 mil habitantes entre 5.571 significa caçar o
+            # polígono certo, e vários são menores que o próprio rótulo.
+            nomes = _municipios(nav.uf)
+            rotulos = _rotulos_busca(nav.uf)
+            opcoes = [TODA_A_UF, *sorted(nomes, key=lambda c: rotulos[c])]
+            selecionado = nav.mun if nav.mun in nomes else None
+            municipio = st.selectbox(
+                "Buscar município",
+                opcoes,
+                index=0 if selecionado is None else opcoes.index(selecionado),
+                format_func=lambda c: c if c == TODA_A_UF else rotulos[c],
+            )
+            if municipio == TODA_A_UF:
+                if nav.nivel == "MUN":
+                    nav.voltar()
+            elif municipio != nav.mun:
+                nav.entrar_municipio(municipio, nome=nomes[municipio])
 
-    st.divider()
-
-    coluna_voltar, coluna_reset = st.columns(2)
-    coluna_voltar.button(
-        "Voltar",
-        use_container_width=True,
-        disabled=not nav.pode_voltar,
-        on_click=nav.voltar,
-    )
-    coluna_reset.button("Reset", use_container_width=True, on_click=nav.reset)
-
-    st.caption(f"Escopo: {nav.trilha()}")
-
-    # Reservado agora, preenchido depois do rádio que define a métrica.
-    #
-    # Quem escolhe a métrica é um controle dentro do painel do mapa, umas 50
-    # linhas abaixo. Escrevendo a legenda aqui, ela mostrava o valor da
-    # interação **anterior**: trocar para "Casos novos" deixava a barra
-    # dizendo "Incidência" até o clique seguinte.
-    #
-    # `st.empty()` guarda o lugar na barra lateral e aceita conteúdo mais
-    # tarde no script, então a posição visual não muda e o valor deixa de
-    # atrasar. Mover o rádio para cá resolveria também, mas separaria o
-    # controle do mapa que ele comanda.
-    espaco_metrica = st.empty()
-
-
-# --- KPIs ------------------------------------------------------------------
-# O escopo vai na faixa, e não só na barra lateral: recolhida — que é como o
-# painel é projetado — não sobrava nada na tela dizendo de que ano e de que
-# território são os números.
+# O breadcrumb é a única coisa na tela que nomeia a macro ou a região de saúde
+# em que se entrou. A faixa resume "Recife · 2024"; o caminho até lá é aqui.
 #
-# Montado aqui, e não com `nav.trilha()`, porque a trilha é o breadcrumb da
-# barra lateral e traz "Ano: " por extenso mais os níveis de recorte. Na faixa
-# cabe o resumo; o detalhe continua ao lado.
+# Só que na maior parte do tempo ele não tem caminho a mostrar: no Brasil sai
+# "Brasil • Ano: 2024" e numa UF sai "UF PE • Ano: 2024", ambos repetindo a
+# faixa duas linhas acima e os próprios controles ao lado. A macro e a região
+# de saúde são o que ninguém mais diz — e a linha aparece só quando é uma
+# delas que está em jogo.
+if nav.macro or nav.micro:
+    st.caption(nav.trilha())
+
+# Ano em andamento precisa dizer que está em andamento. Sem isto o painel
+# mente por omissão: em 2025 a incidência aparece como 0,83 contra 40,42 em
+# 2024, e a leitura natural é queda, não ano pela metade.
+if (meses := _meses_com_dado(pack.DOENCA, nav.ano)) < 12:
+    st.warning(
+        f"**{nav.ano} está incompleto** — dado até {MESES[meses - 1] if meses else '—'}"
+        f" ({meses} de 12 meses). Não compare o total com anos fechados.",
+        icon=":material/schedule:",
+    )
+
+# O escopo vai na faixa porque ela é o cabeçalho do painel: sem isso, nada na
+# tela dizia de que ano e de que território são os números.
+#
+# Montado aqui, e não com `nav.trilha()`, porque a trilha traz "Ano: " por
+# extenso mais os níveis de recorte. Na faixa cabe o resumo; o caminho
+# completo fica na legenda sob a barra.
 _local = (
     "Brasil" if nav.nivel == "BR"
     else (nav.nome_mun or config.NOME_POR_UF.get(nav.uf, nav.uf))
 )
-st.markdown(
+espaco_faixa.markdown(
     ui.faixa_intro(
         pack.TITULO,
         escopo=f"{_local} · {nav.ano} · Sinan/MS",
@@ -364,6 +389,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# --- KPIs ------------------------------------------------------------------
 escopo = nav.escopo
 atual = _kpis(pack.DOENCA, escopo.ano, escopo.nivel, escopo.uf, escopo.mun)
 anterior = (
@@ -451,7 +478,6 @@ with esquerda, resiliencia.painel("Mapa"):
     # erro nenhum aparecendo. Manter a anterior é o comportamento de rádio, que
     # é o que a interface promete: uma das quatro está sempre ativa.
     nav.metrica = escolha or nav.metrica
-    espaco_metrica.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
 
     st.markdown(
         ui.titulo_painel(
@@ -586,6 +612,12 @@ def _painel_ranking() -> None:
     recorte antigo e ninguém veria erro nenhum.
     """
     with resiliencia.painel("Ranking"):
+        # Reserva o espaço que a coluna da esquerda gasta com os botões de
+        # métrica, para os dois títulos da linha começarem na mesma altura.
+        st.markdown(
+            f'<div style="height:{DESNIVEL_LINHA_1}px"></div>',
+            unsafe_allow_html=True,
+        )
 
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
         # UFs, numa UF os municípios dela.

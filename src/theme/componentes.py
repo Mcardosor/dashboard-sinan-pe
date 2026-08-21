@@ -390,28 +390,6 @@ def css_layout() -> str:
   }}
 }}
 
-section[data-testid="stSidebar"][aria-expanded="true"] {{
-  width: {tokens.LARGURA_SIDEBAR} !important;
-  min-width: {tokens.LARGURA_SIDEBAR} !important;
-}}
-/* 1440 e não 1200. O corte antigo deixava o notebook de 1280 no pior dos
-   mundos: barra de 380px — 30% da tela — e as duas colunas da grade com 397px
-   cada. Medido no navegador, o mapa era desenhado a 463px nesse espaço e o
-   Acre saía pela borda esquerda.
-
-   1440 cobre 1280 e 1366, que é onde a maioria dos notebooks está. Acima
-   disso a barra volta aos 380px do original, onde ela cabe sem espremer. */
-@media (max-width: 1440px) {{
-  section[data-testid="stSidebar"][aria-expanded="true"] {{
-    width: 300px !important;
-    min-width: 300px !important;
-  }}
-}}
-section[data-testid="stSidebar"][aria-expanded="false"] {{
-  width: 0 !important;
-  min-width: 0 !important;
-}}
-
 /* O `st.columns` é uma linha flex que não quebra. Deixando quebrar, e com um
    mínimo por coluna, recupera-se o comportamento do grid `auto-fit` do
    original — que a troca por colunas reais (necessária para os botões) havia

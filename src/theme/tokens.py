@@ -72,7 +72,6 @@ TEXTO_ESCURO = "#E5E7EB"
 # --- Espaçamento e layout --------------------------------------------------
 GAP = "12px"
 PADDING = "12px"
-LARGURA_SIDEBAR = "380px"
 
 #: Respiro da página, substituindo o padrão do Streamlit (`96px 80px 160px`).
 #:
