@@ -248,6 +248,43 @@ para as outras duas.
 
 ---
 
+## Pedido: a categoria "não informado" de `SITUA_ENCE` parou de vir em 2018
+
+**Este não corrigimos do nosso lado porque não dá — o dado não chega.**
+
+Medido comparando `sinan_landing` com `silver.tuberculose`, casos novos
+(incluindo "não sabe" e "pós-óbito", como o boletim define), Brasil:
+
+| Ano | `silver.tuberculose` | `sinan_landing` (código `0`) |
+|---|---:|---:|
+| 2015 | 2.716 | 2.711 |
+| 2016 | 1.918 | 1.897 |
+| 2017 | 2.177 | 2.155 |
+| **2018** | 2.087 | **47** |
+| 2019 | 2.167 | 0 |
+| 2023 | 2.706 | 0 |
+| **2024** | **4.264** | **0** |
+
+Até 2017 o balde vinha fiel, com a diferença de dezenas que se espera entre
+extrações. Em 2018 ele colapsa e depois some.
+
+**Por que importa.** O denominador de toda proporção de encerramento encolhe,
+então cura, interrupção e óbito saem maiores do que são. Para a cura no
+Brasil, o desvio inverte de sinal exatamente em 2018 — de −1,0 ponto em 2017
+para +0,7 em 2018 —, e o degrau artificial atravessa qualquer série temporal
+de desfecho. A queda da cura no período aparece como 8,6 pontos quando na
+fonte é 9,5.
+
+Também é o que nos separa da Tabela 9 do Boletim de TB 2026: o MS conta esses
+casos como "não avaliado", e sem eles nossa cura dá 65,1% contra 63,4%
+publicados.
+
+**O pedido:** verificar se o filtro do pipeline descarta `SITUA_ENCE` vazio ou
+igual a `9`/`0` a partir de alguma versão do layout do SINAN. Se o balde
+voltar, os dois painéis passam a reproduzir o boletim.
+
+---
+
 ## Achados que não pedem resposta, só aviso
 
 São coisas que corrigimos do nosso lado, mas que provavelmente também afetam

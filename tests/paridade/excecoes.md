@@ -221,8 +221,11 @@ encerramento não existem como linha, e é parte deles que o MS conta como "não
 avaliado". Denominador menor dá proporção maior, e é por isso que os dois
 indicadores ficam acima.
 
-Reconstruído: pondo 4.066 desses casos (39% dos 10.532) no denominador, os
-quatro indicadores caem a menos de meio ponto do publicado.
+Reconstruído a partir dos nossos agregados, pondo 4.066 desses casos (39% dos
+10.532) no denominador, os quatro indicadores caíam a menos de meio ponto do
+publicado. **Confirmado na fonte em 22/ago/2026:** o `silver.tuberculose` tem
+**4.264** casos novos de 2024 com `situacao_encerramento = 'Nao informado'` —
+5% do estimado. É esse o balde que falta.
 
 | Denominador | Cura | Interrupção | Óbito | Não aval. |
 |---|---:|---:|---:|---:|
@@ -232,19 +235,33 @@ quatro indicadores caem a menos de meio ponto do publicado.
 | Nota `e` + **4.066** dos sem registro | 63,1 | 15,0 | 9,3 | 12,6 |
 | **Boletim, Tabela 9** | **63,4** | **15,2** | **8,8** | **12,6** |
 
-**Não temos como saber quais 4.066.** O agregado que recebemos não distingue,
-entre os casos sem encerramento, os que o MS considera "não avaliado" dos que
-deixa de fora. Por isso a regra fica como está: aplicar só a exclusão da nota
-`e` afastaria mais (66,6%), e jogar todos os sem registro no denominador
-afastaria muito mais (58,3%).
+**Não é escolha do MS: é defeito de extração do nosso lado da entrega.** A
+categoria "não informado" vinha fiel no `sinan_landing` até 2017, colapsou em
+2018 — 2.087 na fonte contra 47 no parquet — e some a partir de 2019. Ver
+`docs/contrato-dados.md`, armadilha 16, e o pedido em
+`docs/perguntas-equipe-r.md`.
+
+Rodando a regra do boletim **na fonte bruta**, ela se reproduz: população de
+86.210 contra 86.204 publicados, cura 64,5% contra 63,4, interrupção 15,4%
+contra 15,2, óbito 8,9% contra 8,8. O que resta é defasagem de extração.
+
+A regra do painel fica como está, porque não há o que corrigir do nosso lado:
+o dado não chega. Aplicar só a exclusão da nota `e` afastaria mais (66,6%) e
+jogar todo o vão no denominador afastaria muito mais (58,3%).
 
 `test_referencia_ms.py` prende a faixa nos dois sentidos, e um segundo teste
 prende a **causa**: se o dataset um dia passar a trazer os casos sem
 encerramento, ele falha pedindo que esta seção saia daqui.
 
-**Não afeta a comparação temporal**, que é para o que o empilhado serve: o
-denominador é o mesmo em todos os anos, então a queda de 73,8% para 65,1%
-continua válida como tendência.
+**Afeta a comparação temporal, ao contrário do que este registro afirmou em
+21/ago.** O denominador **não** é o mesmo em todos os anos: até 2017 ele
+inclui o balde "não informado" e de 2018 em diante não inclui. O desvio contra
+a fonte inverte de sinal exatamente aí — de −1,0 ponto em 2017 para +0,7 em
+2018 —, um degrau artificial de cerca de 1,7 ponto no meio da série.
+
+O sentido da tendência se mantém, e a magnitude erra **para menos**: a queda
+da cura entre 2010 e 2024 aparece como 8,6 pontos e na fonte é 9,5. O gráfico
+avisa disso na tela.
 
 ---
 

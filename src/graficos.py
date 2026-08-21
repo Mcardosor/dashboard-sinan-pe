@@ -223,11 +223,18 @@ def desfechos(
 #: Aviso do empilhado de desfechos. O gráfico é honesto e ainda assim
 #: comparável ao boletim só até certo ponto — dizer isso na tela é mais barato
 #: que alguém citar o número numa reunião como se fosse o oficial.
+#:
+#: A segunda frase não é zelo: o degrau de 2018 é defeito de extração,
+#: confirmado contra o SINAN bruto. Ver docs/contrato-dados.md, armadilha 16.
 AVISO_DESFECHOS = (
     "Sobre **todos** os casos novos encerrados. O Boletim do MS publica a "
     "mesma composição só para tuberculose pulmonar confirmada por critério "
     "laboratorial, e chega a proporções de cura mais altas — os dados que "
-    "recebemos não permitem isolar esse subgrupo."
+    "recebemos não permitem isolar esse subgrupo.  \n"
+    "**Há um degrau em 2018.** A categoria \"não informado\" deixou de ser "
+    "extraída naquele ano, e sem ela o denominador encolhe: de 2018 em diante "
+    "a cura aparece cerca de 1 ponto acima do real. A queda no período é um "
+    "pouco maior do que o gráfico mostra, não menor."
 )
 
 

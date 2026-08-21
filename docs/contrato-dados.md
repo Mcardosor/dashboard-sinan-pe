@@ -157,6 +157,37 @@ de desfechos o conta em "não avaliados e outros".
 usa `000000` esperando recorte vazio passa por engano — use um código que não
 exista, como `999999`.
 
+### 16. `SITUA_ENCE` perdeu a categoria "não informado" a partir de 2018
+
+**É defeito de extração da equipe parceira, medido contra o SINAN bruto.**
+
+| Ano | Fonte (`silver.tuberculose`) | Nosso parquet (código `0`) |
+|---|---:|---:|
+| 2015 | 2.716 | 2.711 |
+| 2017 | 2.177 | 2.155 |
+| **2018** | 2.087 | **47** |
+| 2019 a 2023 | 1.921 a 2.706 | **0** |
+| **2024** | **4.264** | **0** |
+
+Até 2017 o balde vinha fiel, com a diferença de dezenas que se espera entre
+duas extrações. Em 2018 ele colapsa e a partir de 2019 some.
+
+**Efeito:** o denominador de qualquer proporção de encerramento encolhe, então
+cura, interrupção e óbito aparecem **maiores** do que são. Medido para a cura
+no Brasil, contra a mesma conta feita na fonte:
+
+| | até 2017 | de 2018 em diante |
+|---|---|---|
+| Nosso desvio | −0,2 a −1,0 ponto | **+0,6 a +1,3 ponto** |
+
+O sinal inverte em 2018 — antes ficávamos abaixo por defasagem de extração,
+depois acima por denominador faltando. Na série de cura isso vira um degrau
+artificial de cerca de 1,7 ponto entre 2017 e 2018, e faz a queda do período
+parecer **menor** do que é: 8,6 pontos no painel contra 9,5 na fonte.
+
+O empilhado de desfechos avisa disso na tela. Não dá para corrigir do nosso
+lado — o dado não chega. Ver `docs/perguntas-equipe-r.md`.
+
 ### 6. O código do município tem dois comprimentos
 
 `incidence` e `incidence_0_14` trazem `cod_mun7` (7 dígitos) e `cod_mun6`.
