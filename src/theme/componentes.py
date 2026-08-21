@@ -390,14 +390,6 @@ def css_layout() -> str:
   }}
 }}
 
-/* Encurta o bloco do ano em 8px para os títulos do mapa e do ranking, cada um
-   na sua coluna, nascerem na mesma altura. O slider é mais alto que os botões
-   de métrica que ocupam o mesmo lugar do outro lado, e a diferença é menor que
-   o passo de 16px de um espaçador. */
-.st-key-ano_alinhado {{
-  margin-bottom: -8px;
-}}
-
 /* O `st.columns` é uma linha flex que não quebra. Deixando quebrar, e com um
    mínimo por coluna, recupera-se o comportamento do grid `auto-fit` do
    original — que a troca por colunas reais (necessária para os botões) havia

@@ -269,43 +269,86 @@ nav.ano = st.session_state.ano
 tem_uf = nav.uf is not None
 mostrar_recorte = tem_uf and nav.tem_recortes_de_saude
 
-# A barra só existe dentro de uma UF: no Brasil não sobra controle nenhum para
-# ela, e uma caixa com borda e nada dentro é pior que caixa nenhuma.
-if tem_uf:
-    with st.container(border=True):
-        # A coluna de folga mantém a busca de município do mesmo tamanho com e
-        # sem o recorte ao lado; sem ela, o seletor esticava ao sair de PE.
-        larguras = [4]
-        if mostrar_recorte:
-            # 4 e não 3: com 3, "Regiões de saúde" não cabia ao lado das
-            # outras duas e o segmentado quebrava em duas linhas.
-            larguras.insert(0, 4)
-        larguras.append(12 - sum(larguras))
+with st.container(border=True):
+    # O total é sempre 17, então "Ano" e "Métrica" ficam do mesmo tamanho em
+    # qualquer estado e a barra não se reorganiza a cada navegação: entrar
+    # numa UF faz aparecer a busca de município, e em PE também o recorte.
+    #
+    # As frações saem do que cada controle mede, não de estética: com 4 de 15
+    # a coluna da métrica dava 379px e o botão "Cura" caía para uma segunda
+    # linha; o recorte precisa de 345 para "Regiões de saúde" caber ao lado
+    # das outras duas. Numa janela estreita os segmentados ainda quebram em
+    # duas linhas — a barra fica mais alta, e continua funcionando.
+    larguras = [3, 5]
+    ocupado = 0
+    if mostrar_recorte:
+        larguras.append(5)
+        ocupado += 5
+    if tem_uf:
+        larguras.append(4)
+        ocupado += 4
+    if folga := 9 - ocupado:
+        larguras.append(folga)
 
-        # `bottom` porque o segmentado é mais alto que o selectbox: alinhando
-        # pelo topo, os rótulos ficam na mesma linha e os controles não.
-        colunas = iter(
-            st.columns(larguras, gap="medium", vertical_alignment="bottom")
+    # `bottom` porque o slider é mais alto que os botões: alinhando pelo topo,
+    # os rótulos ficam na mesma linha e os controles não.
+    colunas = iter(
+        st.columns(larguras, gap="medium", vertical_alignment="bottom")
+    )
+
+    with next(colunas):
+        st.select_slider("Ano", options=anos, key="ano")
+
+    with next(colunas):
+        # A métrica é escolhida aqui, e não clicando no card de KPI. O card
+        # não avisava que era clicável — parecia indicador porque é indicador
+        # —, e a interação custou quatro rodadas de conserto. Este controle é
+        # nativo: teclado, foco e `aria-checked` vêm de graça.
+        escolha = st.segmented_control(
+            "Métrica do mapa",
+            pack.METRICAS_MAPA,
+            default=(
+                nav.metrica
+                if nav.metrica in pack.METRICAS_MAPA
+                else pack.METRICAS_MAPA[0]
+            ),
+            # Rótulo curto: com o nome completo os quatro botões quebravam em
+            # duas linhas. A unidade continua à vista na legenda do mapa e no
+            # título do ranking, que é onde ela é necessária para ler o
+            # número.
+            format_func=pack.rotulo_curto,
+            key="metrica_mapa",
+            help="Define o que o mapa pinta e o que o ranking ordena.",
         )
+        # `segmented_control` devolve **None** quando se clica no item já
+        # selecionado — ele desmarca, coisa que um rádio não faz. Sem esta
+        # guarda a métrica viraria nula, o mapa perderia a cor e o ranking a
+        # ordenação, sem erro nenhum aparecendo. Manter a anterior é o
+        # comportamento de rádio, que é o que a interface promete: uma das
+        # quatro está sempre ativa.
+        nav.metrica = escolha or nav.metrica
 
-        if mostrar_recorte:
-            with next(colunas):
-                # Segmentado como a métrica do mapa, e pela mesma razão: são
-                # poucas opções, sempre uma ativa, e o rádio gastava três
-                # linhas.
-                recorte = st.segmented_control(
-                    "Recorte do mapa",
-                    RECORTES,
-                    default=nav.recorte,
-                    format_func=ROTULO_RECORTE.get,
-                    key="recorte_mapa",
-                    help="Em que divisão o mapa reparte a UF.",
-                )
-                # Mesma guarda do seletor de métrica: clicar no item já ativo
-                # devolve `None`, e sem isto o recorte viraria nulo.
-                if recorte and recorte != nav.recorte:
-                    nav.definir_recorte(recorte)
+    # Quem decide o que desenhar em cada coluna é a mesma condição que decidiu
+    # a largura, guardada acima. Ler `nav` de novo aqui encaixaria o controle
+    # na coluna do vizinho até as colunas acabarem, se algo tivesse mudado a
+    # geografia no meio da linha.
+    if mostrar_recorte:
+        with next(colunas):
+            # Segmentado como a métrica, e pela mesma razão: são poucas
+            # opções, sempre uma ativa, e o rádio gastava três linhas.
+            recorte_escolhido = st.segmented_control(
+                "Recorte do mapa",
+                RECORTES,
+                default=nav.recorte,
+                format_func=ROTULO_RECORTE.get,
+                key="recorte_mapa",
+                help="Em que divisão o mapa reparte a UF.",
+            )
+            # Mesma guarda do seletor de métrica.
+            if recorte_escolhido and recorte_escolhido != nav.recorte:
+                nav.definir_recorte(recorte_escolhido)
 
+    if tem_uf:
         with next(colunas):
             # A busca por nome fica porque o mapa não a substitui: achar um
             # município de 8 mil habitantes entre 5.571 significa caçar o
@@ -376,49 +419,45 @@ anterior = (
     else None
 )
 
-# O realce do card acompanha a métrica do mapa, que só é decidida lá embaixo,
-# dentro do painel do mapa. Desenhar a grade aqui deixava o realce uma
-# interação atrasado: clicar em "Cura" repintava mapa e ranking na hora, e o
-# anel continuava em "Incidência" até o clique seguinte. O `st.empty()` guarda
-# a posição na página e a grade é preenchida depois que `nav.metrica` existe.
-espaco_kpis = st.empty()
+# O realce do card acompanha a métrica do mapa, que a barra de controles já
+# resolveu acima — por isso a grade pode ser desenhada aqui mesmo. Enquanto o
+# seletor de métrica morou dentro do painel do mapa, ela precisava esperar:
+# clicar em "Cura" repintava mapa e ranking na hora e o anel continuava em
+# "Incidência" até o clique seguinte.
+for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
+    colunas = st.columns(POR_LINHA, gap="small")
+    for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
+        valor = getattr(atual, chave)
+        taxa = chave in pack.TAXAS
 
+        # Proporção sem denominador engana: "Curas 49.114, queda de 6.004"
+        # omite que os casos também caíram. Onde o pack declara a fração, ela
+        # aparece sob o valor.
+        subtitulo = None
+        if par := pack.FRACAO_KPI.get(chave):
+            num, den = (getattr(atual, campo) for campo in par)
+            if num is not None and den:
+                subtitulo = (
+                    f"{ui.formatar_inteiro(num)} de {ui.formatar_inteiro(den)}"
+                )
 
-def _desenhar_kpis(metrica: str) -> None:
-    for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
-        colunas = st.columns(POR_LINHA, gap="small")
-        for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
-            valor = getattr(atual, chave)
-            taxa = chave in pack.TAXAS
-
-            # Proporção sem denominador engana: "Curas 49.114, queda de 6.004"
-            # omite que os casos também caíram. Onde o pack declara a fração, ela
-            # aparece sob o valor.
-            subtitulo = None
-            if par := pack.FRACAO_KPI.get(chave):
-                num, den = (getattr(atual, campo) for campo in par)
-                if num is not None and den:
-                    subtitulo = (
-                        f"{ui.formatar_inteiro(num)} de {ui.formatar_inteiro(den)}"
-                    )
-
-            coluna.markdown(
-                ui.kpi_card(
-                    pack.rotulo(chave),
-                    ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
-                    cor=pack.cor(chave),
-                    subtitulo=subtitulo,
-                    selecionado=(chave == metrica),
-                    badge_delta=ui.delta(
-                        valor,
-                        getattr(anterior, chave) if anterior else None,
-                        taxa=taxa,
-                        bom_se_cai=chave in pack.BOM_SE_CAI,
-                    ),
-                    ajuda=pack.descricao(chave),
+        coluna.markdown(
+            ui.kpi_card(
+                pack.rotulo(chave),
+                ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
+                cor=pack.cor(chave),
+                subtitulo=subtitulo,
+                selecionado=(chave == nav.metrica),
+                badge_delta=ui.delta(
+                    valor,
+                    getattr(anterior, chave) if anterior else None,
+                    taxa=taxa,
+                    bom_se_cai=chave in pack.BOM_SE_CAI,
                 ),
-                unsafe_allow_html=True,
-            )
+                ajuda=pack.descricao(chave),
+            ),
+            unsafe_allow_html=True,
+        )
 
 # --- Linha principal e composição -----------------------------------------
 # Os painéis são espaços reservados: o mapa entra na semana 3, os gráficos na
@@ -430,31 +469,6 @@ with esquerda, resiliencia.painel("Mapa"):
     # O que o mapa desenha depende do nível e, em PE, do recorte escolhido.
     recorte = nav.recorte if nav.tem_recortes_de_saude else "MUN"
     nivel_mapa = "UF" if nav.nivel == "BR" else recorte
-
-    # Cabeçalho, que também alinha as duas colunas: a da direita gasta 84px
-    # com o rádio de horizonte e o toggle, e sem isto o mapa começava no topo
-    # enquanto a série começava bem abaixo.
-    # A métrica do mapa é escolhida aqui, e não clicando no card. O card não
-    # avisava que era clicável — parecia indicador porque é indicador —, e a
-    # interação custou quatro rodadas de conserto. Este controle é nativo:
-    # teclado, foco e `aria-checked` vêm de graça.
-    escolha = st.segmented_control(
-        "Métrica do mapa",
-        pack.METRICAS_MAPA,
-        default=nav.metrica if nav.metrica in pack.METRICAS_MAPA else pack.METRICAS_MAPA[0],
-        # Rótulo curto: com o nome completo os quatro botões quebravam em duas
-        # linhas. A unidade continua à vista na legenda do mapa e no título do
-        # ranking, que é onde ela é necessária para ler o número.
-        format_func=pack.rotulo_curto,
-        key="metrica_mapa",
-        help="Define o que o mapa pinta e o que o ranking ordena.",
-    )
-    # `segmented_control` devolve **None** quando se clica no item já
-    # selecionado — ele desmarca, coisa que um rádio não faz. Sem esta guarda a
-    # métrica viraria nula, o mapa perderia a cor e o ranking a ordenação, sem
-    # erro nenhum aparecendo. Manter a anterior é o comportamento de rádio, que
-    # é o que a interface promete: uma das quatro está sempre ativa.
-    nav.metrica = escolha or nav.metrica
 
     st.markdown(
         ui.titulo_painel(
@@ -633,25 +647,6 @@ def _painel_ranking() -> None:
 
 
 with direita:
-    # O ano ocupa o espaço que a coluna da esquerda gasta com os botões de
-    # métrica — antes um espaçador vazio, agora um controle de verdade, e os
-    # dois títulos da linha continuam começando na mesma altura.
-    #
-    # **Fora** do `_painel_ranking`, que é um fragmento: lá dentro, arrastar o
-    # ano recarregaria só o ranking, e mapa, KPIs e série ficariam no ano
-    # antigo sem erro nenhum aparecer.
-    #
-    # Encurtado para não atravessar a coluna inteira: a régua de anos precisa
-    # de menos largura que o gráfico, e esticada ela competia com o ranking.
-    #
-    # O contêiner com `key` existe pelo CSS: o slider é 8px mais alto que os
-    # botões de métrica, e sem encurtá-lo o "Ranking — …" nascia 8px abaixo do
-    # "Mapa — …". Um espaçador do outro lado não serve — bloco de markdown tem
-    # altura mínima e só move de 16 em 16.
-    faixa_ano, _resto = st.columns([3, 4], gap="medium")
-    with faixa_ano.container(key="ano_alinhado"):
-        st.select_slider("Ano", options=anos, key="ano")
-
     _painel_ranking()
 
 
@@ -730,13 +725,6 @@ def _painel_evolucao() -> None:
 
 
 _painel_evolucao()
-
-# Agora `nav.metrica` já passou pelo widget do mapa, e a grade reservada lá em
-# cima pode ser preenchida com o realce certo. Fora do `resiliencia.painel` do
-# mapa de propósito: uma falha aqui é dos KPIs e deve ser anunciada como tal.
-with espaco_kpis.container(), resiliencia.painel("Indicadores"):
-    _desenhar_kpis(nav.metrica)
-
 
 st.divider()
 
