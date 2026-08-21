@@ -132,6 +132,82 @@ def evolucao_anual(dados: pd.DataFrame, *, rotulo: str, cor: str, altura: int = 
     )
 
 
+def desfechos(
+    dados: pd.DataFrame,
+    *,
+    cores: dict[str, str],
+    rotulos: dict[str, str],
+    ano: int,
+    altura: int = ALTURA,
+) -> alt.Chart:
+    """Composição anual dos desfechos de tratamento, empilhada.
+
+    No formato da Figura 22 do Boletim de TB 2026: uma barra por ano, as
+    quatro fatias somando 100%. Responde à pergunta que a linha isolada de
+    cura não responde — para onde foi o que deixou de curar.
+
+    Barra empilhada e não área: o dado é anual e discreto, e a área sugere
+    interpolação entre anos que não existe.
+
+    A ordem das fatias vem de `rotulos`, e é fixa de propósito. Deixar o
+    Altair ordenar por valor faria as faixas trocarem de lugar entre anos, e o
+    gráfico deixaria de ser legível como composição.
+    """
+    if dados.empty:
+        return sem_dado("Sem desfechos registrados para este recorte")
+
+    ordem = list(rotulos)
+    base = dados.assign(
+        rotulo=dados["desfecho"].map(rotulos),
+        atual=dados["ano"] == ano,
+        ordem=dados["desfecho"].map(ordem.index),
+    )
+    dominio = [rotulos[nome] for nome in ordem]
+    faixa = [cores[nome] for nome in ordem]
+
+    return tema(
+        alt.Chart(base)
+        .mark_bar()
+        .encode(
+            x=alt.X("ano:O", title=None),
+            y=alt.Y("pct:Q", title="% dos encerramentos", scale=alt.Scale(domain=[0, 100])),
+            color=alt.Color(
+                "rotulo:N",
+                scale=alt.Scale(domain=dominio, range=faixa),
+                legend=alt.Legend(title=None),
+                sort=dominio,
+            ),
+            # Ascendente põe a cura embaixo, encostada no eixo. É a fatia
+            # que se lê contra uma linha de base; as outras flutuam, e flutuar
+            # sobre uma base que se mexe já é difícil o bastante para a de
+            # cima. Com `descending` a cura ia para o topo e a leitura
+            # invertia.
+            order=alt.Order("ordem:Q", sort="ascending"),
+            # O ano selecionado fica opaco e os demais recuam, igual à série
+            # anual ao lado.
+            opacity=alt.condition(alt.datum.atual, alt.value(1.0), alt.value(0.55)),
+            tooltip=[
+                alt.Tooltip("ano:O", title="Ano"),
+                alt.Tooltip("rotulo:N", title="Desfecho"),
+                alt.Tooltip("pct:Q", title="Proporção", format=".1f"),
+                alt.Tooltip("n:Q", title="Encerramentos", format=",.0f"),
+            ],
+        ),
+        altura=altura,
+    )
+
+
+#: Aviso do empilhado de desfechos. O gráfico é honesto e ainda assim
+#: comparável ao boletim só até certo ponto — dizer isso na tela é mais barato
+#: que alguém citar o número numa reunião como se fosse o oficial.
+AVISO_DESFECHOS = (
+    "Sobre **todos** os casos novos encerrados. O Boletim do MS publica a "
+    "mesma composição só para tuberculose pulmonar confirmada por critério "
+    "laboratorial, e chega a proporções de cura mais altas — os dados que "
+    "recebemos não permitem isolar esse subgrupo."
+)
+
+
 def ranking(
     dados: pd.DataFrame,
     *,

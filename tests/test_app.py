@@ -85,13 +85,20 @@ def test_altura_da_primeira_linha_deriva_do_mapa() -> None:
     )
 
 
-def test_as_tres_series_recebem_a_mesma_altura() -> None:
-    """Mensal, anual e dupla desenham no mesmo lugar da grade.
+#: Séries que dividem o painel de evolução: mensal, anual, dupla e o
+#: empilhado de desfechos. Todas desenham no mesmo lugar da grade.
+SERIES_DO_PAINEL = 4
+
+
+def test_as_series_recebem_a_mesma_altura() -> None:
+    """As quatro desenham no mesmo lugar da grade.
 
     Uma delas ficou sem o argumento na primeira tentativa — a indentação
-    mudara com a reorganização e o `replace` não casou, em silêncio.
+    mudara com a reorganização e o `replace` não casou, em silêncio. Quando o
+    empilhado de desfechos entrou, este teste foi quem avisou que a conta
+    mudara de três para quatro.
     """
-    assert FONTE.count("altura=ALTURA_SERIE") == 3
+    assert FONTE.count("altura=ALTURA_SERIE") == SERIES_DO_PAINEL
 
 
 def test_quem_divide_a_linha_com_o_mapa_fecha_com_ele() -> None:

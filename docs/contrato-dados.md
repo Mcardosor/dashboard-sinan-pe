@@ -129,6 +129,34 @@ Os rótulos foram achatados em Favorável / Desfavorável / Não avaliado. Os c�
 "Desfavorável". Para separar óbito de abandono, use o **código**, nunca o
 `valor_lbl`.
 
+### 13. O código de `SITUA_ENCE` tem zero à esquerda em alguns anos
+
+`03` e `04` convivem com `3` e `4` no mesmo dataset — só em 2018 e 2019, 177
+registros no Brasil. O `trim` da armadilha 3 **não** resolve isso: ele tira o
+espaço, não o zero.
+
+Um filtro por `{"3", "4"}` perde esses óbitos em silêncio, e eles vão parar em
+qualquer balde que sirva de resto. Normalize com `lstrip("0")` antes de
+comparar, preservando o `"0"` sozinho — que existe e é outra coisa (ver
+abaixo). `kpis.grupo_do_desfecho()` é o único lugar que faz isso; use-o.
+
+### 14. Existe um `SITUA_ENCE = 0` (Ignorado), e ele some em 2018
+
+De 2010 a 2017 há um código `0` com volume relevante — 2.711 registros em 2015,
+13.359 no total. Em 2018 caem para 47 e depois zeram, o que parece melhora de
+preenchimento, não mudança de código.
+
+Ele **não é encerramento favorável**. Tratá-lo como cura inflaria justamente os
+anos antigos, que são a base de qualquer comparação temporal. O indicador de
+monitoramento do MS já o excluía do denominador (ver armadilha 4); o empilhado
+de desfechos o conta em "não avaliados e outros".
+
+### 15. `geo_id = '000000'` existe e tem dado
+
+É o balde de município ignorado, e traz encerramentos de verdade. Um teste que
+usa `000000` esperando recorte vazio passa por engano — use um código que não
+exista, como `999999`.
+
 ### 6. O código do município tem dois comprimentos
 
 `incidence` e `incidence_0_14` trazem `cod_mun7` (7 dígitos) e `cod_mun6`.

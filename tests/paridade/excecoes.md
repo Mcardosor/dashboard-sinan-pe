@@ -167,6 +167,29 @@ a comparação não parecer omissa.
   coorte com os agregados que recebemos. `letalidade` convive com a mesma
   aproximação desde o início, pelo mesmo motivo.
 
+- **Desfechos do tratamento empilhados**, no painel de evolução: cura,
+  interrupção, óbito e não avaliados, ano a ano, no formato da Figura 22 do
+  Boletim de TB 2026. Entrou em 21/ago/2026. Responde o que a linha isolada de
+  cura não responde — para onde foi o que deixou de curar.
+
+  **Não é o número do boletim, e a tela diz isso.** A Figura 22 é sobre
+  tuberculose pulmonar *confirmada por critério laboratorial*, um subgrupo que
+  não conseguimos isolar: o `sinan_landing` guarda marginais, uma variável por
+  vez, e temos `SITUA_ENCE` e `FORMA` mas não o cruzamento. O nosso é sobre
+  todos os casos novos encerrados, com o mesmo denominador do card de
+  interrupção — um teste prende os dois juntos.
+
+  A tendência, essa reproduz. O boletim: cura de 74,6% (2019) para 65,5%
+  (2024), interrupção de 12,6% para 16,5%. Nós: 72,8% para 65,1% e 12,2% para
+  15,5%.
+
+  **Em aberto:** nosso 2024 dá 65,1% e a Tabela 9 publica 63,4% para todos os
+  casos novos — 1,7 ponto acima, contra os 0,3 ponto que nos separam do
+  boletim na interrupção, que usa o mesmo denominador. Ou a Tabela 9 tira do
+  denominador algo que mantemos, ou a coluna lida foi outra: a extração do PDF
+  veio embaralhada e a leitura foi por posição. Vale conferir antes de alguém
+  citar o nível absoluto como oficial.
+
 - **Composição por 24 variáveis**, contra 9 no painel de PE e 7 no nacional.
 
 ---

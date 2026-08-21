@@ -19,6 +19,22 @@ from .conexao import ParticaoAusente, caminho, conectar
 from .escopo import Escopo, mun6
 
 
+#: Piso para um ano entrar no empilhado de desfechos, como fração da mediana
+#: da própria série.
+#:
+#: **Relativo, e não um número de registros.** 2025 tem 1.074 encerramentos no
+#: Brasil contra 75.404 de 2024 — a extração que recebemos mal começou o ano —,
+#: e uma barra de 100% apoiada nisso não é dado ralo, é ruído com cara de
+#: achado, empilhado ao lado das outras com a mesma aparência de solidez. Mas
+#: um piso absoluto que pegue esse caso apagaria a série inteira de qualquer
+#: município: Recife encerra algumas centenas por ano, e são dados legítimos.
+#:
+#: Comparar com a mediana da série resolve os dois: 2025 é 1,4% dela e cai;
+#: um ano municipal normal fica perto de 100% e fica. A variação real entre
+#: anos não chega perto de cinco vezes, então 0,2 separa sem cortar dado bom.
+PISO_ANO_DESFECHO = 0.2
+
+
 def _uma_linha(sql: str, params: list) -> dict:
     df = conectar().execute(sql, params).fetchdf()
     if df.empty:
@@ -478,6 +494,71 @@ def serie_anual(esc: Escopo, metrica: str = "casos") -> pd.DataFrame:
         sql += f" WHERE {onde}"
         params += p
     return conectar().execute(sql + " ORDER BY ano", params).fetchdf()
+
+
+def serie_desfechos(esc: Escopo) -> pd.DataFrame:
+    """Composição anual dos desfechos de tratamento, em contagem e proporção.
+
+    Uma consulta só para a série inteira: a partição de `sinan_landing` é
+    doença/nível/ano, então omitir o ano varre todos eles sem custo de laço —
+    16 anos saem em uma ida ao disco.
+
+    Devolve `ano`, `desfecho`, `n` e `pct`, com as quatro fatias de
+    :data:`kpis.GRUPOS_DESFECHO` somando 100% em cada ano.
+
+    O agrupamento acontece em Python, e não no SQL, porque a normalização do
+    zero à esquerda mora em :func:`kpis.grupo_do_desfecho` — a regra é uma só,
+    e duplicá-la num `CASE WHEN` é como as duas versões se separam.
+
+    Anos rasos demais são descartados por :data:`PISO_ANO_DESFECHO`, que é
+    relativo à mediana da série — a extração que recebemos mal começou 2025.
+    """
+    from . import kpis
+
+    fonte = caminho(
+        "sinan_landing",
+        doenca=config.cod_landing(esc.doenca),
+        nivel=esc.nivel,
+    )
+    sql = f"""
+        SELECT ano, trim(valor) AS valor, sum(n) AS n
+        FROM read_parquet('{fonte}', hive_partitioning=true)
+        WHERE variavel = 'SITUA_ENCE' AND sexo = 'TOTAL'
+    """
+    params: list = []
+    if esc.nivel == "UF":
+        sql += " AND uf = ?"
+        params.append(esc.uf)
+    elif esc.nivel == "MUN":
+        sql += " AND geo_id = ?"
+        params.append(mun6(esc.mun))
+    sql += " GROUP BY 1, 2"
+
+    bruto = conectar().execute(sql, params).fetchdf()
+    if bruto.empty:
+        return pd.DataFrame(columns=["ano", "desfecho", "n", "pct"])
+
+    bruto["desfecho"] = bruto["valor"].map(kpis.grupo_do_desfecho)
+    bruto["ano"] = bruto["ano"].astype(int)
+
+    total = bruto.groupby("ano")["n"].sum()
+    completos = total[total >= PISO_ANO_DESFECHO * total.median()].index
+    bruto = bruto[bruto["ano"].isin(completos)]
+    if bruto.empty:
+        return pd.DataFrame(columns=["ano", "desfecho", "n", "pct"])
+
+    # `reindex` sobre o produto ano x desfecho: sem ele, um ano sem nenhum
+    # óbito registrado simplesmente não teria a fatia, e a legenda mudaria de
+    # tamanho de ano para ano.
+    nomes = [nome for nome, _ in kpis.GRUPOS_DESFECHO]
+    grade = pd.MultiIndex.from_product(
+        [sorted(bruto["ano"].unique()), nomes], names=["ano", "desfecho"]
+    )
+    serie = (
+        bruto.groupby(["ano", "desfecho"])["n"].sum().reindex(grade, fill_value=0.0)
+    ).reset_index()
+    serie["pct"] = 100 * serie["n"] / serie.groupby("ano")["n"].transform("sum")
+    return serie
 
 
 def ranking(esc: Escopo, metrica: str, top_n: int = 15) -> pd.DataFrame:

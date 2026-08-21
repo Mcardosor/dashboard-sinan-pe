@@ -87,6 +87,11 @@ ALTURA_LINHA_1 = mapa.ALTURA - 46
 #: horizontais empilhadas pedem **altura**. Estavam nos slots trocados.
 ALTURA_SERIE = 280
 
+#: `Escopo` exige um ano, e a série de desfechos não usa nenhum — ela varre a
+#: partição inteira. Passar `nav.ano` aqui daria a impressão errada de que o
+#: recorte temporal importa.
+ANO_IRRELEVANTE = 0
+
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
@@ -162,6 +167,14 @@ def _serie(doenca, ano, nivel, uf, mun, horizonte, metrica):
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
 def _serie_dupla(doenca, ano, nivel, uf, mun, horizonte):
     return leitura.serie_dupla(Escopo(doenca, ano, nivel, uf=uf, mun=mun), horizonte)
+
+
+# Sem `ano` na chave, de propósito: a série de desfechos cobre todos os anos
+# de uma vez, então ela é a mesma para qualquer ano selecionado. Pôr o ano ali
+# multiplicaria as entradas do cache por 15 guardando cópias idênticas.
+@st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
+def _serie_desfechos(doenca, nivel, uf, mun):
+    return leitura.serie_desfechos(Escopo(doenca, ANO_IRRELEVANTE, nivel, uf=uf, mun=mun))
 
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
@@ -676,25 +689,48 @@ def _painel_evolucao() -> None:
         controle_h, controle_d = st.columns([3, 2])
         horizonte = controle_h.radio(
             "Evolução temporal",
-            ["meses", "anos"],
-            format_func=lambda h: "Meses do ano" if h == "meses" else "Todos os anos",
+            ["meses", "anos", "desfechos"],
+            format_func=lambda h: {
+                "meses": "Meses do ano",
+                "anos": "Todos os anos",
+                "desfechos": "Desfechos do tratamento",
+            }[h],
             horizontal=True,
             key="horizonte",
             help=(
                 "Meses do ano mostra o ano selecionado mês a mês; Todos os anos "
-                "mostra a série histórica completa."
+                "mostra a série histórica da métrica; Desfechos mostra em que "
+                "os tratamentos terminaram, ano a ano."
             ),
         )
-        # Casos e incidência juntos é o gráfico que o original mostra para
-        # tuberculose. Fica como opção, não como padrão, porque só faz sentido
-        # para essas duas métricas.
-        duplo = controle_d.toggle(
-            "Casos + incidência",
-            key="serie_dupla",
-            help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
-        )
+        # O toggle não é desenhado no modo desfechos: ele sobrepõe casos e
+        # incidência, e ali não há nem uma coisa nem outra. Deixá-lo visível e
+        # inerte seria pior que não tê-lo.
+        duplo = False
+        if horizonte != "desfechos":
+            # Casos e incidência juntos é o gráfico que o original mostra para
+            # tuberculose. Fica como opção, não como padrão, porque só faz
+            # sentido para essas duas métricas.
+            duplo = controle_d.toggle(
+                "Casos + incidência",
+                key="serie_dupla",
+                help="Sobrepõe a contagem e a taxa, cada uma no seu eixo.",
+            )
 
-        if duplo:
+        if horizonte == "desfechos":
+            figura_serie = graficos.desfechos(
+                _serie_desfechos(pack.DOENCA, nav.nivel, nav.uf, nav.mun),
+                cores={
+                    "cura": pack.cor("cura"),
+                    "interrupcao": pack.cor("interrupcao_trat_pct"),
+                    "obito": pack.cor("obitos"),
+                    "outros": pack.cor("pop"),
+                },
+                rotulos=calc.ROTULO_DESFECHO,
+                ano=nav.ano,
+                altura=ALTURA_SERIE,
+            )
+        elif duplo:
             serie = _serie_dupla(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun, horizonte)
             figura_serie = graficos.evolucao_dupla(
                 serie,
@@ -730,6 +766,8 @@ def _painel_evolucao() -> None:
         # usuário descobrir somando as barras.
         if horizonte == "meses":
             st.caption(graficos.AVISO_NOTIFICACAO)
+        elif horizonte == "desfechos":
+            st.caption(graficos.AVISO_DESFECHOS)
 
 
 _painel_evolucao()

@@ -80,6 +80,49 @@ _ABANDONO = {
     "boletim": {"2", "10"},
 }
 
+#: Ordem e composição dos desfechos empilhados da evolução, no formato da
+#: Figura 22 do Boletim de TB 2026 — cura, interrupção, óbito e o resto.
+#:
+#: O denominador é **todos os encerramentos**, o mesmo de
+#: `interrupcao_trat_pct` sob a regra `boletim`, e por isso as quatro fatias
+#: somam 100% por construção: a última é o complemento, não uma lista. Listar
+#: os códigos dela deixaria um código novo do SINAN sumir do gráfico sem
+#: ninguém notar; sendo complemento, ele aparece — no balde errado, mas
+#: aparece, e o total continua fechando.
+#:
+#: O boletim exclui do denominador os encerramentos por TB drogarresistente,
+#: mudança de esquema e falência. Nós não excluímos, para o gráfico usar o
+#: mesmo denominador do card de interrupção — ver `tests/paridade/excecoes.md`.
+GRUPOS_DESFECHO: tuple[tuple[str, frozenset[str]], ...] = (
+    ("cura", frozenset({"1"})),
+    ("interrupcao", frozenset(_ABANDONO[REGRA_INTERRUPCAO])),
+    ("obito", frozenset({"3", "4"})),
+    ("outros", frozenset()),  # complemento; ver acima
+)
+
+#: Rótulo de cada grupo na legenda.
+ROTULO_DESFECHO = {
+    "cura": "Cura",
+    "interrupcao": "Interrupção",
+    "obito": "Óbito",
+    "outros": "Não avaliados e outros",
+}
+
+
+def grupo_do_desfecho(codigo: str) -> str:
+    """Em que fatia do empilhado um código de `SITUA_ENCE` cai.
+
+    **Normaliza o zero à esquerda.** O dataset traz `03` e `04` convivendo com
+    `3` e `4` — só em 2018 e 2019, 177 registros —, e `trim` não resolve isso.
+    Sem normalizar, esses óbitos cairiam silenciosamente em "outros".
+    """
+    limpo = str(codigo).strip().lstrip("0") or "0"
+    for nome, codigos in GRUPOS_DESFECHO:
+        if limpo in codigos:
+            return nome
+    return "outros"
+
+
 #: Códigos excluídos do denominador. Só o indicador de monitoramento do MS os
 #: exclui; o R e o boletim usam todos os encerramentos.
 _NAO_AVALIADOS = {
