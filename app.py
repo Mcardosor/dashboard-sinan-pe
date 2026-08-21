@@ -87,14 +87,6 @@ ALTURA_LINHA_1 = mapa.ALTURA - 46
 #: horizontais empilhadas pedem **altura**. Estavam nos slots trocados.
 ALTURA_SERIE = 280
 
-#: Desnível entre as duas colunas da linha principal, medido no navegador.
-#:
-#: A da esquerda gasta o bloco "Métrica do mapa" — 60px de rótulo mais botões,
-#: e 16px de respiro até o título — antes de chegar ao "Mapa — …". A da
-#: direita começa direto no "Ranking — …", 76px acima. O espaçador devolve os
-#: 76 inteiros: o respiro entra na conta porque o Streamlit não põe gap depois
-#: de um markdown sem conteúdo visível, então ele não vem de graça.
-DESNIVEL_LINHA_1 = 76
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_LEVES)
 def _kpis(doenca: str, ano: int, nivel: str, uf: str | None, mun: str | None):
@@ -254,81 +246,66 @@ anos = _anos()
 # define ano, UF e município, e é deles que sai o escopo que a faixa anuncia.
 espaco_faixa = st.empty()
 
-# Os controles moravam numa barra lateral de 380px que não fazia mais nada —
-# ano, UF, município e dois botões, e o resto vazio. Sobrava largura à
-# esquerda e faltava no mapa, que era desenhado a 463px num notebook de 1280 e
-# deixava o Acre fora da borda. Numa linha no topo, as duas colunas da grade
-# ganham ~150px cada em toda largura de tela.
-with st.container(border=True):
-    # A conta das larguras mantém "Ano" e "UF" do mesmo tamanho em qualquer
-    # estado e os botões sempre colados na direita. Sem a coluna de folga, os
-    # controles se esticavam e encolhiam a cada navegação: entrar numa UF faz
-    # aparecer o seletor de município, e em PE também o de recorte.
-    tem_uf = nav.uf is not None
-    mostrar_recorte = tem_uf and nav.tem_recortes_de_saude
+# O ano é resolvido aqui, mas o **widget** dele só é desenhado lá embaixo, ao
+# lado dos botões de métrica. Tem que ser assim: o ano decide a faixa, os KPIs,
+# o mapa e a série, todos montados antes daquele ponto da página.
+#
+# `key="ano"` e **sem** `value`: o Streamlit é o dono do valor. No rerun de uma
+# interação, `st.session_state.ano` já traz o valor novo antes de o widget ser
+# instanciado, então ler daqui não atrasa nada — é o mesmo estado, lido antes
+# de ser desenhado.
+#
+# Com `value=nav.ano` era preciso arrastar duas vezes para o ano mudar: widget
+# sem `key` tem identidade derivada dos argumentos, então devolver o valor novo
+# em `value` recria o widget e descarta a interação que acabou de acontecer.
+#
+# Só o slider mexe no ano — `nav.reset()` preserva por padrão, e o clique no
+# mapa muda geografia, não tempo. Sem ninguém mais escrevendo, o estado do
+# widget pode ser a fonte da verdade e `nav.ano` vira reflexo dele.
+if "ano" not in st.session_state:
+    st.session_state.ano = nav.ano
+nav.ano = st.session_state.ano
 
-    # A conta das larguras mantém "Ano" do mesmo tamanho em qualquer estado.
-    # Sem a coluna de folga, o slider se esticava e encolhia a cada navegação:
-    # entrar numa UF faz aparecer o seletor de município, e em PE também o de
-    # recorte.
-    larguras = [3]
-    ocupado = 0
-    if mostrar_recorte:
-        # 4 e não 3: com 3, "Regiões de saúde" não cabia ao lado das outras
-        # duas e o segmentado quebrava em duas linhas, engordando a barra.
-        larguras.append(4)
-        ocupado += 4
-    if tem_uf:
-        larguras.append(4)
-        ocupado += 4
-    if folga := 8 - ocupado:
-        larguras.append(folga)
+tem_uf = nav.uf is not None
+mostrar_recorte = tem_uf and nav.tem_recortes_de_saude
 
-    # `bottom` porque o slider é mais alto que o selectbox: alinhando pelo
-    # topo, os rótulos ficam na mesma linha e os controles não.
-    colunas = iter(
-        st.columns(larguras, gap="medium", vertical_alignment="bottom")
-    )
+# A barra só existe dentro de uma UF: no Brasil não sobra controle nenhum para
+# ela, e uma caixa com borda e nada dentro é pior que caixa nenhuma.
+if tem_uf:
+    with st.container(border=True):
+        # A coluna de folga mantém a busca de município do mesmo tamanho com e
+        # sem o recorte ao lado; sem ela, o seletor esticava ao sair de PE.
+        larguras = [4]
+        if mostrar_recorte:
+            # 4 e não 3: com 3, "Regiões de saúde" não cabia ao lado das
+            # outras duas e o segmentado quebrava em duas linhas.
+            larguras.insert(0, 4)
+        larguras.append(12 - sum(larguras))
 
-    with next(colunas):
-        # `key` e **sem** `value`: o Streamlit é o dono do valor do slider.
-        #
-        # Com `value=nav.ano` era preciso arrastar duas vezes para o ano
-        # mudar. Widget sem `key` tem identidade derivada dos argumentos,
-        # então devolver o valor novo em `value` no rerun seguinte recria o
-        # widget e descarta a interação que acabou de acontecer; só a segunda
-        # pegava.
-        #
-        # Só o slider mexe no ano — `nav.reset()` preserva por padrão, e o
-        # clique no mapa muda geografia, não tempo. Sem ninguém mais
-        # escrevendo, o estado do widget pode ser a fonte da verdade, e
-        # `nav.ano` vira reflexo dele.
-        if "ano" not in st.session_state:
-            st.session_state.ano = nav.ano
-        nav.ano = st.select_slider("Ano", options=anos, key="ano")
+        # `bottom` porque o segmentado é mais alto que o selectbox: alinhando
+        # pelo topo, os rótulos ficam na mesma linha e os controles não.
+        colunas = iter(
+            st.columns(larguras, gap="medium", vertical_alignment="bottom")
+        )
 
-    # Quem decide o que desenhar em cada coluna é a mesma condição que decidiu
-    # a largura, guardada acima. Ler `nav` de novo aqui encaixaria o controle
-    # na coluna do vizinho até as colunas acabarem, se algo tivesse mudado a
-    # geografia no meio da linha.
-    if mostrar_recorte:
-        with next(colunas):
-            # Segmentado como a métrica do mapa, e pela mesma razão: são
-            # poucas opções, sempre uma ativa, e o rádio gastava três linhas.
-            recorte = st.segmented_control(
-                "Recorte do mapa",
-                RECORTES,
-                default=nav.recorte,
-                format_func=ROTULO_RECORTE.get,
-                key="recorte_mapa",
-                help="Em que divisão o mapa reparte a UF.",
-            )
-            # Mesma guarda do seletor de métrica: clicar no item já ativo
-            # devolve `None`, e sem isto o recorte viraria nulo.
-            if recorte and recorte != nav.recorte:
-                nav.definir_recorte(recorte)
+        if mostrar_recorte:
+            with next(colunas):
+                # Segmentado como a métrica do mapa, e pela mesma razão: são
+                # poucas opções, sempre uma ativa, e o rádio gastava três
+                # linhas.
+                recorte = st.segmented_control(
+                    "Recorte do mapa",
+                    RECORTES,
+                    default=nav.recorte,
+                    format_func=ROTULO_RECORTE.get,
+                    key="recorte_mapa",
+                    help="Em que divisão o mapa reparte a UF.",
+                )
+                # Mesma guarda do seletor de métrica: clicar no item já ativo
+                # devolve `None`, e sem isto o recorte viraria nulo.
+                if recorte and recorte != nav.recorte:
+                    nav.definir_recorte(recorte)
 
-    if tem_uf:
         with next(colunas):
             # A busca por nome fica porque o mapa não a substitui: achar um
             # município de 8 mil habitantes entre 5.571 significa caçar o
@@ -612,13 +589,6 @@ def _painel_ranking() -> None:
     recorte antigo e ninguém veria erro nenhum.
     """
     with resiliencia.painel("Ranking"):
-        # Reserva o espaço que a coluna da esquerda gasta com os botões de
-        # métrica, para os dois títulos da linha começarem na mesma altura.
-        st.markdown(
-            f'<div style="height:{DESNIVEL_LINHA_1}px"></div>',
-            unsafe_allow_html=True,
-        )
-
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
         # UFs, numa UF os municípios dela.
         alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
@@ -663,8 +633,26 @@ def _painel_ranking() -> None:
 
 
 with direita:
-    _painel_ranking()
+    # O ano ocupa o espaço que a coluna da esquerda gasta com os botões de
+    # métrica — antes um espaçador vazio, agora um controle de verdade, e os
+    # dois títulos da linha continuam começando na mesma altura.
+    #
+    # **Fora** do `_painel_ranking`, que é um fragmento: lá dentro, arrastar o
+    # ano recarregaria só o ranking, e mapa, KPIs e série ficariam no ano
+    # antigo sem erro nenhum aparecer.
+    #
+    # Encurtado para não atravessar a coluna inteira: a régua de anos precisa
+    # de menos largura que o gráfico, e esticada ela competia com o ranking.
+    #
+    # O contêiner com `key` existe pelo CSS: o slider é 8px mais alto que os
+    # botões de métrica, e sem encurtá-lo o "Ranking — …" nascia 8px abaixo do
+    # "Mapa — …". Um espaçador do outro lado não serve — bloco de markdown tem
+    # altura mínima e só move de 16 em 16.
+    faixa_ano, _resto = st.columns([3, 4], gap="medium")
+    with faixa_ano.container(key="ano_alinhado"):
+        st.select_slider("Ano", options=anos, key="ano")
 
+    _painel_ranking()
 
 
 st.divider()
