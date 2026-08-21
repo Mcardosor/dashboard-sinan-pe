@@ -290,10 +290,13 @@ with st.container(border=True):
     if folga := 9 - ocupado:
         larguras.append(folga)
 
-    # `bottom` porque o slider é mais alto que os botões: alinhando pelo topo,
-    # os rótulos ficam na mesma linha e os controles não.
+    # `top`, e não `bottom`. Alinhar pelas bases punha os rótulos em degrau de
+    # 8px — "Ano" e "Buscar município" numa altura, "Métrica" e "Recorte" 8px
+    # abaixo, porque os segmentados são mais altos que slider e selectbox. O
+    # degrau que sobra pelo topo fica na base dos controles, onde não há texto
+    # para denunciá-lo.
     colunas = iter(
-        st.columns(larguras, gap="medium", vertical_alignment="bottom")
+        st.columns(larguras, gap="medium", vertical_alignment="top")
     )
 
     with next(colunas):
@@ -460,6 +463,11 @@ for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
         )
 
 # --- Linha principal e composição -----------------------------------------
+# O último card de KPI terminava exatamente onde o título do mapa começava —
+# medido, 600px os dois. As outras faixas da página já se separam por uma
+# régua; esta não tinha nenhuma, e a leitura era de um bloco só.
+st.divider()
+
 # Os painéis são espaços reservados: o mapa entra na semana 3, os gráficos na
 # 4 e a composição na 5. Ficam aqui para o layout ser exercitado desde já.
 esquerda, direita = st.columns(2, gap="small")
