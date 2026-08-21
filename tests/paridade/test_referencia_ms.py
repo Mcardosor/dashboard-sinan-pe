@@ -196,3 +196,70 @@ def test_as_tres_regras_nao_se_confundem() -> None:
     assert len({round(x, 2) for x in v.values()}) == 3, (
         f"as três regras convergiram — alguém igualou definições sem querer: {v}"
     )
+
+
+# --- Tabela 9: desfechos de encerramento, Brasil 2024 -----------------------
+
+TABELA_9 = REFERENCIA["tabela_9_brasil_2024"]
+
+#: Quanto a cura e a interrupção podem ficar **acima** do boletim.
+#:
+#: Maior que `MARGEM_ACIMA`, e por um motivo conhecido, não por frouxidão: o
+#: denominador do MS inclui casos sem SITUA_ENCE preenchido, que no nosso
+#: agregado não existem como linha. Denominador menor dá proporção maior, e
+#: medimos +1,73 ponto na cura e +0,32 na interrupção.
+#:
+#: 3 pontos deixa folga para a variação entre extrações sem deixar passar uma
+#: mudança de regra: trocar o denominador para o total de casos novos jogaria
+#: a cura para 58,3%, e voltar a contar só o abandono clássico a mudaria em
+#: mais de meio ponto.
+MARGEM_ACIMA_DESFECHO = 3.0
+
+#: E quanto podem ficar abaixo. Apertado: ficar **abaixo** é o que não tem
+#: explicação aqui, porque o efeito conhecido empurra para cima.
+MARGEM_ABAIXO_DESFECHO = 0.5
+
+
+@pytest.mark.parametrize("indicador", ["cura", "interrupcao"])
+def test_desfechos_ficam_acima_do_boletim_e_dentro_da_folga(indicador: str) -> None:
+    """Cura e interrupção do card, contra a Tabela 9.
+
+    Não é paridade — é uma faixa, e a faixa é assimétrica de propósito. Ver
+    `MARGEM_ACIMA_DESFECHO` e `excecoes.md` §5: a diferença é o denominador,
+    e ela empurra os dois para cima.
+    """
+    esc = Escopo(pack.DOENCA, 2024, "BR")
+    nosso = getattr(calc.calcular(esc), {"cura": "cura_pct", "interrupcao": "interrupcao_trat_pct"}[indicador])
+    oficial = TABELA_9[indicador]
+
+    assert nosso >= oficial - MARGEM_ABAIXO_DESFECHO, (
+        f"{indicador}: {nosso:.2f}% contra {oficial}% do boletim. Ficar abaixo "
+        f"não tem explicação — o denominador menor que o do MS empurra para cima."
+    )
+    assert nosso <= oficial + MARGEM_ACIMA_DESFECHO, (
+        f"{indicador}: {nosso:.2f}% contra {oficial}% do boletim, acima da "
+        f"folga de {MARGEM_ACIMA_DESFECHO} ponto. A regra mudou?"
+    )
+
+
+def test_o_denominador_do_ms_continua_maior_que_o_nosso() -> None:
+    """Prende a causa da divergência, não só o efeito.
+
+    Se um dia o `sinan_landing` passar a trazer os casos sem encerramento, a
+    diferença some e este teste falha pedindo que a exceção saia de
+    `excecoes.md`. É o mesmo desenho de `test_divergentes_continuam_divergindo`.
+    """
+    from src.data import leitura
+
+    esc = Escopo(pack.DOENCA, 2024, "BR")
+    com_encerramento = float(leitura.variavel_sinan(esc, "SITUA_ENCE")["n"].sum())
+    # `TRATAMENTO` é preenchido para praticamente todo caso novo, e serve de
+    # proxy do total: 85.936 contra os 86.204 que o boletim publica.
+    casos_novos = float(leitura.variavel_sinan(esc, "TRATAMENTO")["n"].sum())
+
+    sem_encerramento = casos_novos - com_encerramento
+    assert sem_encerramento > 5_000, (
+        f"só {sem_encerramento:,.0f} casos sem encerramento — se o dataset "
+        f"passou a trazê-los, o denominador pode virar o do MS e a exceção de "
+        f"excecoes.md §5 sai"
+    )

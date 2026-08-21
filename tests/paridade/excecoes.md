@@ -195,14 +195,56 @@ a comparação não parecer omissa.
   (2024), interrupção de 12,6% para 16,5%. Nós: 72,8% para 65,1% e 12,2% para
   15,5%.
 
-  **Em aberto:** nosso 2024 dá 65,1% e a Tabela 9 publica 63,4% para todos os
-  casos novos — 1,7 ponto acima, contra os 0,3 ponto que nos separam do
-  boletim na interrupção, que usa o mesmo denominador. Ou a Tabela 9 tira do
-  denominador algo que mantemos, ou a coluna lida foi outra: a extração do PDF
-  veio embaralhada e a leitura foi por posição. Vale conferir antes de alguém
-  citar o nível absoluto como oficial.
+  **Fica 1,7 ponto acima do publicado, e a causa é conhecida.** Fechado em
+  22/ago/2026 — ver §6.
 
 - **Composição por 24 variáveis**, contra 9 no painel de PE e 7 no nacional.
+
+## 6. Diferença de denominador com a Tabela 9 do boletim — explicada
+
+| Indicador (Brasil, 2024) | Boletim | Nosso | Diferença |
+|---|---:|---:|---:|
+| Cura | 63,4% | 65,13% | +1,73 |
+| Interrupção de tratamento | 15,2% | 15,52% | +0,32 |
+| Não avaliados | 12,6% | 7,62% | −4,98 |
+
+**O numerador está certo; falta uma fatia do denominador.** O apêndice de
+métodos do boletim (nota `e`, página impressa 51) define o denominador como o
+total de casos novos com desfecho em *cura, interrupção, óbito, **ignorado ou
+não avaliado***, excluindo falência (9), mudança de esquema (8) e TB
+drogarresistente (7) — que são acompanhados no Site-TB — e mudança de
+diagnóstico (6), por não ser tuberculose.
+
+O `sinan_landing` **só traz linha para caso com `SITUA_ENCE` preenchido**:
+75.404 no Brasil em 2024, contra 85.936 casos novos. Os 10.532 sem
+encerramento não existem como linha, e é parte deles que o MS conta como "não
+avaliado". Denominador menor dá proporção maior, e é por isso que os dois
+indicadores ficam acima.
+
+Reconstruído: pondo 4.066 desses casos (39% dos 10.532) no denominador, os
+quatro indicadores caem a menos de meio ponto do publicado.
+
+| Denominador | Cura | Interrupção | Óbito | Não aval. |
+|---|---:|---:|---:|---:|
+| Nosso hoje — todos com registro | 65,1 | 15,5 | 9,6 | 7,6 |
+| Nota `e` — exclui 7/8/9 | 66,6 | 15,9 | 9,8 | 7,8 |
+| Nota `e` + **todos** os sem registro | 58,3 | 13,9 | 8,6 | 19,3 |
+| Nota `e` + **4.066** dos sem registro | 63,1 | 15,0 | 9,3 | 12,6 |
+| **Boletim, Tabela 9** | **63,4** | **15,2** | **8,8** | **12,6** |
+
+**Não temos como saber quais 4.066.** O agregado que recebemos não distingue,
+entre os casos sem encerramento, os que o MS considera "não avaliado" dos que
+deixa de fora. Por isso a regra fica como está: aplicar só a exclusão da nota
+`e` afastaria mais (66,6%), e jogar todos os sem registro no denominador
+afastaria muito mais (58,3%).
+
+`test_referencia_ms.py` prende a faixa nos dois sentidos, e um segundo teste
+prende a **causa**: se o dataset um dia passar a trazer os casos sem
+encerramento, ele falha pedindo que esta seção saia daqui.
+
+**Não afeta a comparação temporal**, que é para o que o empilhado serve: o
+denominador é o mesmo em todos os anos, então a queda de 73,8% para 65,1%
+continua válida como tendência.
 
 ---
 

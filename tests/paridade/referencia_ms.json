@@ -9,7 +9,6 @@
     "lido_em": "2026-08-11",
     "observacao": "O boletim marca os dados como preliminares e sujeitos a alteração. O SINAN é atualizado retroativamente, então uma extração mais nova tende a ter MAIS casos que uma mais antiga — nunca menos."
   },
-
   "_por_que_existe": [
     "referencia_r.json compara com o dashboard da equipe parceira, o que mede",
     "concordância, não correção: em 2026-08 os dois painéis exibiam o mesmo",
@@ -17,33 +16,102 @@
     "não tinha como perceber. Esta referência é externa e oficial, e por isso",
     "pega essa classe de erro."
   ],
-
   "nivel": "BR",
   "doenca": "TUBERCULOSE",
-
   "serie_brasil": [
-    { "ano": 2014, "casos": 70039, "incid": 34.9 },
-    { "ano": 2015, "casos": 69809, "incid": 34.5 },
-    { "ano": 2016, "casos": 70519, "incid": 34.6 },
-    { "ano": 2017, "casos": 74097, "incid": 36.1 },
-    { "ano": 2018, "casos": 77482, "incid": 37.5 },
-    { "ano": 2019, "casos": 78423, "incid": 37.7 },
-    { "ano": 2020, "casos": 69797, "incid": 33.4 },
-    { "ano": 2021, "casos": 73191, "incid": 34.8 },
-    { "ano": 2022, "casos": 81436, "incid": 38.6 },
-    { "ano": 2023, "casos": 84925, "incid": 40.1 },
-    { "ano": 2024, "casos": 86204, "incid": 40.6 },
-    { "ano": 2025, "casos": 84368, "incid": 39.5 }
+    {
+      "ano": 2014,
+      "casos": 70039,
+      "incid": 34.9
+    },
+    {
+      "ano": 2015,
+      "casos": 69809,
+      "incid": 34.5
+    },
+    {
+      "ano": 2016,
+      "casos": 70519,
+      "incid": 34.6
+    },
+    {
+      "ano": 2017,
+      "casos": 74097,
+      "incid": 36.1
+    },
+    {
+      "ano": 2018,
+      "casos": 77482,
+      "incid": 37.5
+    },
+    {
+      "ano": 2019,
+      "casos": 78423,
+      "incid": 37.7
+    },
+    {
+      "ano": 2020,
+      "casos": 69797,
+      "incid": 33.4
+    },
+    {
+      "ano": 2021,
+      "casos": 73191,
+      "incid": 34.8
+    },
+    {
+      "ano": 2022,
+      "casos": 81436,
+      "incid": 38.6
+    },
+    {
+      "ano": 2023,
+      "casos": 84925,
+      "incid": 40.1
+    },
+    {
+      "ano": 2024,
+      "casos": 86204,
+      "incid": 40.6
+    },
+    {
+      "ano": 2025,
+      "casos": 84368,
+      "incid": 39.5
+    }
   ],
-
   "anos_ignorados": {
     "2025": "Nossos parquets têm 1.773 casos contra 84.368 do boletim (−97,9%): a extração que recebemos da equipe parceira mal começou 2025. Não é divergência de método, é ausência de dado — o mesmo que o painel já sinaliza como ano incompleto. Reavaliar quando chegar uma extração nova."
   },
-
   "medido_em_2026_08_11": {
     "_nota": "Desvio do nosso painel contra o boletim, para referência histórica. Todos negativos e pequenos, como esperado de uma extração anterior.",
-    "2014": -0.67, "2015": -0.52, "2016": -0.76, "2017": -0.27,
-    "2018": -0.16, "2019": -0.13, "2020": -1.36, "2021": -1.06,
-    "2022": -0.88, "2023": -0.53, "2024": -0.32
+    "2014": -0.67,
+    "2015": -0.52,
+    "2016": -0.76,
+    "2017": -0.27,
+    "2018": -0.16,
+    "2019": -0.13,
+    "2020": -1.36,
+    "2021": -1.06,
+    "2022": -0.88,
+    "2023": -0.53,
+    "2024": -0.32
+  },
+  "tabela_9_brasil_2024": {
+    "_fonte": "Tabela 9 — Indicadores operacionais de encerramento do tratamento dos casos novos de tuberculose por unidades federativas, regiões e Brasil, 2024. Página impressa 62.",
+    "_populacao": "Casos novos de TB, todas as formas — a linha 'TB' da tabela, não a de TB pulmonar nem a de confirmados por critério laboratorial.",
+    "_lido_em": "2026-08-22",
+    "_como_foi_lido": "Com extração estruturada de tabela (pymupdf find_tables). A leitura por ordem de texto, tentada antes, embaralha as colunas: a tabela é transposta — os indicadores são linhas e as regiões são colunas — e cada indicador tem três populações empilhadas.",
+    "cura": 63.4,
+    "interrupcao": 15.2,
+    "nao_avaliados": 12.6,
+    "_denominador_do_ms": "Total de casos novos com desfecho em {cura, interrupção, óbito, ignorado ou NÃO AVALIADO}, excluídas as situações de encerramento falência (9), mudança de esquema (8) e TB drogarresistente (7), que são acompanhadas no Site-TB, e mudança de diagnóstico (6), por não ser tuberculose. Apêndice de métodos, nota `e`, página impressa 51.",
+    "_por_que_nao_reproduzimos": "O `sinan_landing` só traz linha para caso com SITUA_ENCE preenchido — 75.404 no Brasil em 2024, contra 85.936 casos novos. Os 10.532 sem encerramento não existem como linha, e é justamente parte deles que o MS conta como 'não avaliado'. Reconstruído: com 4.066 desses (39%) no denominador, os quatro indicadores caem a menos de 0,5 ponto do publicado — cura 63,1 contra 63,4, interrupção 15,0 contra 15,2, não avaliados 12,6 contra 12,6. Não temos como saber quais 4.066, então o denominador não é reproduzível com o agregado que recebemos. O numerador está certo; falta uma fatia do denominador.",
+    "_efeito_no_painel": "Denominador menor que o do MS => proporções maiores. A cura fica ~1,7 ponto acima do publicado e a interrupção ~0,3. É por isso que a margem para cima aqui é maior que a da série de casos novos, onde ficar acima não teria explicação benigna.",
+    "medido_em_2026_08_22": {
+      "cura": 65.13,
+      "interrupcao": 15.52,
+      "nao_avaliados": 7.62
+    }
   }
 }

@@ -243,10 +243,11 @@ DESCRICOES = {
         "Encerramentos por cura sobre todos os encerramentos — o denominador "
         "da Tabela 9 do Boletim de TB 2026, o mesmo do card de interrupção e "
         "do empilhado de desfechos. "
+        "Fica ~1,7 ponto acima do que o boletim publica (63,4% no Brasil em "
+        "2024), porque o denominador do MS inclui casos sem encerramento "
+        "preenchido, que o dado agregado que recebemos não traz. "
         "É aproximação de coorte: o tratamento leva cerca de seis meses, "
-        "então parte dos casos de um ano só encerra no seguinte. O boletim "
-        "fecha a coorte e publica 65,5% para 2024, sobre um subconjunto — só "
-        "os casos pulmonares confirmados por critério laboratorial."
+        "então parte dos casos de um ano só encerra no seguinte."
     ),
     "pop": "População estimada do recorte.",
     "mortalidade": (
