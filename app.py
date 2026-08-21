@@ -372,40 +372,49 @@ anterior = (
     else None
 )
 
-for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
-    colunas = st.columns(POR_LINHA, gap="small")
-    for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
-        valor = getattr(atual, chave)
-        taxa = chave in pack.TAXAS
+# O realce do card acompanha a métrica do mapa, que só é decidida lá embaixo,
+# dentro do painel do mapa. Desenhar a grade aqui deixava o realce uma
+# interação atrasado: clicar em "Cura" repintava mapa e ranking na hora, e o
+# anel continuava em "Incidência" até o clique seguinte. O `st.empty()` guarda
+# a posição na página e a grade é preenchida depois que `nav.metrica` existe.
+espaco_kpis = st.empty()
 
-        # Proporção sem denominador engana: "Curas 49.114, queda de 6.004"
-        # omite que os casos também caíram. Onde o pack declara a fração, ela
-        # aparece sob o valor.
-        subtitulo = None
-        if par := pack.FRACAO_KPI.get(chave):
-            num, den = (getattr(atual, campo) for campo in par)
-            if num is not None and den:
-                subtitulo = (
-                    f"{ui.formatar_inteiro(num)} de {ui.formatar_inteiro(den)}"
-                )
 
-        coluna.markdown(
-            ui.kpi_card(
-                pack.rotulo(chave),
-                ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
-                cor=pack.cor(chave),
-                subtitulo=subtitulo,
-                selecionado=(chave == nav.metrica),
-                badge_delta=ui.delta(
-                    valor,
-                    getattr(anterior, chave) if anterior else None,
-                    taxa=taxa,
-                    bom_se_cai=chave in pack.BOM_SE_CAI,
+def _desenhar_kpis(metrica: str) -> None:
+    for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
+        colunas = st.columns(POR_LINHA, gap="small")
+        for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
+            valor = getattr(atual, chave)
+            taxa = chave in pack.TAXAS
+
+            # Proporção sem denominador engana: "Curas 49.114, queda de 6.004"
+            # omite que os casos também caíram. Onde o pack declara a fração, ela
+            # aparece sob o valor.
+            subtitulo = None
+            if par := pack.FRACAO_KPI.get(chave):
+                num, den = (getattr(atual, campo) for campo in par)
+                if num is not None and den:
+                    subtitulo = (
+                        f"{ui.formatar_inteiro(num)} de {ui.formatar_inteiro(den)}"
+                    )
+
+            coluna.markdown(
+                ui.kpi_card(
+                    pack.rotulo(chave),
+                    ui.formatar_decimal(valor) if taxa else ui.formatar_inteiro(valor),
+                    cor=pack.cor(chave),
+                    subtitulo=subtitulo,
+                    selecionado=(chave == metrica),
+                    badge_delta=ui.delta(
+                        valor,
+                        getattr(anterior, chave) if anterior else None,
+                        taxa=taxa,
+                        bom_se_cai=chave in pack.BOM_SE_CAI,
+                    ),
+                    ajuda=pack.descricao(chave),
                 ),
-                ajuda=pack.descricao(chave),
-            ),
-            unsafe_allow_html=True,
-        )
+                unsafe_allow_html=True,
+            )
 
 # --- Linha principal e composição -----------------------------------------
 # Os painéis são espaços reservados: o mapa entra na semana 3, os gráficos na
@@ -425,17 +434,23 @@ with esquerda, resiliencia.painel("Mapa"):
     # avisava que era clicável — parecia indicador porque é indicador —, e a
     # interação custou quatro rodadas de conserto. Este controle é nativo:
     # teclado, foco e `aria-checked` vêm de graça.
-    nav.metrica = st.radio(
+    escolha = st.segmented_control(
         "Métrica do mapa",
         pack.METRICAS_MAPA,
-        index=pack.METRICAS_MAPA.index(nav.metrica)
-        if nav.metrica in pack.METRICAS_MAPA
-        else 0,
-        format_func=pack.rotulo,
-        horizontal=True,
+        default=nav.metrica if nav.metrica in pack.METRICAS_MAPA else pack.METRICAS_MAPA[0],
+        # Rótulo curto: com o nome completo os quatro botões quebravam em duas
+        # linhas. A unidade continua à vista na legenda do mapa e no título do
+        # ranking, que é onde ela é necessária para ler o número.
+        format_func=pack.rotulo_curto,
         key="metrica_mapa",
         help="Define o que o mapa pinta e o que o ranking ordena.",
     )
+    # `segmented_control` devolve **None** quando se clica no item já
+    # selecionado — ele desmarca, coisa que um rádio não faz. Sem esta guarda a
+    # métrica viraria nula, o mapa perderia a cor e o ranking a ordenação, sem
+    # erro nenhum aparecendo. Manter a anterior é o comportamento de rádio, que
+    # é o que a interface promete: uma das quatro está sempre ativa.
+    nav.metrica = escolha or nav.metrica
     espaco_metrica.caption(f"Métrica ativa: {pack.rotulo(nav.metrica)}")
 
     st.markdown(
@@ -695,6 +710,12 @@ def _painel_evolucao() -> None:
 
 
 _painel_evolucao()
+
+# Agora `nav.metrica` já passou pelo widget do mapa, e a grade reservada lá em
+# cima pode ser preenchida com o realce certo. Fora do `resiliencia.painel` do
+# mapa de propósito: uma falha aqui é dos KPIs e deve ser anunciada como tal.
+with espaco_kpis.container(), resiliencia.painel("Indicadores"):
+    _desenhar_kpis(nav.metrica)
 
 
 st.divider()

@@ -120,8 +120,26 @@ def cor(metrica: str) -> str:
     return CORES.get(metrica, CORES["secondary"])
 
 
+#: Rótulos curtos, para controles onde o nome inteiro não cabe.
+#:
+#: Só existem os que precisam: no seletor de métrica do mapa, "Taxa de
+#: mortalidade (por 100 mil hab.)" empurrava os quatro botões para duas linhas.
+#: A unidade não se perde — ela aparece na legenda do mapa e no título do
+#: ranking, que é onde o número de fato é lido.
+ROTULOS_CURTOS = {
+    "incid": "Incidência",
+    "mortalidade": "Mortalidade",
+    "cura_pct": "Cura",
+}
+
+
 def rotulo(metrica: str) -> str:
     return ROTULOS.get(metrica, metrica)
+
+
+def rotulo_curto(metrica: str) -> str:
+    """Nome enxuto para botão; cai no completo quando não há versão curta."""
+    return ROTULOS_CURTOS.get(metrica, rotulo(metrica))
 
 
 def rampa_mapa(metrica: str) -> list[str]:
