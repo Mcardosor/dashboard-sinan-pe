@@ -276,3 +276,63 @@ def test_grafico_duplo_vazio_mostra_recado() -> None:
         eixo_x="mes_nome:N",
     )
     assert g.mark["type"] == "text"
+
+
+#: Altura da caixa de um rótulo do eixo y, medida no navegador com a fonte de
+#: 12px do tema. O Vega esconde um nome sim, outro não assim que o passo entre
+#: rótulos fica abaixo disso.
+CAIXA_ROTULO = 16
+
+
+@pytest.mark.parametrize("top_n", [5, 15, 20, 25, 30])
+def test_o_ranking_reserva_faixa_para_todo_rotulo(top_n: int) -> None:
+    """Nome de município não pode sumir porque a lista cresceu.
+
+    Com altura fixa em 484px e 25 municípios, cada faixa ficava com 15,3px
+    contra uma caixa de rótulo de 16 — colidia por menos de um pixel e o Vega
+    escondia metade dos nomes, sem aviso nenhum. O gráfico continuava bonito e
+    respondia a perguntas erradas: a barra que se lê não era a que se pensava
+    estar lendo.
+
+    A primeira correção reservou 22px por barra sobre a altura **total** e não
+    resolveu — o eixo x e o título comem 82px antes de sobrar espaço para as
+    faixas. É por isso que a conta desconta `ALTURA_EIXO_RANKING`.
+    """
+    import altair as alt
+
+    dados = _ranking("UF", "PE", top_n=top_n)
+    figura = graficos.ranking(
+        dados,
+        rotulo="Incidência",
+        cor="#C1440A",
+        selecao=alt.selection_point(name="barra", fields=["chave"]),
+        altura_minima=484,
+    )
+    util = figura.height - graficos.ALTURA_EIXO_RANKING
+    por_faixa = util / len(dados)
+    assert por_faixa >= CAIXA_ROTULO, (
+        f"{top_n} barras: {por_faixa:.1f}px por faixa contra {CAIXA_ROTULO} "
+        f"de rótulo — o Vega vai esconder um nome sim, outro não"
+    )
+
+
+def test_altura_do_ranking_e_piso_e_nao_teto() -> None:
+    """Listas curtas fecham com o mapa; listas longas passam dele.
+
+    O piso existe para o ranking não terminar antes do mapa e deixar um vão na
+    linha. Virar teto foi o que escondeu os rótulos.
+    """
+    import altair as alt
+
+    def altura(n: int) -> int:
+        return graficos.ranking(
+            _ranking("UF", "PE", top_n=n),
+            rotulo="Incidência",
+            cor="#C1440A",
+            selecao=alt.selection_point(name="barra", fields=["chave"]),
+            altura_minima=484,
+        ).height
+
+    assert altura(5) == 484, "lista curta tem de fechar com o mapa"
+    assert altura(15) == 484, "o padrão tem de fechar com o mapa"
+    assert altura(30) > 484, "lista longa tem de crescer além do piso"

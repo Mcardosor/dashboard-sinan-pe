@@ -24,6 +24,29 @@ def _px(token: str) -> int:
 #: Altura padrão dos gráficos do painel direito.
 ALTURA = 300
 
+#: Faixa vertical por barra do ranking, na **área de plotagem**.
+#:
+#: Medido no navegador: a caixa do rótulo tem 16px de altura com a fonte de
+#: 12px, e o Vega esconde um nome sim outro não assim que o passo entre eles
+#: fica abaixo disso. Com 27 UFs em 512px de área útil o passo caía para
+#: 15,3px — colidia por menos de um pixel, e metade dos nomes sumia.
+#:
+#: 22 deixa 6px de folga sobre a caixa, o bastante para a variação de métrica
+#: de fonte entre navegadores.
+ALTURA_BARRA_RANKING = 22
+
+#: Altura que o eixo x, seu título e as margens comem antes de sobrar espaço
+#: para as barras. Medido no navegador: 594px de gráfico davam 512px de área
+#: de plotagem.
+#:
+#: Entra na conta porque a primeira tentativa de conserto reservou 22px por
+#: barra sobre a altura **total** e continuou escondendo nomes — as faixas
+#: recebiam 19px, não 22.
+ALTURA_EIXO_RANKING = 82
+
+#: Piso do ranking, para uma lista de 5 não virar uma tira.
+ALTURA_MIN_RANKING = 180
+
 #: Tooltip escuro do original: fundo quase preto, cantos arredondados.
 TOOLTIP_FUNDO = "#111827"
 
@@ -214,7 +237,7 @@ def ranking(
     rotulo: str,
     cor: str,
     selecao: alt.Parameter,
-    altura: int | None = None,
+    altura_minima: int = 0,
 ) -> alt.Chart:
     """Barras horizontais das maiores geografias, clicáveis.
 
@@ -222,10 +245,17 @@ def ranking(
     rotacionar, e rótulo rotacionado é mais difícil de ler que uma barra a
     mais de altura.
 
-    ``altura`` sobrescreve o cálculo por número de barras. Serve para o
-    ranking dividir a linha com o mapa, que tem altura fixa: sem isso a
-    coluna da direita termina antes e sobra um vão. Deixando ``None``, cada
-    barra recebe 22px e o painel cresce com a lista.
+    ``altura_minima`` é **piso, não teto**. Serve para o ranking dividir a
+    linha com o mapa, que tem altura fixa: sem ela a coluna da direita termina
+    antes e sobra um vão. Cada barra recebe :data:`ALTURA_BARRA_RANKING`, e o
+    painel cresce quando a lista pede mais que o piso.
+
+    Já foi sobrescrita, e era um teto disfarçado: com 484px fixos e 25
+    municípios, cada faixa ficava com 19px e o Vega passava a esconder um
+    rótulo sim, outro não — metade dos nomes sumia sem nenhum aviso. É uma
+    forma de degradação silenciosa: o gráfico continua bonito e responde a
+    perguntas erradas, porque a barra que se lê não é a que se pensa estar
+    lendo.
     """
     if dados.empty:
         return sem_dado("Sem dados para ranquear neste recorte")
@@ -246,7 +276,11 @@ def ranking(
             ],
         )
         .add_params(selecao),
-        altura=altura if altura is not None else max(180, 22 * len(dados)),
+        altura=max(
+            altura_minima,
+            ALTURA_MIN_RANKING,
+            ALTURA_BARRA_RANKING * len(dados) + ALTURA_EIXO_RANKING,
+        ),
     )
 
 

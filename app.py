@@ -647,7 +647,10 @@ def _painel_ranking() -> None:
                 rotulo=pack.rotulo(nav.metrica),
                 cor=pack.cor(nav.metrica),
                 selecao=escolha,
-                altura=ALTURA_LINHA_1,
+                # Piso, não altura: alinha com o mapa nas listas curtas e
+                # deixa o painel crescer quando o slider pede mais nomes do
+                # que cabem em 484px.
+                altura_minima=ALTURA_LINHA_1,
             ),
             use_container_width=True,
             on_select="rerun",

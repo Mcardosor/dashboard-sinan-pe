@@ -109,8 +109,13 @@ def test_quem_divide_a_linha_com_o_mapa_fecha_com_ele() -> None:
     horizontais pedem altura —, e estavam nos slots trocados. A regra de
     fechar junto continua; o que mudou foi a quem ela se aplica.
     """
-    assert FONTE.count("altura=ALTURA_LINHA_1") == 1, (
+    assert FONTE.count("altura_minima=ALTURA_LINHA_1") == 1, (
         "exatamente um painel divide a linha 1 com o mapa"
+    )
+    assert "altura=ALTURA_LINHA_1" not in FONTE, (
+        "`ALTURA_LINHA_1` tem de ser piso e não altura fixa: como altura, "
+        "25 municípios ficavam com 19px por faixa e o Vega escondia um nome "
+        "sim, outro não"
     )
 
 
