@@ -26,14 +26,17 @@ CLASSES = 6
 SEM_DADO = "#F3F4F6"
 
 #: Altura do mapa, em pixels. O painel reserva `ALTURA_MIN_MAPA`.
-#: 460 e não 520. O Brasil é quase quadrado — 45,1 graus de largura por 41,2
-#: em Mercator — e o zoom é limitado pela **largura**, não pela altura. Com
-#: `LARGURA_PAINEL` em 430, o mapa desenha 430x392: num painel de 520 sobravam
-#: **128px de vazio vertical**, visíveis como uma faixa morta abaixo do mapa.
 #:
-#: 460 deixa 68px de folga, que é o espaço da legenda e do botão Voltar. Baixar
-#: mais apertaria o ranking, que divide a linha e recebe `ALTURA - 46`.
-ALTURA = 460
+#: Casada com `LARGURA_PAINEL`, não escolhida à parte. O Brasil é quase
+#: quadrado — 45,1 graus de largura por 41,2 em Mercator — e o enquadramento
+#: pega o menor dos dois ajustes, então altura de menos faz a altura virar o
+#: teto e a largura nova ser desperdiçada: com 580x460 o país saía 504x460,
+#: preso pela altura. 530 é o que 580 de largura pede (580 x 41,2 / 45,1), e o
+#: Brasil desenha 580x529.
+#:
+#: Eram 460, casados com os 430 de largura de quando a barra lateral existia.
+#: Baixar mais aperta o ranking, que divide a linha e recebe `ALTURA - 46`.
+ALTURA = 530
 
 ROTULO_SEM_DADO = "sem dado"
 
@@ -131,23 +134,36 @@ def _mercator_inverso(y: float) -> float:
 
 
 #: Largura assumida do painel do mapa, em pixels — o **pior caso**, não o
-#: comum. A altura é :data:`ALTURA`.
+#: comum. A altura é :data:`ALTURA`, e as duas andam juntas.
 #:
 #: O Streamlit não informa ao servidor a largura da janela, então o zoom é
-#: calculado contra um número fixo e a coluna real varia bastante: medido no
-#: navegador, 397px num notebook de 1280 com a barra lateral aberta e 747px a
-#: 1600 com ela recolhida.
+#: calculado contra um número fixo enquanto a coluna real varia. Medido no
+#: navegador, a coluna é `(janela - 106) / 2` — 80px de respiro da página, 16
+#: do vão entre as colunas e ~10 da barra de rolagem:
 #:
-#: Antes eram 463, escolhidos como "uma coluna num monitor comum". Errar para
-#: cima **corta a geometria**: a 1280 o Acre saía pela borda. Errar para baixo
-#: só deixa margem. Entre um mapa incompleto e um mapa pequeno, o incompleto é
-#: pior num painel de vigilância — margem se vê, recorte não.
+#: ===========  ======
+#: janela       coluna
+#: ===========  ======
+#: 1280            587
+#: 1366            630
+#: 1536            715
+#: 1920            907
+#: ===========  ======
 #:
-#: 430 cabe nos 437px que sobram no pior caso depois de a barra lateral encolher
-#: para 300px em telas de até 1440px. O preço é margem em telas largas, e a
-#: correção de verdade seria medir a largura no cliente e devolvê-la ao
-#: servidor — ver `docs/deploy.md`.
-LARGURA_PAINEL = 430
+#: Errar para cima **corta a geometria**: a 1280 o Acre saía pela borda
+#: esquerda. Errar para baixo só deixa margem. Entre um mapa incompleto e um
+#: mapa pequeno, o incompleto é pior num painel de vigilância — margem se vê,
+#: recorte não.
+#:
+#: 580 cobre qualquer janela a partir de 1266px, que é o alvo do projeto.
+#: Eram 430, o que sobrava depois de a barra lateral de 300px comer a tela;
+#: sem ela, a mesma janela de 1280 dá 587.
+#:
+#: O preço continua sendo margem em telas largas — a 1536 sobram 135px em
+#: volta do mapa. Isto move o pior caso, não elimina o problema: a correção de
+#: verdade é medir a largura no cliente e devolvê-la ao servidor, ver
+#: `docs/deploy.md`.
+LARGURA_PAINEL = 580
 
 
 def enquadrar(
