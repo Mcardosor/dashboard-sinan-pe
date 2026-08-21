@@ -11,12 +11,17 @@ from src.theme import componentes as c
 from src.theme import cores
 
 
+#: Campos do `Kpis` que existem só para alimentar outro número e nunca viram
+#: card: denominadores e numeradores de fração. Cobrar cor e rótulo do pack
+#: para eles seria cobrar por uma tela que não existe.
+AUXILIARES = {"pop_0_14", "cura_encerrada", "encerramentos"}
+
 #: Todas as métricas que o pack precisa conhecer, independentemente de
 #: aparecerem na tela. Derivada do dataclass para não haver duas listas.
 TODOS_OS_KPIS = tuple(
     campo
     for campo in __import__("src.data.kpis", fromlist=["Kpis"]).Kpis.__dataclass_fields__
-    if not campo.startswith("_") and campo != "pop_0_14"
+    if not campo.startswith("_") and campo not in AUXILIARES
 )
 
 

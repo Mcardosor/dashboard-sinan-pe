@@ -137,13 +137,19 @@ class Kpis:
     casos: float | None = None
     obitos: float | None = None
     cura: float | None = None
-    #: Curas sobre casos novos do **mesmo ano**, em %.
+    #: Encerramentos por cura sobre **todos os encerramentos**, que é o
+    #: denominador da Tabela 9 do Boletim de TB 2026 e o mesmo de
+    #: `interrupcao_trat_pct` sob a regra `boletim`.
     #:
-    #: É aproximação, e a tela diz isso. Tratamento de TB leva cerca de seis
-    #: meses, então o desfecho dos casos de um ano só se conhece no seguinte —
-    #: o boletim do MS reporta coorte fechada, e nós não temos como fechar a
-    #: coorte com os agregados que recebemos. `letalidade` já convive com a
-    #: mesma aproximação, pelo mesmo motivo.
+    #: Era sobre os casos novos do ano, e dava 57,15% no Brasil em 2024 contra
+    #: 65,1% agora. Trocou em 21/ago/2026: com o empilhado de desfechos na
+    #: evolução, a tela passou a ter dois números de cura para o mesmo ano,
+    #: oito pontos apart e ambos rotulados "cura".
+    #:
+    #: Continua sendo aproximação de coorte — o tratamento leva cerca de seis
+    #: meses, então parte dos casos de um ano só encerra no seguinte, e não há
+    #: como fechar a coorte com os agregados que recebemos. `letalidade`
+    #: convive com a mesma aproximação, pelo mesmo motivo.
     cura_pct: float | None = None
     pop: float | None = None
     incid: float | None = None
@@ -154,12 +160,39 @@ class Kpis:
     taxa_det_0_14: float | None = None
     hiv_pos_pct: float | None = None
     interrupcao_trat_pct: float | None = None
+    #: Encerramentos por cura e total de encerramentos, os dois de
+    #: `SITUA_ENCE`. Existem para a fração sob o card bater com a porcentagem
+    #: dele: `incidence.casos_cura` e `SITUA_ENCE = 1` diferem em alguns casos
+    #: por UF — 2.619 contra 2.621 em PE — porque um é por residência e o
+    #: outro por notificação. Misturar as fontes faria a conta exibida não
+    #: fechar com o número exibido.
+    cura_encerrada: float | None = None
+    encerramentos: float | None = None
+
+
+def contagem_desfechos(esc: Escopo) -> dict[str, float]:
+    """Encerramentos por grupo de desfecho no recorte, mais ``total``.
+
+    Mesma regra do empilhado da evolução e do mapa — os três leem
+    :func:`grupo_do_desfecho`, então não há como um contar cura de um jeito e
+    outro de outro.
+    """
+    if esc.doenca != "TUBERCULOSE":
+        return {}
+    df = leitura.variavel_sinan(esc, "SITUA_ENCE")
+    if df.empty:
+        return {}
+    por_grupo = df.assign(g=df["valor"].map(grupo_do_desfecho)).groupby("g")["n"].sum()
+    contagem = {nome: float(por_grupo.get(nome, 0.0)) for nome, _ in GRUPOS_DESFECHO}
+    contagem["total"] = float(por_grupo.sum())
+    return contagem
 
 
 def calcular(esc: Escopo, regra_interrupcao: str | None = None) -> Kpis:
     """Todos os KPIs do recorte."""
     inc = leitura.incidencia(esc)
     inc14 = leitura.incidencia_0_14(esc)
+    desfechos = contagem_desfechos(esc)
 
     casos = inc.get("casos_total")
     cura = inc.get("casos_cura")
@@ -179,7 +212,9 @@ def calcular(esc: Escopo, regra_interrupcao: str | None = None) -> Kpis:
         incid=_div(casos, pop, POR_100K),
         mortalidade=_div(obitos, pop, POR_100K),
         letalidade=_div(obitos, casos, 100),
-        cura_pct=_div(cura, casos, 100),
+        cura_pct=_div(desfechos.get("cura"), desfechos.get("total"), 100),
+        cura_encerrada=_num(desfechos.get("cura")),
+        encerramentos=_num(desfechos.get("total")),
         casos_0_14=_num(casos_0_14),
         pop_0_14=_num(pop_0_14),
         taxa_det_0_14=_div(casos_0_14, pop_0_14, POR_100K),

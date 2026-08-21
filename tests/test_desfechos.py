@@ -138,3 +138,51 @@ def test_serie_vazia_nao_explode() -> None:
     assert isinstance(vazio, pd.DataFrame)
     assert vazio.empty
     assert list(vazio.columns) == ["ano", "desfecho", "n", "pct"]
+
+
+@pytest.mark.parametrize("esc", [BR, PE, RECIFE], ids=["BR", "PE", "Recife"])
+def test_a_cura_e_a_mesma_no_card_no_mapa_e_no_empilhado(esc: Escopo) -> None:
+    """Três lugares da tela mostram cura. Têm de mostrar o mesmo número.
+
+    Este teste existe porque eles já se separaram: enquanto o card dividia
+    por casos novos e o empilhado por encerramentos, a mesma tela exibia
+    57,15% e 65,1% para o Brasil em 2024, ambos rotulados "cura".
+    """
+    do_card = kpis.calcular(esc).cura_pct
+
+    serie = leitura.serie_desfechos(esc)
+    do_empilhado = float(
+        serie[(serie["ano"] == esc.ano) & (serie["desfecho"] == "cura")]["pct"].iloc[0]
+    )
+    assert do_empilhado == pytest.approx(do_card, abs=0.01), (
+        f"empilhado {do_empilhado:.2f}% vs card {do_card:.2f}%"
+    )
+
+    # O mapa desenha o nível **abaixo** do escopo, então a comparação direta
+    # só existe subindo um nível: o valor de PE no mapa do Brasil.
+    if esc.nivel == "UF":
+        do_mapa = leitura.valores_por_geografia(
+            Escopo(esc.doenca, esc.ano, "BR"), "cura_pct"
+        )
+        assert float(do_mapa[esc.uf]) == pytest.approx(do_card, abs=0.01), (
+            f"mapa {do_mapa[esc.uf]:.2f}% vs card {do_card:.2f}%"
+        )
+
+
+def test_a_fracao_do_card_da_a_porcentagem_do_card() -> None:
+    """"49.114 de 75.404" tem de dar os 65,1% exibidos ao lado.
+
+    Os dois vinham de fontes diferentes — `incidence` por residência e
+    `SITUA_ENCE` por notificação —, que discordam em alguns casos por UF:
+    2.619 contra 2.621 em PE. A conta exibida não fechava com o número
+    exibido, e por pouco, que é o pior tamanho de erro para se notar.
+    """
+    from src.doencas import tuberculose as pack
+
+    numerador, denominador = pack.FRACAO_KPI["cura_pct"]
+    for esc in (BR, PE, RECIFE):
+        k = kpis.calcular(esc)
+        num, den = getattr(k, numerador), getattr(k, denominador)
+        assert 100 * num / den == pytest.approx(k.cura_pct, abs=0.001), (
+            f"{esc.nivel}: {num}/{den} não dá {k.cura_pct}"
+        )

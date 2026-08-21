@@ -142,9 +142,21 @@ a comparação não parecer omissa.
   O dado veio nos parquets e não é exibido em nenhum dos dois painéis deles.
 - **Pirâmide de óbitos**: a deles só mostra CASOS.
 - **Aviso de ano incompleto**, nomeando o último mês com dado.
-- **Proporção de cura (%)**, que nenhum dos dois painéis tem. Curas sobre
-  casos novos do mesmo ano. Entrou em 18/ago/2026 e **substituiu a contagem
-  de curas no mapa**, mantendo-a no card como fração ("49.114 de 85.932").
+- **Proporção de cura (%)**, que nenhum dos dois painéis tem. Entrou em
+  18/ago/2026 e **substituiu a contagem de curas no mapa**, mantendo-a no card
+  como fração.
+
+  **Mudou de denominador em 21/ago/2026**, de casos novos do ano para todos os
+  encerramentos — 57,15% viraram 65,1% no Brasil em 2024. O motivo foi a tela:
+  com o empilhado de desfechos na evolução, passou a haver dois números de
+  cura para o mesmo ano, oito pontos apart e ambos rotulados "cura". O
+  denominador que ficou é o da Tabela 9 do boletim, o mesmo do card de
+  interrupção. Um teste prende card, mapa e empilhado ao mesmo valor.
+
+  A fração exibida passou a sair inteira de `SITUA_ENCE` ("2.621 de 4.350" em
+  PE). Antes o numerador vinha de `incidence`, por residência, e as duas
+  fontes discordam em alguns casos por UF — a conta mostrada não dava a
+  porcentagem mostrada.
 
   A troca no mapa não é estética. Coroplético pinta **área**, e área não tem
   relação com população: com a contagem crua, São Paulo ficava no tom mais

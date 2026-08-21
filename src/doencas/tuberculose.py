@@ -62,7 +62,10 @@ LAYOUT_KPI = (
 #: "Curas: 49.114 ↓ 6.004 vs ano anterior" engana sem o denominador — os casos
 #: também caíram. Com a fração à vista, o card diz a proporção e não esconde os
 #: absolutos, que é o que o card antigo entregava.
-FRACAO_KPI = {"cura_pct": ("cura", "casos")}
+#: Fração exibida sob o valor do card. Os dois campos precisam sair da mesma
+#: fonte, ou a conta mostrada não dá a porcentagem mostrada — ver o comentário
+#: de `cura_encerrada` em `kpis.py`.
+FRACAO_KPI = {"cura_pct": ("cura_encerrada", "encerramentos")}
 
 #: Métricas que o mapa e o ranking sabem desenhar.
 #:
@@ -237,11 +240,13 @@ DESCRICOES = {
     "obitos": "Óbitos com a doença como causa básica, vindos do SIM.",
     "cura": "Encerramentos por cura no ano.",
     "cura_pct": (
-        "Encerramentos por cura sobre os casos novos do mesmo ano. "
-        "É aproximação: o tratamento leva cerca de seis meses, então parte "
-        "dos casos de um ano só encerra no seguinte. O boletim do MS usa "
-        "coorte fechada e publica 65,5% para 2024, sobre um subconjunto — "
-        "só os casos confirmados por critério laboratorial."
+        "Encerramentos por cura sobre todos os encerramentos — o denominador "
+        "da Tabela 9 do Boletim de TB 2026, o mesmo do card de interrupção e "
+        "do empilhado de desfechos. "
+        "É aproximação de coorte: o tratamento leva cerca de seis meses, "
+        "então parte dos casos de um ano só encerra no seguinte. O boletim "
+        "fecha a coorte e publica 65,5% para 2024, sobre um subconjunto — só "
+        "os casos pulmonares confirmados por critério laboratorial."
     ),
     "pop": "População estimada do recorte.",
     "mortalidade": (
