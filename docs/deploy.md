@@ -1,13 +1,12 @@
 # Publicação
 
 Estado: **em produção desde 18/ago/2026**, na VM `wrdocker2`, porta 8507.
-Falta um passo — o bloco do nginx, que exige sudo — e por isso o painel hoje
-responde só por VPN.
+Público desde 20/ago/2026, quando o bloco do nginx entrou.
 
 | | |
 |---|---|
-| Por VPN, funcionando | `http://10.20.10.64:8507/cenarios/sinan/` |
-| Público, **pendente** | `https://painel.cenarios.unb.br/cenarios/sinan` |
+| Público | `https://painel.cenarios.unb.br/cenarios/sinan/` |
+| Direto, por VPN | `http://10.20.10.64:8507/cenarios/sinan/` |
 | Container | `dashboard-sinan` |
 | Pasta na VM | `~/dashboard-sinan-pe` |
 
@@ -53,10 +52,10 @@ A primeira carga levou 2 minutos.
 Depois, `docker compose restart` — o cache do Streamlit tem TTL de um dia, e
 reiniciar é o que garante que o dado novo apareça na hora.
 
-## O que falta: nginx
+## O bloco do nginx
 
-Precisa entrar em `/etc/nginx/sites-enabled/telessaude`, junto dos outros
-`location`:
+Já aplicado em `/etc/nginx/sites-enabled/telessaude`, junto dos outros
+`location`. Fica registrado para quando a VM for reconstruída:
 
 ```nginx
     location /cenarios/sinan {
