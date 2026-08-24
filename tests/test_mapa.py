@@ -119,7 +119,6 @@ def test_enquadrar_centraliza_no_bbox() -> None:
 
 def test_enquadrar_cabe_nas_duas_bordas() -> None:
     """O que o corte do mapa do Brasil denunciou: precisa caber em cima e embaixo."""
-    import numpy as np
 
     from src.data import geo
 
@@ -334,7 +333,7 @@ def test_geometria_pronta_nao_muda_o_desenho() -> None:
     sem, com = _montar_features("PE"), _montar_features("PE", convertidas)
 
     assert len(sem) == len(com)
-    for a, b in zip(sem, com):
+    for a, b in zip(sem, com, strict=True):
         assert a["geometry"] == b["geometry"]
         assert a["properties"] == b["properties"]
 

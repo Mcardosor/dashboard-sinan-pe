@@ -19,10 +19,6 @@ from .data.escopo import Escopo, mun6
 #: exclusivos de Pernambuco e vêm dos shapefiles de apoio.
 RECORTES = ("MUN", "MACRO", "MICRO")
 
-#: Mantido para leitura; a verdade está no registro de `data/recortes.py`.
-UF_COM_RECORTES = recortes.UF
-
-
 def nivel_agregado(nivel: str) -> str:
     """Nível de quem é *listado* sob o escopo — no Brasil as UFs, senão os
     municípios da UF.
@@ -119,9 +115,7 @@ class Navegacao:
             )
         self.recorte = valor
         # Trocar de recorte descarta a seleção do recorte anterior.
-        if valor == "MUN":
-            self.macro = self.micro = None
-        elif valor == "MACRO":
+        if valor in ("MUN", "MACRO"):
             self.macro = self.micro = None
         else:
             self.micro = None

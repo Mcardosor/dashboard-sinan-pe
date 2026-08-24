@@ -78,7 +78,7 @@ def test_municipios_vizinhos_quase_nao_se_sobrepoem(uf: str) -> None:
 
     pior = max(
         camada.geometry.iloc[i].intersection(camada.geometry.iloc[j]).area
-        for i, j in zip(pares.index, pares["index_right"])
+        for i, j in zip(pares.index, pares["index_right"], strict=True)
     )
     assert pior < LIMITE_SOBREPOSICAO_M2, (
         f"{uf}: sobreposição de {pior:.0f} m² entre vizinhos"

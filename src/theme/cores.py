@@ -44,7 +44,9 @@ def rgb_para_hex(rgb: Rgb) -> str:
 def misturar(a: str, b: str, t: float) -> str:
     """Interpola linearmente entre duas cores. ``t=0`` devolve ``a``, ``t=1`` devolve ``b``."""
     ra, rb = hex_para_rgb(a), hex_para_rgb(b)
-    return rgb_para_hex(tuple(x + (y - x) * t for x, y in zip(ra, rb)))  # type: ignore[arg-type]
+    return rgb_para_hex(  # type: ignore[arg-type]
+        tuple(x + (y - x) * t for x, y in zip(ra, rb, strict=True))
+    )
 
 
 def rampa(base: str) -> list[str]:

@@ -68,9 +68,6 @@ _COD_SIM = {
     ZIKA: "ZIKA",
 }
 
-DOENCAS = (TUBERCULOSE, HANSENIASE, DENGUE, ZIKA)
-
-
 def cod_agregado(doenca: str) -> str:
     """Código da doença nos datasets do SINAN agregado."""
     return _COD_AGREGADO[_canon(doenca)]

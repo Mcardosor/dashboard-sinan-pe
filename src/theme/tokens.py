@@ -16,8 +16,6 @@ RAIO_PAINEL = "14px"
 RAIO_PILL = "999px"
 
 BORDA = "1px solid color-mix(in srgb, currentColor 14%, transparent)"
-BORDA_HOVER = "1px solid color-mix(in srgb, currentColor 24%, transparent)"
-
 SOMBRA_REPOUSO = "0 10px 26px rgba(2,6,23,.08)"
 SOMBRA_HOVER = "0 18px 44px rgba(2,6,23,.12)"
 SOMBRA_ATIVO = "0 22px 56px rgba(2,6,23,.14)"
@@ -32,8 +30,6 @@ SOMBRA_ATIVO = "0 22px 56px rgba(2,6,23,.14)"
 #: `currentColor` já vem invertido.
 MISTURA_CARD = "4%"
 MISTURA_CARD_TOPO = "7%"
-MISTURA_BORDA = "14%"
-
 # --- Tipografia ------------------------------------------------------------
 FONTE = (
     "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, "
@@ -95,31 +91,5 @@ PAGINA_LADOS_ESTREITO = "16px"
 ALTURA_MIN_MAPA = "520px"
 ALTURA_MIN_PAINEL = "560px"
 
-#: Larguras do grid de KPIs por faixa de viewport.
-GRID_KPI = (
-    (0, "180px"),
-    (1240, "210px"),
-    (860, "200px"),
-)
-
 # --- Gráficos --------------------------------------------------------------
 TOOLTIP_FUNDO = "rgba(17,24,39,.96)"
-#: O original usava 10.5px, pequeno demais para leitura confortável.
-TOOLTIP_TEXTO = "12px"
-TOOLTIP_RAIO = "10px"
-
-GRID_GRAFICO = {"left": 52, "right": 16, "top": 26, "bottom": 56, "containLabel": True}
-
-#: Paleta categórica padrão, usada quando a doença não declara a sua.
-PALETA_PADRAO = (
-    "#0B8A8F",
-    "#E39D00",
-    "#1C5D99",
-    "#4C9F70",
-    "#6B3FA0",
-    "#2E7D32",
-    "#C62828",
-    "#8C564B",
-    "#546E7A",
-    "#7F7F7F",
-)

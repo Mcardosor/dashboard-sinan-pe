@@ -10,7 +10,6 @@ responde por ele e a geometria tem de casar chave a chave.
 
 from __future__ import annotations
 
-import itertools
 
 import pytest
 

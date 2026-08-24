@@ -92,7 +92,10 @@ def escala_quantil(
         f"{_formatar(cortes[i], decimais)} a {_formatar(cortes[i + 1], decimais)}"
         for i in range(usadas)
     ]
-    cores = dict(zip(rotulos, tons))
+    # `strict=True` prende a invariante: rótulos e tons saem os dois de
+    # `usadas`, e se um dia divergirem, classes sumiriam da legenda sem
+    # erro — o mapa continuaria colorido e a legenda incompleta.
+    cores = dict(zip(rotulos, tons, strict=True))
     cores[ROTULO_SEM_DADO] = SEM_DADO
     return Escala(cortes=[float(c) for c in cortes], rotulos=rotulos, cores=cores)
 
@@ -303,7 +306,10 @@ def _compactar(mapa_deck) -> None:
             default=default_serialize,
             separators=(",", ":"),
         )
-    except Exception:  # noqa: BLE001 — otimização não pode derrubar o mapa
+    # Captura ampla de propósito: otimização não pode derrubar o mapa. E
+    # `Exception`, nunca `BaseException` — `RerunException` herda desta
+    # última justamente para atravessar blocos como este.
+    except Exception:
         return
 
     mapa_deck.to_json = lambda: compacto
@@ -463,7 +469,7 @@ def deck(
             "type": "FeatureCollection",
             "features": [
                 {"type": "Feature", "geometry": g, "properties": p}
-                for g, p in zip(geometrias, propriedades)
+                for g, p in zip(geometrias, propriedades, strict=True)
             ],
         }
     else:

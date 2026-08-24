@@ -61,9 +61,11 @@ def test_todas_as_metricas_tem_contraste_nos_dois_temas() -> None:
         for tema in TEXTO:
             misturada = cores.misturar(cor, TEXTO[tema], 0.28)
             razao = cores.contraste(misturada, FUNDO[tema])
-            if razao < 3.0:
+            if razao < cores.CONTRASTE_MINIMO:
                 ruins.append(f"{metrica} no tema {tema}: {razao:.1f}")
-    assert not ruins, "contraste abaixo de 3:1 — " + "; ".join(ruins)
+    assert not ruins, (
+        f"contraste abaixo de {cores.CONTRASTE_MINIMO}:1 — " + "; ".join(ruins)
+    )
 
 
 def test_o_acento_do_kpi_se_mistura_ao_texto() -> None:

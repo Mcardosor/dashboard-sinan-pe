@@ -88,7 +88,7 @@ def relatorio(pares: list[tuple[Path, Path]]) -> int:
     for origem, destino in pares:
         n = _tamanho(origem)
         total += n
-        print(f"  {str(destino):48} {n / 1e6:8.1f} MB")
+        print(f"  {destino!s:48} {n / 1e6:8.1f} MB")
     print(f"  {'TOTAL':48} {total / 1e6:8.1f} MB")
     return total
 

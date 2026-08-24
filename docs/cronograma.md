@@ -320,7 +320,9 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 - [x] `prefers-reduced-motion`
 
 ### 8.3 Entrega
-- [ ] Deploy
+- [x] Deploy — Docker na VM `wrdocker2` desde 18/ago; público em
+      `painel.cenarios.unb.br/cenarios/sinan` desde 20/ago, quando o bloco do
+      nginx entrou. Ver `docs/deploy.md`
 - [x] README de execução
 - [x] Registrar as divergências metodológicas — `excecoes.md` e `perguntas-equipe-r.md`
 

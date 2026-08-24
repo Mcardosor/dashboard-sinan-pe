@@ -109,16 +109,6 @@ PALETA_MAPA = {
     ),
 }
 
-PALETA_BARRAS = (
-    "#C1440A", "#DE501A", "#F07B42", "#A83208", "#E06030",
-    "#902800", "#B84010", "#D86820", "#7A2100", "#601800",
-)
-
-PALETA_LINHAS = (
-    "#ED853A", "#7C2D12", "#C2410C", "#98531B", "#EA580C",
-    "#9A3412", "#B45309", "#D97706", "#A16207", "#431407",
-)
-
 def cor(metrica: str) -> str:
     return CORES.get(metrica, CORES["secondary"])
 

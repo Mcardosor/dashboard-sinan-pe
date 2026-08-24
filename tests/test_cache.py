@@ -20,7 +20,7 @@ APP = (RAIZ / "app.py").read_text(encoding="utf-8")
 def _constante(nome: str) -> int:
     achado = re.search(rf"^{nome} = (.+)$", APP, re.M)
     assert achado, f"constante {nome} sumiu do app.py"
-    return int(eval(achado.group(1).split("#")[0].strip()))  # noqa: S307
+    return int(eval(achado.group(1).split("#")[0].strip()))
 
 
 def test_ttl_e_longo_porque_o_dado_e_imutavel() -> None:

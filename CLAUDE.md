@@ -13,7 +13,7 @@ Documentação em português. Código, commits e comentários também.
 
 ```bash
 streamlit run app.py                      # aplicação (porta 8501)
-pytest                                    # suíte inteira (~630 testes, ~13 s)
+pytest                                    # suíte inteira (~640 testes, ~15 s)
 pytest tests/test_mapa.py -q              # um módulo
 pytest tests/test_mapa.py::test_x -q      # um teste
 pytest tests/paridade -q                  # só o harness de paridade
@@ -29,7 +29,7 @@ Não há linter nem formatter configurados no projeto.
 
 **Testes sem os dados:** os parquets não são versionados (892 MB). Sem eles,
 `tests/conftest.py` ignora os módulos que dependem de dado e a suíte roda com
-101 testes em vez de ~630. O cabeçalho do pytest mostra `dados: presentes` ou
+88 testes em vez de ~640. O cabeçalho do pytest mostra `dados: presentes` ou
 `AUSENTES` com o caminho — se disser AUSENTES, confira `SINAN_DATA_DIR`.
 
 ## Arquitetura
@@ -84,6 +84,13 @@ uma investigação; a íntegra está em `docs/contrato-dados.md`.
    Óbitos saem de `obitos_sim_faixa`; cura não tem fonte local.
 10. **Os indicadores de TB vêm de outra extração**, com cobertura de ano
    própria. Não compare com os KPIs num ano que ainda não fechou.
+11. **`SITUA_ENCE` tem código com zero à esquerda** em 2018 e 2019 — `03`
+   convive com `3`. O `trim` da regra 5 não resolve; use
+   `kpis.grupo_do_desfecho()`, que normaliza.
+12. **A categoria "não informado" de `SITUA_ENCE` sumiu da extração em 2018.**
+   São 4.264 casos em 2024. Toda proporção de encerramento sai maior do que é,
+   e a série ganha um degrau artificial naquele ano. Não dá para corrigir do
+   nosso lado — está registrado como pedido à equipe parceira.
 
 ### Paridade
 
@@ -92,9 +99,12 @@ tela e gravados em `referencia_r.json`. **Toda divergência precisa estar em
 `tests/paridade/excecoes.md`** — o que não estiver listado e divergir é bug, e
 um teste confere que o registro acompanhe o código.
 
-Três KPIs reproduzem o R no número exato; uma divergência é intencional (nós
-corrigimos a contagem dobrada e eles não); uma segue aberta e depende de
-resposta da equipe parceira. Ver `docs/perguntas-equipe-r.md`.
+Dois KPIs reproduzem o R no número exato. **Nenhuma divergência segue em
+aberto:** duas são intencionais (corrigimos a contagem dobrada e eles não;
+mudamos a regra da interrupção por decisão do José Mário) e as demais foram
+fechadas contra o Boletim Epidemiológico do MS, que confirma o nosso número e
+não o deles. Ver `docs/perguntas-equipe-r.md` para o que ainda depende da
+equipe parceira — nada disso bloqueia o painel.
 
 ### Mapa
 

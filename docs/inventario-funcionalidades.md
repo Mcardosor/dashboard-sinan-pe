@@ -10,6 +10,18 @@ Marque conforme implementa. "Idêntico" significa esta lista inteira marcada.
 > verificados em tela, mas seguiam desmarcados. Numa checklist de paridade
 > isso é pior que inútil: apaga a diferença entre "não fizemos" e "não
 > anotamos", e some com a lista curta do que falta de verdade.
+
+> **Auditado de novo em 2026-08-23.** Sobraram 13 itens desmarcados, e
+> **nenhum é trabalho parado do painel de tuberculose.** Eles se dividem em
+> três baldes, que a checklist não distinguia:
+>
+> | Balde | Itens | Situação |
+> |---|---:|---|
+> | **Hanseníase** | 5 | Fora do escopo desta entrega. O painel é só de tuberculose, por decisão de 21/ago. Entram com o pack da doença, se ele existir |
+> | **Bloqueado na origem** | 1 | Pirâmide de CURA. O dado chega zerado; é falha do pipeline da equipe parceira, confirmada contra o SINAN bruto |
+> | **Superset** | 7 | Semana 7, adiada. É produto separado, não parte do painel |
+>
+> Do que é escopo nosso e depende só de nós: **nada em aberto.**
 >
 > **Revisto em 2026-08-11**, agora com o app rodando e medição no navegador.
 > A seção de KPIs descrevia o card como clicável e navegável por teclado; isso
@@ -41,13 +53,15 @@ faixa de intro está declarado mas perde em especificidade para o Streamlit
   colunas, com a bandeira de Pernambuco à esquerda. Removida — os dados são
   nacionais, e ao lado de um mapa do Brasil a bandeira lia como recorte
   geográfico em vez de emissor. Sem logotipo, o título ocupa a faixa toda
-- [ ] Título com `clamp(18px, 2.1vw, 30px)` — **declarado e sem efeito.** O
-      token existe (`tokens.TEXTO_TITULO`) e a regra `.sinan-intro-titulo`
-      também, mas o elemento é um `<h1>` e o seletor do Streamlit
-      (`.st-emotion-cache-…  h1`, `2.75rem`) tem especificidade maior e vence.
-      Medido no navegador: **44px**, contra os 30px de teto. É o que faz o
-      título quebrar em telas estreitas. Corrigir exige subir a
-      especificidade, ex.: `.sinan-intro h1.sinan-intro-titulo`
+- [x] Título com `clamp(24px, 2.1vw, 30px)` — **corrigido em 18/ago/2026.**
+      Ficou declarado e sem efeito por semanas: o token existia
+      (`tokens.TEXTO_TITULO`) e a regra `.sinan-intro-titulo` também, mas o
+      elemento é um `<h1>` e o seletor do Streamlit (`.st-emotion-cache-… h1`,
+      `2.75rem`) tinha especificidade maior e vencia — medido no navegador,
+      44px contra os 30 de teto, e era o que fazia o título quebrar em telas
+      estreitas. Resolvido subindo para `.sinan-intro h1.sinan-intro-titulo`.
+      Fica registrado porque a armadilha vale para qualquer regra que dispute
+      com o tema do Streamlit
 
 ## KPIs
 

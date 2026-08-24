@@ -208,7 +208,7 @@ def _meses_com_dado(doenca: str, ano: int) -> int:
 def _municipios(uf: str) -> dict[str, str]:
     """Código de 6 dígitos → nome, para o seletor e para a trilha."""
     camada = geo.municipios(uf)
-    return dict(zip(camada["cod_mun6"], camada["nome_mun"]))
+    return dict(zip(camada["cod_mun6"], camada["nome_mun"], strict=True))
 
 
 @st.cache_data(ttl=TTL_DADOS)
@@ -442,7 +442,12 @@ anterior = (
 # "Incidência" até o clique seguinte.
 for inicio in range(0, len(pack.LAYOUT_KPI), POR_LINHA):
     colunas = st.columns(POR_LINHA, gap="small")
-    for coluna, chave in zip(colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA]):
+    # `strict=False` de propósito: a última linha pode ter menos KPIs que
+    # colunas, e as colunas sobrando ficam vazias. É o único zip do projeto
+    # onde truncar é o comportamento desejado.
+    for coluna, chave in zip(
+        colunas, pack.LAYOUT_KPI[inicio : inicio + POR_LINHA], strict=False
+    ):
         valor = getattr(atual, chave)
         taxa = chave in pack.TAXAS
 
@@ -889,7 +894,7 @@ with resiliencia.painel("Indicadores do programa"):
         pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.mun
     )
     colunas = st.columns(len(indicadores), gap="small")
-    for coluna, ind in zip(colunas, indicadores):
+    for coluna, ind in zip(colunas, indicadores, strict=True):
         coluna.markdown(
             ui.indicador_programa(
                 ind["rotulo"],

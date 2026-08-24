@@ -85,7 +85,7 @@ def test_grafico_troca_o_eixo_conforme_a_base() -> None:
     pequeno = leitura.composicao(
         Escopo(pack.DOENCA, 2024, "MUN", uf="BA", mun="290689"), "HIV"
     )
-    eixo = lambda d: graficos.composicao(  # noqa: E731
+    eixo = lambda d: graficos.composicao(
         d, rotulo="Coinfecção HIV", cor="#B4442E"
     ).to_dict()["encoding"]["x"]["title"]
 

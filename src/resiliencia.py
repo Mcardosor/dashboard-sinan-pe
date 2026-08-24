@@ -45,6 +45,10 @@ def painel(nome: str, *, avisar: Callable[[str, Exception], None] | None = None)
     """
     try:
         yield
-    except Exception as erro:  # noqa: BLE001 — a contenção é o objetivo
+    # `Exception` e não `BaseException`: a contenção é o objetivo, mas
+    # `st.rerun()` levanta `RerunException`, que herda de `BaseException`
+    # para atravessar daqui. Ampliar a captura mata a navegação por
+    # clique sem erro nenhum aparecer.
+    except Exception as erro:
         logger.exception("painel %r falhou", nome)
         (avisar or _avisar_streamlit)(nome, erro)

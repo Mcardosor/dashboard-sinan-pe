@@ -50,8 +50,8 @@ def test_obitos_do_sim_usam_o_mesmo_vocabulario_de_faixas() -> None:
     if sim.empty or sinan.empty:
         pytest.skip("dado indisponível")
 
-    de_sim = dict(zip(sim["faixa_etaria"], sim["faixa_ord"]))
-    de_sinan = dict(zip(sinan["faixa_etaria"], sinan["faixa_ord"]))
+    de_sim = dict(zip(sim["faixa_etaria"], sim["faixa_ord"], strict=True))
+    de_sinan = dict(zip(sinan["faixa_etaria"], sinan["faixa_ord"], strict=True))
 
     assert set(de_sim) <= set(de_sinan), "SIM tem faixa que não existe no SINAN"
     for faixa, ordem in de_sim.items():

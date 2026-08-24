@@ -652,7 +652,7 @@ def ranking(esc: Escopo, metrica: str, top_n: int = 15) -> pd.DataFrame:
         nomes = {sigla: sigla for sigla in valores.index}
     else:
         camada = geo.municipios(esc.uf)
-        nomes = dict(zip(camada["cod_mun6"], camada["nome_mun"]))
+        nomes = dict(zip(camada["cod_mun6"], camada["nome_mun"], strict=True))
 
     tabela = pd.DataFrame(
         {
