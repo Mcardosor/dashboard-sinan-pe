@@ -178,8 +178,13 @@ def _serie_desfechos(doenca, nivel, uf, mun):
 
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
-def _ranking(doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, top_n: int):
-    return leitura.ranking(Escopo(doenca, ano, nivel_agregado(nivel), uf=uf), metrica, top_n)
+def _ranking(
+    doenca: str, ano: int, nivel: str, uf: str | None, metrica: str, top_n: int,
+    recorte: str = "MUN",
+):
+    return leitura.ranking(
+        Escopo(doenca, ano, nivel_agregado(nivel), uf=uf), metrica, top_n, recorte
+    )
 
 
 @st.cache_data(ttl=TTL_DADOS, max_entries=ENTRADAS_MEDIAS, show_spinner=False)
@@ -647,9 +652,21 @@ def _painel_ranking() -> None:
     recorte antigo e ninguém veria erro nenhum.
     """
     with resiliencia.painel("Ranking"):
+        # O mesmo recorte que o mapa desenha. Sem isto o mapa mostrava
+        # macrorregiões e o ranking listava municípios ao lado, com o título
+        # dizendo "municípios" — dois recortes na mesma linha.
+        recorte_atual = nav.recorte if nav.tem_recortes_de_saude else "MUN"
+
         # O ranking mostra o nível abaixo do escopo, igual ao mapa: no Brasil as
         # UFs, numa UF os municípios dela.
-        alvo = "UFs" if nav.nivel == "BR" else f"municípios de {nav.uf}"
+        # O nome do recorte sai do mesmo dicionário que rotula o controle, e
+        # não de uma segunda lista — foi assim que o título ficou dizendo
+        # "municípios" enquanto o mapa desenhava macrorregiões.
+        alvo = (
+            "UFs"
+            if nav.nivel == "BR"
+            else f"{ROTULO_RECORTE[recorte_atual].lower()} de {nav.uf}"
+        )
         st.markdown(
             ui.titulo_painel(f"Ranking — {alvo}, por {pack.rotulo(nav.metrica).lower()}"),
             unsafe_allow_html=True,
@@ -659,7 +676,9 @@ def _painel_ranking() -> None:
         "Quantos exibir", 5, 30, 15, step=5, key="top_n",
         help="Quantas posições do ranking aparecem, da maior para a menor.",
     )
-        tabela = _ranking(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n)
+        tabela = _ranking(
+            pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n, recorte_atual
+        )
 
         # A escala é a mesma que o mapa usa, recalculada a partir da mesma
         # série cacheada — não da fatia do top N, ou as faixas mudariam com o
@@ -668,7 +687,6 @@ def _painel_ranking() -> None:
         # Recalcular em vez de receber do painel do mapa: eles são fragmentos
         # distintos, e o ranking recarrega sozinho quando o slider mexe.
         # `test_graficos.py` confere que as duas escalas dão os mesmos cortes.
-        recorte_atual = nav.recorte if nav.tem_recortes_de_saude else "MUN"
         escala_mapa = mapa.escala_natural(
             _valores_mapa(
                 pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, recorte_atual
@@ -694,7 +712,10 @@ def _painel_ranking() -> None:
             ),
             use_container_width=True,
             on_select="rerun",
-            key=f"rank-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}-{top_n}",
+            key=(
+                f"rank-{nav.nivel}-{nav.uf or 'BR'}-{nav.ano}-{nav.metrica}"
+                f"-{recorte_atual}-{top_n}"
+            ),
         )
 
         if clicado := graficos.alvo_do_clique(evento_rank, "barra"):

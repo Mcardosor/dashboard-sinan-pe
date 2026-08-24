@@ -415,3 +415,75 @@ def test_o_ranking_sem_escala_volta_a_cor_unica() -> None:
     assert figura.encoding.color.to_dict() == {"value": "#C1440A"}, (
         "sem escala, todas as barras saem na cor da métrica"
     )
+
+
+# ---------------------------------------------------------------------------
+# Ranking e recorte
+# ---------------------------------------------------------------------------
+
+PE = Escopo("TUBERCULOSE", 2024, "UF", uf="PE")
+
+
+@pytest.mark.parametrize(
+    "recorte,esperado",
+    [("MACRO", {"Metropolitana", "Agreste"}), ("MICRO", {"Recife", "Caruaru"})],
+)
+def test_ranking_segue_o_recorte_do_mapa(recorte: str, esperado: set) -> None:
+    """Mapa e ranking têm de mostrar o mesmo recorte.
+
+    Enquanto não seguia, o mapa desenhava macrorregiões e o ranking listava
+    municípios ao lado, com o título dizendo "municípios" — dois recortes na
+    mesma linha. E as cores, que saem da escala do mapa, deixavam de casar:
+    valor de município classificado contra faixas de macrorregião.
+    """
+    tabela = leitura.ranking(PE, "casos", 15, recorte)
+    assert not tabela.empty
+    assert esperado <= set(tabela["nome"]), (
+        f"recorte {recorte} devia listar regiões, veio {list(tabela['nome'])[:4]}"
+    )
+
+
+def test_ranking_so_lista_quem_tem_poligono_no_mapa() -> None:
+    """O `sinan_landing` traz municípios de outros estados sob `uf='PE'`.
+
+    São dez, com 13 registros de 4.350, e sem nome resolvido na origem. O mapa
+    nunca os mostrou — não há geometria para pintar. O ranking mostrava, com o
+    código cru no lugar do nome, e como bastava um caso curado para dar 100%,
+    eles ocupavam o topo do ranking de cura.
+    """
+    from src.data import geo
+
+    de_pe = set(geo.municipios("PE")["cod_mun6"])
+    for metrica in ("incid", "casos", "cura_pct"):
+        tabela = leitura.ranking(PE, metrica, 30)
+        intrusos = set(tabela["chave"]) - de_pe
+        assert not intrusos, f"{metrica}: fora de PE no ranking — {intrusos}"
+
+
+def test_proporcao_com_base_pequena_nao_entra_no_ranking() -> None:
+    """Cura de 100% sobre três encerramentos não é o melhor município do estado.
+
+    A regra já existia para o painel de composição e não alcançava o mapa nem
+    o ranking. Em PE, 84 dos 178 municípios com encerramento têm menos de
+    cinco, e 29 deles apareciam com 100% — o topo inteiro era base pequena.
+    """
+    desfechos = leitura.desfechos_por_geografia(PE)
+    tabela = leitura.ranking(PE, "cura_pct", 15)
+
+    for chave in tabela["chave"]:
+        base = float(desfechos.loc[chave, "total"])
+        assert base >= leitura.MINIMO_PARA_PERCENTUAL, (
+            f"{chave} entrou no ranking de cura com {base:.0f} encerramentos"
+        )
+
+
+def test_a_supressao_de_base_pequena_vale_tambem_no_mapa() -> None:
+    """Mapa e ranking têm de suprimir o mesmo — ou um pinta o que o outro nega."""
+    desfechos = leitura.desfechos_por_geografia(PE)
+    valores = leitura.valores_por_geografia(PE, "cura_pct")
+
+    pequenos = desfechos.index[desfechos["total"] < leitura.MINIMO_PARA_PERCENTUAL]
+    assert len(pequenos) > 0, "amostra sem base pequena — o teste perdeu o alvo"
+    assert valores.reindex(pequenos).isna().all(), (
+        "município com base pequena continua pintado no mapa"
+    )

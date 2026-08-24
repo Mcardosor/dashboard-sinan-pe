@@ -188,6 +188,18 @@ parecer **menor** do que é: 8,6 pontos no painel contra 9,5 na fonte.
 O empilhado de desfechos avisa disso na tela. Não dá para corrigir do nosso
 lado — o dado não chega. Ver `docs/perguntas-equipe-r.md`.
 
+### 17. `sinan_landing` tem município de outra UF sob a UF errada
+
+Filtrando `uf = 'PE'` em 2024 vêm **dez municípios de outros estados** — 13
+registros de 4.350, com `geo_nome` nulo. Prefixos 22, 25, 27, 29 e 35.
+
+O mapa nunca os mostrou, porque não há geometria para pintar; quem cruza com a
+camada geográfica os perde em silêncio, que aqui é o comportamento certo. Quem
+**não** cruza os exibe: o ranking mostrava o código cru no lugar do nome, e
+como bastava um caso curado para dar 100%, eles ocupavam o topo da cura.
+
+Cruze sempre com `geo.municipios(uf)` antes de listar.
+
 ### 6. O código do município tem dois comprimentos
 
 `incidence` e `incidence_0_14` trazem `cod_mun7` (7 dígitos) e `cod_mun6`.

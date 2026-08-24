@@ -353,6 +353,18 @@ _DERIVADA_DE_OBITO = {"obitos", "mortalidade", "letalidade"}
 #: ele serve continua válido para a próxima razão que nascer no `incidence`.
 _RAZAO_EM_INCIDENCE: dict[str, tuple[str, str]] = {}
 
+#: Abaixo deste total, o percentual não é calculado.
+#:
+#: Não é uma regra de privacidade que alguém nos impôs — é que percentual de
+#: base minúscula não significa nada. "100% dos casos são do sexo masculino"
+#: apoiado numa pessoa é ruído apresentado como achado, e num município com
+#: um caso no ano — 993 dos 4.148 com notificação em 2024 — o cruzamento de
+#: município, sexo, idade e agravo deixa de ser agregado na prática.
+#:
+#: A supressão fica aqui, e não no gráfico, para que nenhum consumidor da
+#: camada de dados consiga exibir o percentual por engano.
+MINIMO_PARA_PERCENTUAL = 5
+
 #: Razões que saem da distribuição de `SITUA_ENCE`, sobre todos os
 #: encerramentos.
 #:
@@ -450,7 +462,12 @@ def valores_por_geografia(esc: Escopo, metrica: str) -> pd.Series:
         tabela = desfechos_por_geografia(esc)
         if tabela.empty:
             return pd.Series(dtype=float)
-        return 100 * tabela[grupo] / tabela["total"].replace(0, pd.NA)
+        # Base pequena vira "sem dado", a mesma regra do painel de composicao.
+        # Sem isto, 84 dos 178 municipios de PE com encerramento tinham menos
+        # de cinco, e 29 deles apareciam com 100% de cura -- o topo do mapa e
+        # do ranking era ocupado por municipio com tres casos.
+        base = tabela["total"].where(tabela["total"] >= MINIMO_PARA_PERCENTUAL)
+        return 100 * tabela[grupo] / base
 
     if metrica in _RAZAO_EM_INCIDENCE:
         num, den = _RAZAO_EM_INCIDENCE[metrica]
@@ -632,27 +649,49 @@ def serie_desfechos(esc: Escopo) -> pd.DataFrame:
     return serie
 
 
-def ranking(esc: Escopo, metrica: str, top_n: int = 15) -> pd.DataFrame:
+def ranking(
+    esc: Escopo, metrica: str, top_n: int = 15, recorte: str = "MUN"
+) -> pd.DataFrame:
     """As ``top_n`` maiores geografias do nível abaixo do escopo.
 
     Mesma fonte que o mapa usa — os dois mostram o mesmo recorte, e ler de
     lugares diferentes seria como o card e a série, que divergem por isso.
 
-    Colunas: ``chave`` (sigla de UF ou código de 6 dígitos), ``nome`` e
-    ``valor``. Empates são desempatados pelo nome, para a ordem não variar
-    entre execuções.
+    Colunas: ``chave`` (sigla de UF, código de 6 dígitos ou nome de região),
+    ``nome`` e ``valor``. Empates são desempatados pelo nome, para a ordem não
+    variar entre execuções.
+
+    ``recorte`` acompanha o do mapa: em ``MACRO`` ou ``MICRO`` a lista passa a
+    ser de regiões, não de municípios.
     """
     from . import geo
 
-    valores = valores_por_geografia(esc, metrica)
+    # O ranking segue o **mesmo recorte do mapa**. Enquanto nao seguia, o
+    # mapa mostrava macrorregioes e o ranking listava municipios ao lado, com
+    # o titulo dizendo "municipios" -- dois recortes na mesma linha, e as
+    # cores, que saem da escala do mapa, deixavam de casar.
+    if recorte in ("MACRO", "MICRO") and esc.nivel != "BR":
+        valores = valores_por_regiao(
+            esc, metrica, "macro" if recorte == "MACRO" else "micro"
+        )
+        nomes = {chave: chave for chave in valores.index}
+    else:
+        valores = valores_por_geografia(esc, metrica)
+        if esc.nivel == "BR":
+            nomes = {sigla: sigla for sigla in valores.index}
+        else:
+            camada = geo.municipios(esc.uf)
+            nomes = dict(zip(camada["cod_mun6"], camada["nome_mun"], strict=True))
+            # **So quem tem poligono na camada.** O `sinan_landing` traz, sob
+            # `uf='PE'`, dez municipios de outros estados -- 13 registros de
+            # 4.350, sem nome resolvido na origem. O mapa nunca os mostrou,
+            # porque nao ha geometria para pintar; o ranking mostrava, com o
+            # codigo cru no lugar do nome. Com um caso curado eles subiam ao
+            # topo da cura com 100%.
+            valores = valores[valores.index.isin(nomes)]
+
     if valores.empty:
         return pd.DataFrame(columns=["chave", "nome", "valor"])
-
-    if esc.nivel == "BR":
-        nomes = {sigla: sigla for sigla in valores.index}
-    else:
-        camada = geo.municipios(esc.uf)
-        nomes = dict(zip(camada["cod_mun6"], camada["nome_mun"], strict=True))
 
     tabela = pd.DataFrame(
         {
@@ -795,17 +834,6 @@ def piramide_completa(esc: Escopo, tipo: str = "CASOS") -> pd.DataFrame:
     return juncao.sort_values(["faixa_ord", "sexo"]).reset_index(drop=True)
 
 
-#: Abaixo deste total, o percentual não é calculado.
-#:
-#: Não é uma regra de privacidade que alguém nos impôs — é que percentual de
-#: base minúscula não significa nada. "100% dos casos são do sexo masculino"
-#: apoiado numa pessoa é ruído apresentado como achado, e num município com
-#: um caso no ano — 993 dos 4.148 com notificação em 2024 — o cruzamento de
-#: município, sexo, idade e agravo deixa de ser agregado na prática.
-#:
-#: A supressão fica aqui, e não no gráfico, para que nenhum consumidor da
-#: camada de dados consiga exibir o percentual por engano.
-MINIMO_PARA_PERCENTUAL = 5
 
 
 def composicao(esc: Escopo, variavel: str) -> pd.DataFrame:
