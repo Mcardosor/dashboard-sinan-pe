@@ -169,6 +169,179 @@ def _mercator_inverso(y: float) -> float:
 LARGURA_PAINEL = 580
 
 
+#: Fração da área total que define o "corpo" da camada. O que sobra são
+#: partes minúsculas — ilhas oceânicas, no nosso caso.
+COBERTURA_CORPO = 0.999
+
+#: Quantos graus uma parte precisa estar fora do corpo para contar como
+#: afastada. 1° são cerca de 110 km: mais que qualquer ilha costeira e muito
+#: menos que Fernando de Noronha (4,5°) ou Trindade (5,9°).
+FOLGA_AFASTADA = 1.0
+
+#: Onde e de que tamanho fica o quadro da ilha, em fracao do enquadramento.
+#:
+#: Canto superior direito porque as ilhas brasileiras ficam a leste, e o olho
+#: procura no lado de onde elas vieram. A ilha e escalada para ocupar
+#: `DESTAQUE_TAMANHO` da largura do quadro principal -- Fernando de Noronha
+#: tem 17 km2 contra os 98 mil de Pernambuco, entao em escala real ela e menor
+#: que um pixel.
+DESTAQUE_TAMANHO = 0.11
+DESTAQUE_MARGEM = 0.02
+
+_LIMITES: dict[tuple, tuple] = {}
+
+
+def limites_uteis(camada) -> tuple[tuple[float, float, float, float], list]:
+    """Retângulo de enquadramento ignorando ilhas oceânicas, e quem elas são.
+
+    O ``total_bounds`` cru é dominado por pedaços de terra longe de tudo, e o
+    enquadramento é calculado sobre ele — então o território que se quer ver
+    encolhe para caber junto com uma ilha de 17 km². Medido:
+
+    ==================  =========  ==========
+    camada              cru        útil
+    ==================  =========  ==========
+    Brasil (27 UFs)     45,1°      39,2°
+    PE (185 municípios)  9,0°       6,6°
+    MG, SP              iguais     iguais
+    ==================  =========  ==========
+
+    No Brasil quem estica são **Trindade e Martim Vaz**, ilhas do Espírito
+    Santo a 1.100 km da costa; em PE, **Fernando de Noronha**. O país inteiro
+    desenhava 13% menor por causa de duas ilhas onde ninguém mora.
+
+    Devolve também a lista de índices das feições que ficaram **inteiramente**
+    fora — só essas somem da tela e precisam de um destaque. Trindade não
+    entra na lista: ela é parte do Espírito Santo, que continua visível pelo
+    continente.
+    """
+    import warnings
+
+    import numpy as np
+
+    chave = (len(camada), tuple(round(v, 4) for v in camada.total_bounds))
+    if chave in _LIMITES:
+        return _LIMITES[chave]
+
+    partes = camada.geometry.explode(index_parts=False)
+    # `area` em graus avisa que não é área de verdade, e não precisa ser: só
+    # serve para ordenar partes da mesma camada, e a ordem é a mesma em
+    # qualquer projeção razoável. Reprojetar 5.571 municípios a cada mapa
+    # custaria mais que tudo o que esta função faz.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*geographic CRS.*")
+        areas = partes.area.to_numpy()
+    ordem = np.argsort(areas)[::-1]
+    corte = int(np.searchsorted(np.cumsum(areas[ordem]) / areas.sum(), COBERTURA_CORPO))
+    corpo = partes.iloc[ordem[: corte + 1]]
+
+    # O retângulo do corpo serve só para medir distância. Devolver ele seria
+    # cortar território: em São Paulo, as ilhas costeiras de Cananéia caem no
+    # rabo de 0,1% da área e ficariam de fora por 0,046° — perto demais para
+    # serem "afastadas", e ainda assim recortadas. O que vale é o retângulo de
+    # tudo **menos** as partes distantes.
+    cx0, cy0, cx1, cy1 = (float(v) for v in corpo.total_bounds)
+    b = partes.bounds
+    distante = (
+        (b.minx < cx0 - FOLGA_AFASTADA)
+        | (b.maxx > cx1 + FOLGA_AFASTADA)
+        | (b.miny < cy0 - FOLGA_AFASTADA)
+        | (b.maxy > cy1 + FOLGA_AFASTADA)
+    )
+    fora = partes.index[distante]
+    xmin, ymin, xmax, ymax = (float(v) for v in partes[~distante].total_bounds)
+    # Uma feição só some da tela se **nenhuma** parte dela ficou no corpo.
+    dentro = set(corpo.index)
+    inteiramente_fora = [i for i in dict.fromkeys(fora) if i not in dentro]
+
+    resultado = ((xmin, ymin, xmax, ymax), inteiramente_fora)
+    _LIMITES[chave] = resultado
+    return resultado
+
+
+def extensao_visivel(limites, largura=None, altura=None):
+    """Retangulo que o painel mostra, que e maior que o dos dados.
+
+    `enquadrar` faz o bounding box caber, e sobra margem no eixo que nao
+    limitou. Pernambuco tem 6,6 graus de largura por 1,7 de altura: cabe pela
+    largura, e restam quatro graus de ceu e mar acima e abaixo.
+
+    E nessa margem que o quadro da ilha vai, e nao no canto do bounding box --
+    ali ele cairia em cima da costa nordeste do proprio estado.
+    """
+    largura = LARGURA_PAINEL if largura is None else largura
+    altura = ALTURA if altura is None else altura
+
+    xmin, ymin, xmax, ymax = limites
+    dx = xmax - xmin
+    dy = abs(_mercator(ymax) - _mercator(ymin))
+    escalas = [largura / dx] if dx > 0 else []
+    if dy > 0:
+        escalas.append(altura / dy)
+    if not escalas:
+        return limites
+    px_por_grau = min(escalas)
+
+    meia_x = largura / px_por_grau / 2
+    meia_y = altura / px_por_grau / 2
+    cx = (xmin + xmax) / 2
+    cy_merc = (_mercator(ymin) + _mercator(ymax)) / 2
+    return (
+        cx - meia_x,
+        _mercator_inverso(cy_merc - meia_y),
+        cx + meia_x,
+        _mercator_inverso(cy_merc + meia_y),
+    )
+
+
+def destacar_ilhas(dados, limites, indices):
+    """Move ilhas oceanicas para um quadro no canto, fora de escala.
+
+    Devolve o ``dados`` com a geometria das feicoes de ``indices`` substituida
+    por uma copia ampliada e reposicionada, mais o retangulo do quadro.
+
+    **Por que mover em vez de abrir uma segunda vista.** O deck.gl desenha
+    varias `MapView` no mesmo canvas, e seria o certo, mas o componente do
+    Streamlit gerencia o estado da vista por conta propria: le
+    ``initialViewState.height`` para dimensionar o grafico e passa um
+    controlador unico. Com duas vistas o mapa nao renderiza -- ``deck.gl:
+    assertion failed`` em ``_rebuildViewports``. Testado.
+
+    **Por que mover e honesto.** E o recurso classico dos atlas, e so vale
+    acompanhado do aviso de que esta fora de escala -- por isso o quadro tem
+    borda e rotulo. A alternativa era enquadrar a ilha junto, encolhendo o
+    territorio em 37%, ou deixa-la fora da tela, somindo com um municipio que
+    tem casos. Num painel de vigilancia, mapa incompleto e pior.
+
+    A feicao movida conserta a geometria e **mantem as propriedades**, entao o
+    clique continua entrando no municipio e o tooltip continua certo.
+    """
+    from shapely import affinity
+
+    xmin, ymin, xmax, ymax = limites
+    largura, altura_bbox = xmax - xmin, ymax - ymin
+    lado = largura * DESTAQUE_TAMANHO
+    margem = largura * DESTAQUE_MARGEM
+
+    quadro = (xmax - margem - lado, ymax - margem - lado, xmax - margem, ymax - margem)
+    alvo_x = (quadro[0] + quadro[2]) / 2
+    alvo_y = (quadro[1] + quadro[3]) / 2
+
+    dados = dados.copy()
+    ilhas = dados.loc[indices]
+    ix0, iy0, ix1, iy1 = ilhas.total_bounds
+    extensao = max(ix1 - ix0, iy1 - iy0) or 1e-9
+    fator = (lado * 0.72) / extensao
+
+    for i in indices:
+        g = dados.at[i, "geometry"]
+        g = affinity.scale(g, xfact=fator, yfact=fator, origin="center")
+        cx, cy = g.centroid.x, g.centroid.y
+        dados.at[i, "geometry"] = affinity.translate(g, alvo_x - cx, alvo_y - cy)
+
+    return dados, quadro
+
+
 def enquadrar(
     limites: tuple[float, float, float, float],
     *,
@@ -459,7 +632,21 @@ def deck(
     )
     dados["rotulo"] = dados[colunas[-1]].astype(str)
 
-    quadro = enquadrar(tuple(camada.total_bounds))
+    limites, ilhas = limites_uteis(camada)
+    quadro = enquadrar(limites)
+
+    # A ilha vai para o canto **antes** de virar GeoJSON, para que o clique,
+    # o tooltip e a cor sigam a feicao movida sem tratamento especial.
+    #
+    # Isto invalida a geometria memoizada pelo chamador, que foi feita a
+    # partir da camada crua -- por isso o caminho rapido e desligado quando
+    # ha ilha. Custa uma conversao a mais so nas UFs que tem uma, hoje so PE.
+    moldura = None
+    if ilhas:
+        dados, moldura = destacar_ilhas(
+            dados, extensao_visivel(limites, altura=altura), ilhas
+        )
+        geometrias = None
 
     # As geometrias chegam prontas quando o chamador as memoizou; as
     # propriedades são sempre montadas do zero, porque carregam a cor.
@@ -499,6 +686,36 @@ def deck(
     )
 
     camadas = [camada_geo]
+
+    if moldura is not None:
+        x0, y0, x1, y1 = moldura
+        camadas.append(
+            pydeck.Layer(
+                "PolygonLayer",
+                data=[{"poligono": [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]}],
+                get_polygon="poligono",
+                filled=False,
+                stroked=True,
+                get_line_color=[120, 120, 120, 170],
+                line_width_min_pixels=1,
+                # A moldura nao pode roubar o clique da ilha que ela emoldura.
+                pickable=False,
+            )
+        )
+        nomes = ", ".join(str(n) for n in dados.loc[ilhas, colunas[-1]])
+        camadas.append(
+            pydeck.Layer(
+                "TextLayer",
+                data=[{"posicao": [(x0 + x1) / 2, y0], "texto": f"{nomes} (fora de escala)"}],
+                get_position="posicao",
+                get_text="texto",
+                get_size=10,
+                get_color=[110, 110, 110, 230],
+                get_alignment_baseline="'top'",
+                get_text_anchor="'middle'",
+                pickable=False,
+            )
+        )
 
     if rotulos_valor:
         rotulos = _camada_rotulos(pydeck, dados)

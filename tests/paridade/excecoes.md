@@ -132,6 +132,7 @@ isso continua sendo útil — o que mudou é que a divergência está explicada.
 | Rampa de cor gerada | `mix("#000000", base, t)`, não monotônica | `mix(base, "#000000", t)` | Rampa não monotônica invalida a leitura de escala sequencial. Não afeta a TB, que declara paletas explícitas e nunca cai no fallback |
 | Tooltip dos gráficos | 10,5px | 12px | Legibilidade |
 | Altura do mapa e dos painéis | `height` fixo (520/760px) | `min-height` | Valor fixo quebra em telas baixas |
+| Enquadramento do mapa | retângulo cru, ilhas incluídas | ilhas oceânicas fora do retângulo, com quadro de destaque | Trindade e Martim Vaz faziam o Brasil desenhar 13% menor; Fernando de Noronha encolhia PE em 27% e o Espírito Santo em 83%. A ilha que sumiria da tela ganha quadro no canto, fora de escala e rotulada, e continua clicável |
 
 ## 5. Além do original
 

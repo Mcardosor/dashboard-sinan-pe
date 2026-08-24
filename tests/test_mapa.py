@@ -247,7 +247,9 @@ def test_deck_pinta_cada_feicao() -> None:
     desenho, escala = mapa.deck(
         camada, valores, chave="cod_mun6", rampa=RAMPA, rotulo_metrica="Incidência"
     )
-    assert len(desenho.layers) == 1
+    # Três e não uma: PE tem Fernando de Noronha, que ganha quadro de destaque
+    # com moldura e rótulo. Ver `mapa.destacar_ilhas`.
+    assert [c.type for c in desenho.layers] == ["GeoJsonLayer", "PolygonLayer", "TextLayer"]
     assert escala.classes == mapa.CLASSES
 
 
@@ -389,3 +391,104 @@ def test_os_dois_caminhos_arredondam_igual() -> None:
     convertidas = mapa.geometrias_geojson(geo.municipios("PE"))
     sem, com = _montar_features("PE"), _montar_features("PE", convertidas)
     assert [f["geometry"] for f in sem] == [f["geometry"] for f in com]
+
+
+# ---------------------------------------------------------------------------
+# Ilhas oceânicas
+# ---------------------------------------------------------------------------
+
+
+def test_limites_uteis_ignoram_ilha_oceanica() -> None:
+    """O enquadramento é calculado sobre o retângulo dos dados.
+
+    Com a ilha dentro, o território que se quer ver encolhe para caber junto
+    com um pedaço de terra a centenas de quilômetros. O Brasil inteiro
+    desenhava 13% menor por causa de Trindade e Martim Vaz, ilhas do Espírito
+    Santo onde ninguém mora.
+    """
+    largura = lambda lim: lim[2] - lim[0]  # noqa: E731
+
+    pe = geo.municipios("PE")
+    assert largura(pe.total_bounds) == pytest.approx(9.0, abs=0.1)
+    assert largura(mapa.limites_uteis(pe)[0]) == pytest.approx(6.6, abs=0.1)
+
+    br = geo.ufs()
+    assert largura(br.total_bounds) == pytest.approx(45.1, abs=0.1)
+    assert largura(mapa.limites_uteis(br)[0]) == pytest.approx(39.2, abs=0.1)
+
+
+@pytest.mark.parametrize("uf", ["MG", "SP", "BA", "RS"])
+def test_limites_uteis_nao_mexem_em_quem_nao_tem_ilha(uf: str) -> None:
+    """A regra é geométrica, não uma lista de exceções — e por isso precisa
+    provar que não recorta território legítimo de quem não tem ilha."""
+    camada = geo.municipios(uf)
+    assert tuple(mapa.limites_uteis(camada)[0]) == pytest.approx(
+        tuple(camada.total_bounds), abs=0.01
+    )
+
+
+def test_so_vira_destaque_quem_sumiria_da_tela() -> None:
+    """Trindade não ganha quadro; Fernando de Noronha ganha.
+
+    A diferença é se a **feição** some. Trindade é parte do Espírito Santo,
+    que continua visível pelo continente — tirá-la do enquadramento basta.
+    Fernando de Noronha é um município inteiro, com casos: fora do
+    enquadramento ele desapareceria do mapa e deixaria de ser clicável.
+    """
+    _, fora_no_brasil = mapa.limites_uteis(geo.ufs())
+    assert fora_no_brasil == [], "nenhuma UF some da tela — todas têm continente"
+
+    pe = geo.municipios("PE")
+    _, fora_em_pe = mapa.limites_uteis(pe)
+    assert [pe.loc[i, "nome_mun"] for i in fora_em_pe] == ["Fernando de Noronha"]
+
+    # O Espírito Santo é o caso que separa as duas situações. Descendo aos
+    # municípios dele, Trindade é uma **parte** de Vitória, não um município.
+    # O enquadramento encolhe de 13,03° para 2,21° — o estado deixa de ser
+    # espremido para caber junto com uma ilha a 1.100 km —, e ainda assim
+    # nenhum quadro é preciso: Vitória continua na tela pelo continente.
+    es = geo.municipios("ES")
+    limites_es, fora_em_es = mapa.limites_uteis(es)
+    assert es.total_bounds[2] - es.total_bounds[0] == pytest.approx(13.03, abs=0.05)
+    assert limites_es[2] - limites_es[0] == pytest.approx(2.21, abs=0.05)
+    assert fora_em_es == []
+
+
+def test_a_ilha_destacada_conserva_o_que_a_torna_clicavel() -> None:
+    """Mover a geometria não pode mover o município para outro lugar do dado.
+
+    O clique e o tooltip saem das **propriedades** da feição. Se `destacar_ilhas`
+    reconstruísse a linha em vez de trocar só a geometria, a ilha continuaria
+    desenhada e pararia de responder ao clique — o pior dos dois mundos, porque
+    parece funcionar.
+    """
+    pe = geo.municipios("PE")
+    limites, ilhas = mapa.limites_uteis(pe)
+    antes = pe.loc[ilhas[0]].drop("geometry")
+
+    movido, moldura = mapa.destacar_ilhas(pe, mapa.extensao_visivel(limites), ilhas)
+    depois = movido.loc[ilhas[0]].drop("geometry")
+
+    assert antes.equals(depois)
+    assert len(movido) == len(pe), "nenhuma feição pode entrar nem sair"
+    assert moldura is not None
+
+
+def test_a_ilha_destacada_cai_dentro_da_area_visivel() -> None:
+    """O quadro vai na margem que o painel mostra, não no canto dos dados.
+
+    Na primeira tentativa ele foi para o canto do retângulo de dados e caiu em
+    cima da costa nordeste do próprio estado — PE é largo e baixo, e o canto
+    superior direito dos dados é território.
+    """
+    pe = geo.municipios("PE")
+    limites, ilhas = mapa.limites_uteis(pe)
+    visivel = mapa.extensao_visivel(limites)
+    movido, (x0, y0, x1, y1) = mapa.destacar_ilhas(pe, visivel, ilhas)
+
+    assert visivel[0] <= x0 and x1 <= visivel[2], "quadro sai pela lateral"
+    assert visivel[1] <= y0 and y1 <= visivel[3], "quadro sai por cima ou por baixo"
+    assert y0 > limites[3], "o quadro precisa ficar acima do território, não sobre ele"
+
+    ilha = movido.loc[ilhas[0]].geometry.bounds
+    assert x0 <= ilha[0] and ilha[2] <= x1, "a ilha vazou da moldura"
