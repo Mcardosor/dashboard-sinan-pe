@@ -643,6 +643,22 @@ def _painel_ranking() -> None:
     )
         tabela = _ranking(pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, top_n)
 
+        # A escala é a mesma que o mapa usa, recalculada a partir da mesma
+        # série cacheada — não da fatia do top N, ou as faixas mudariam com o
+        # slider e a barra do Amazonas trocaria de cor ao exibir mais nomes.
+        #
+        # Recalcular em vez de receber do painel do mapa: eles são fragmentos
+        # distintos, e o ranking recarrega sozinho quando o slider mexe.
+        # `test_graficos.py` confere que as duas escalas dão os mesmos cortes.
+        recorte_atual = nav.recorte if nav.tem_recortes_de_saude else "MUN"
+        escala_mapa = mapa.escala_quantil(
+            _valores_mapa(
+                pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, recorte_atual
+            ),
+            pack.rampa_mapa(nav.metrica),
+            decimais=1 if nav.metrica in pack.TAXAS else 0,
+        )
+
         import altair as alt
 
         escolha = alt.selection_point(name="barra", fields=["chave"], on="click")
@@ -656,6 +672,7 @@ def _painel_ranking() -> None:
                 # deixa o painel crescer quando o slider pede mais nomes do
                 # que cabem em 484px.
                 altura_minima=ALTURA_LINHA_1,
+                escala=escala_mapa,
             ),
             use_container_width=True,
             on_select="rerun",

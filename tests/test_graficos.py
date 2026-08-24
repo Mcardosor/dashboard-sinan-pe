@@ -368,3 +368,50 @@ def test_o_rotulo_do_ranking_nunca_deixa_dois_municipios_iguais() -> None:
         f"nomes que viram o mesmo texto no eixo, com {cabem} caracteres: "
         + "; ".join(colisoes[:3])
     )
+
+
+@pytest.mark.parametrize(
+    "nivel,uf", [("BR", None), ("UF", "PE"), ("UF", "MG")], ids=["BR", "PE", "MG"]
+)
+def test_ranking_e_mapa_classificam_pelos_mesmos_cortes(nivel: str, uf: str | None) -> None:
+    """A barra de um estado tem de sair na cor do polígono dele.
+
+    O mapa calcula a escala depois de juntar os valores à geometria; o ranking
+    a calcula da série crua, porque é outro fragmento e recarrega sozinho
+    quando o slider mexe. Se as duas contas divergirem, um estado aparece num
+    tom no mapa e noutro na barra — pior que a cor única de antes, porque
+    parece informação.
+    """
+    from src import mapa
+    from src.data import geo
+
+    esc = Escopo("TUBERCULOSE", 2024, nivel, uf=uf)
+    valores = leitura.valores_por_geografia(esc, "incid")
+    rampa = tb.rampa_mapa("incid")
+
+    camada = geo.ufs() if nivel == "BR" else geo.municipios(uf)
+    chave = "uf" if nivel == "BR" else "cod_mun6"
+    do_mapa = mapa.escala_quantil(camada[chave].map(valores), rampa, decimais=1)
+    do_ranking = mapa.escala_quantil(valores, rampa, decimais=1)
+
+    assert do_mapa.cortes == pytest.approx(do_ranking.cortes)
+    assert do_mapa.cores == do_ranking.cores
+
+
+def test_o_ranking_sem_escala_volta_a_cor_unica() -> None:
+    """O parâmetro é opcional, e a ausência dele não pode quebrar nada.
+
+    Serve a quem chamar o gráfico fora do painel — testes e o script de
+    medição — sem ter uma escala à mão.
+    """
+    import altair as alt
+
+    figura = graficos.ranking(
+        _ranking("UF", "PE", top_n=5),
+        rotulo="Incidência",
+        cor="#C1440A",
+        selecao=alt.selection_point(name="barra", fields=["chave"]),
+    )
+    assert figura.encoding.color.to_dict() == {"value": "#C1440A"}, (
+        "sem escala, todas as barras saem na cor da métrica"
+    )

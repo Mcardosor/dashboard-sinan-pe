@@ -277,6 +277,7 @@ def ranking(
     cor: str,
     selecao: alt.Parameter,
     altura_minima: int = 0,
+    escala=None,
 ) -> alt.Chart:
     """Barras horizontais das maiores geografias, clicáveis.
 
@@ -295,9 +296,37 @@ def ranking(
     forma de degradação silenciosa: o gráfico continua bonito e responde a
     perguntas erradas, porque a barra que se lê não é a que se pensa estar
     lendo.
+
+    ``escala`` é a do mapa ao lado. Passando-a, cada barra recebe a cor do
+    polígono correspondente, e os dois painéis viram uma leitura só: o
+    Amazonas é o tom mais escuro nos dois lugares. Sem ela, todas as barras
+    saem na cor da métrica — que é o que havia antes, e fazia o ranking
+    parecer desligado do mapa.
+
+    A cor é redundante com o comprimento, de propósito: não acrescenta
+    informação, acrescenta **ligação**. Por isso a legenda fica desligada —
+    a do mapa, logo abaixo, já explica as faixas e vale para os dois.
     """
     if dados.empty:
         return sem_dado("Sem dados para ranquear neste recorte")
+
+    if escala is None:
+        cor_da_barra = alt.value(cor)
+    else:
+        # Importado aqui e nao no topo: `graficos` nao depende de `mapa` em
+        # nenhum outro ponto, e subir esse acoplamento para o modulo inteiro
+        # por causa de uma funcao seria pagar caro por pouco.
+        from . import mapa
+
+        dados = dados.assign(classe=mapa.classificar(dados["valor"], escala))
+        cor_da_barra = alt.Color(
+            "classe:N",
+            scale=alt.Scale(
+                domain=list(escala.cores),
+                range=list(escala.cores.values()),
+            ),
+            legend=None,
+        )
 
     return tema(
         alt.Chart(dados)
@@ -310,7 +339,7 @@ def ranking(
                 axis=alt.Axis(labelLimit=LARGURA_ROTULO_RANKING),
             ),
             x=alt.X("valor:Q", title=rotulo),
-            color=alt.value(cor),
+            color=cor_da_barra,
             # O item sob o cursor destaca; os demais recuam. Dá retorno de
             # que a barra é clicável sem precisar de instrução escrita.
             opacity=alt.condition(selecao, alt.value(1.0), alt.value(0.55)),
