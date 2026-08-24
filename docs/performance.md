@@ -36,8 +36,7 @@ cima, o custo por interação tende a zero em recortes já visitados.
 - O painel de composição, que percorre 11 variáveis de `sinan_landing`
 - Comportamento com vários usuários simultâneos
 
-O alvo de tempo de resposta por interação será fixado na semana 6, quando
-mapa e gráficos existirem.
+O alvo de tempo de resposta por interação está fixado abaixo.
 
 ## Geometria (semana 2.4)
 
@@ -190,3 +189,66 @@ no navegador. Não é dado, não é DuckDB, não é geometria.
 Isso delimita o alvo realista: dá para melhorar o que é nosso, e o que é nosso
 já custa 10% do total. Perseguir os outros 90% significaria trocar de
 framework, o que não está em discussão.
+
+---
+
+# Alvo de tempo de resposta
+
+Fixado em 23/ago/2026, com mapa e gráficos prontos. Medido nesta máquina, com
+os parquets em disco local.
+
+| Orçamento | Alvo | Medido | Onde é preso |
+|---|---:|---:|---|
+| **Servidor**, por interação, pior recorte | ≤ 300 ms | **270 ms** (MG) | `tests/test_performance.py` |
+| **Payload do mapa**, pior recorte | ≤ 1,0 MB | **0,71 MB** (MG) | `tests/test_mapa.py` |
+| **Percebido**, rede local | ≤ 1,5 s | **1,0 s** | não testável — ver abaixo |
+
+"Interação" é o trabalho completo de uma troca de recorte ou de métrica: os
+KPIs do ano e do anterior, o mapa, o ranking, a série, a pirâmide, a
+composição e os indicadores.
+
+## Por que o alvo tem três linhas e não uma
+
+Só as duas primeiras são nossas. A terceira depende da máquina do usuário e da
+rede, e um teste que a medisse falharia por motivo alheio ao código — vira
+ruído e acaba desligado.
+
+Os dois orçamentos que controlamos são justamente os que **causam** a terceira,
+e por isso são o que os testes prendem.
+
+## O que a medição do percebido mostrou
+
+Trocar a métrica no mapa do Brasil leva **1,00 s** de mediana, e em Minas
+Gerais leva **1,00 s** também — apesar de MG transferir 0,71 MB contra 0,19 do
+Brasil. Em `localhost` o payload é gratuito, e essa é exatamente a armadilha
+que este documento já registrava: **medir localmente esconde o custo de rede**.
+Num enlace de 10 Mbit/s, o meio megabyte a mais de MG acrescenta cerca de
+0,6 s, e o pior caso vai a ~1,6 s.
+
+Dos 1,00 s medidos, **cerca de 160 ms são nossos**. O resto é o ciclo de rerun
+do Streamlit mais o redesenho de cinco painéis no navegador — deck.gl
+reconstruindo a cena WebGL e o Vega remontando quatro gráficos.
+
+Vale registrar como o alvo **não** foi medido. A primeira tentativa cronometrou
+o indicador de execução do Streamlit e deu ~2 s; a mesma medição dava ~2 s
+também para arrastar o slider do ranking, que só redesenha o ranking dentro de
+um fragmento. Duas interações de custo muito diferente com o mesmo número é
+sinal de que se está medindo o instrumento. O número acima vem de esperar a
+**mudança de conteúdo** — o título do ranking passando a nomear a nova métrica.
+
+## O que já foi ganho depois da linha de base
+
+**Leitura duplicada nos KPIs, 23/ago.** A contagem de desfechos entrou lendo
+`SITUA_ENCE` por conta própria, sem saber que a interrupção já lia. O conjunto
+de KPIs pagava duas idas ao `sinan_landing` pelo mesmo dado. Corrigido lendo
+uma vez e emprestando:
+
+| Recorte | Antes | Depois | |
+|---|---:|---:|---:|
+| Brasil | 23,3 ms | 18,3 ms | −21% |
+| PE | 24,3 ms | 19,4 ms | −20% |
+| Recife | 31,4 ms | 23,5 ms | −25% |
+
+Não quebrou nada e não apareceu em teste nenhum, porque duplicar leitura não
+muda resultado — só custo. `test_calcular_nao_le_a_mesma_variavel_duas_vezes`
+existe para a próxima não passar despercebida.

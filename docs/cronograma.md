@@ -239,8 +239,13 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 ### 6.2 Performance
 - [x] Profiling: o mais lento era montar o mapa (112 ms em MG), dos quais 75 ms eram converter a malha
 - [x] Tuning de `st.cache_data` — TTL de 10 min para 24 h (dado imutável entre publicações) e teto para o cache de geometria, que estava sem limite
-- [ ] Verificar partition pruning nas queries DuckDB
-- [ ] Definir e bater um alvo de tempo de resposta por interação — **depende de medir pela rede**, ver docs/performance.md
+- [x] Verificar partition pruning nas queries DuckDB — `conexao.caminho()` poda
+      pelo caminho, e consultar um município custa o mesmo que consultar o
+      Brasil apesar de `sinan_landing` ter 28,9 M de linhas
+- [x] Definir e bater um alvo de tempo de resposta por interação — fixado em
+      23/ago em três orçamentos: servidor ≤ 300 ms (medido 270), payload do
+      mapa ≤ 1,0 MB (medido 0,71) e percebido ≤ 1,5 s em rede local (medido
+      1,0). Os dois primeiros são presos por teste; ver docs/performance.md
 
 ### 6.3 Robustez — **feito, antecipado**
 - [x] Tratamento de erro por componente — `src/resiliencia.py`. Verificado

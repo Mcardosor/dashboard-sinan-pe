@@ -170,17 +170,31 @@ class Kpis:
     encerramentos: float | None = None
 
 
-def contagem_desfechos(esc: Escopo) -> dict[str, float]:
+def encerramentos(esc: Escopo):
+    """Distribuição de ``SITUA_ENCE`` no recorte, ou ``None`` fora da TB.
+
+    Existe para ser lida **uma vez** por :func:`calcular` e emprestada a quem
+    precisa. Antes, a contagem de desfechos e a interrupção liam cada uma a
+    sua cópia, e o conjunto de KPIs pagava duas idas ao `sinan_landing` pelo
+    mesmo dado — 7 dos 23 ms do recorte nacional.
+    """
+    if esc.doenca != "TUBERCULOSE":
+        return None
+    return leitura.variavel_sinan(esc, "SITUA_ENCE")
+
+
+def contagem_desfechos(esc: Escopo, df=None) -> dict[str, float]:
     """Encerramentos por grupo de desfecho no recorte, mais ``total``.
 
     Mesma regra do empilhado da evolução e do mapa — os três leem
     :func:`grupo_do_desfecho`, então não há como um contar cura de um jeito e
     outro de outro.
+
+    ``df`` evita reler: passe o que :func:`encerramentos` já devolveu.
     """
-    if esc.doenca != "TUBERCULOSE":
-        return {}
-    df = leitura.variavel_sinan(esc, "SITUA_ENCE")
-    if df.empty:
+    if df is None:
+        df = encerramentos(esc)
+    if df is None or df.empty:
         return {}
     por_grupo = df.assign(g=df["valor"].map(grupo_do_desfecho)).groupby("g")["n"].sum()
     contagem = {nome: float(por_grupo.get(nome, 0.0)) for nome, _ in GRUPOS_DESFECHO}
@@ -192,7 +206,9 @@ def calcular(esc: Escopo, regra_interrupcao: str | None = None) -> Kpis:
     """Todos os KPIs do recorte."""
     inc = leitura.incidencia(esc)
     inc14 = leitura.incidencia_0_14(esc)
-    desfechos = contagem_desfechos(esc)
+    # Lido uma vez e emprestado aos dois consumidores abaixo.
+    enc = encerramentos(esc)
+    desfechos = contagem_desfechos(esc, enc)
 
     casos = inc.get("casos_total")
     cura = inc.get("casos_cura")
@@ -219,7 +235,7 @@ def calcular(esc: Escopo, regra_interrupcao: str | None = None) -> Kpis:
         pop_0_14=_num(pop_0_14),
         taxa_det_0_14=_div(casos_0_14, pop_0_14, POR_100K),
         hiv_pos_pct=hiv_pos_pct(esc),
-        interrupcao_trat_pct=interrupcao_trat_pct(esc, regra_interrupcao),
+        interrupcao_trat_pct=interrupcao_trat_pct(esc, regra_interrupcao, enc),
     )
 
 
@@ -254,7 +270,9 @@ def hiv_pos_pct(esc: Escopo) -> float | None:
     return _div(pos, testados, 100)
 
 
-def interrupcao_trat_pct(esc: Escopo, regra: str | None = None) -> float | None:
+def interrupcao_trat_pct(
+    esc: Escopo, regra: str | None = None, df=None
+) -> float | None:
     """Interrupção de tratamento a partir de SITUA_ENCE (tuberculose).
 
     Três regras disponíveis — ver docs/contrato-dados.md, armadilha 4:
@@ -282,7 +300,8 @@ def interrupcao_trat_pct(esc: Escopo, regra: str | None = None) -> float | None:
             f"Regra inválida: {regra!r}. Esperado uma de {sorted(_ABANDONO)}."
         )
 
-    df = leitura.variavel_sinan(esc, "SITUA_ENCE")
+    if df is None:
+        df = leitura.variavel_sinan(esc, "SITUA_ENCE")
     if df.empty:
         return None
 
