@@ -6,7 +6,7 @@ tentativa não repetir o caminho.
 
 ## O que funciona hoje
 
-O mapa renderiza e reage à métrica ativa, com escala por quantil e legenda.
+O mapa renderiza e reage à métrica ativa, com escala em quebras naturais e legenda.
 A navegação existe e usa a mesma máquina de estados (`src/estado.py`) que o
 clique vai usar — só que acionada pelos seletores da barra lateral.
 

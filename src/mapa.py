@@ -59,21 +59,75 @@ def _formatar(valor: float, decimais: int) -> str:
     return texto.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
 
 
-def escala_quantil(
+def _quebras_naturais(v, classes: int, iteracoes: int = 50) -> list[float]:
+    """Cortes que minimizam a variancia dentro de cada classe (Jenks).
+
+    k-medias em uma dimensao, partindo dos quantis e iterando ate estabilizar.
+    Deterministico: mesma entrada, mesmos cortes.
+    """
+    v = np.sort(np.asarray(v, dtype=float))
+    centros = np.quantile(v, np.linspace(0, 1, classes + 2)[1:-1])
+    for _ in range(iteracoes):
+        rotulo = np.abs(v[:, None] - centros[None, :]).argmin(1)
+        novos = np.array(
+            [
+                v[rotulo == i].mean() if (rotulo == i).any() else centros[i]
+                for i in range(classes)
+            ]
+        )
+        if np.allclose(novos, centros):
+            break
+        centros = np.sort(novos)
+    meios = [(centros[i] + centros[i + 1]) / 2 for i in range(classes - 1)]
+    return sorted(set([float(v[0]), *map(float, meios), float(v[-1])]))
+
+
+def escala_natural(
     valores: pd.Series, rampa: list[str], classes: int = CLASSES, decimais: int = 1
 ) -> Escala:
-    """Divide os valores em classes de igual frequência.
+    """Divide os valores em classes por **quebras naturais**.
 
-    Quantis repetidos são colapsados: quando mais da metade dos municípios tem
-    zero caso — o que é comum em recortes pequenos — vários cortes caem no
-    mesmo número e produziriam classes vazias.
+    Era por quantis, classes de igual frequencia, herdado do painel em R.
+    Trocou em 24/ago/2026 porque a incidencia tem cauda longa e o quantil
+    comprime justamente o topo, que e onde a vigilancia olha: em Pernambuco,
+    **29 municipios dividiam a mesma cor cobrindo de 59 a 445 por 100 mil** --
+    Itapissuma e Goiana pintados iguais com seis vezes de diferenca.
+
+    Medido pelo GVF, que e quanto da variancia dos dados a classificacao
+    explica -- 1,0 seria perfeito:
+
+    ==========  ========  ==========  ========
+    recorte     quantil   naturais    iguais
+    ==========  ========  ==========  ========
+    Brasil         0,895       0,958     0,962
+    PE             0,463       0,964     0,823
+    MG             0,791       0,939     0,916
+    ==========  ========  ==========  ========
+
+    Intervalos iguais ganham por pouco no Brasil e perdem feio em PE, e ainda
+    empilham quase tudo na classe de baixo -- o defeito espelhado. Quebras
+    naturais e o unico que vai bem nos tres.
+
+    Custa 2,5 ms em MG, o maior recorte, contra 0,1 do quantil. Cabe no
+    orcamento de 300 ms por interacao com folga; ver docs/performance.md.
+
+    Cortes repetidos sao colapsados: quando mais da metade dos municipios tem
+    zero caso -- comum em recortes pequenos -- varios cortes caem no mesmo
+    numero e produziriam classes vazias.
     """
     limpos = pd.to_numeric(valores, errors="coerce").dropna()
     limpos = limpos[np.isfinite(limpos)]
     if limpos.empty:
         return Escala(cortes=[], rotulos=[], cores={ROTULO_SEM_DADO: SEM_DADO})
 
-    cortes = sorted(set(np.quantile(limpos, np.linspace(0, 1, classes + 1))))
+    if limpos.nunique() <= classes:
+        cortes = sorted(set(limpos.tolist()))
+        if len(cortes) > 1:
+            cortes = cortes[:1] + [
+                (cortes[i] + cortes[i + 1]) / 2 for i in range(len(cortes) - 1)
+            ] + cortes[-1:]
+    else:
+        cortes = _quebras_naturais(limpos.to_numpy(), classes)
     if len(cortes) < 2:
         unico = float(cortes[0])
         rotulo = _formatar(unico, decimais)
@@ -606,6 +660,7 @@ def deck(
     altura: int = ALTURA,
     geometrias: list | None = None,
     rotulos_valor: bool = False,
+    destacado: str | None = None,
 ):
     """Mapa em pydeck, para o drill-down por clique.
 
@@ -622,7 +677,7 @@ def deck(
     dados = camada[[*colunas, "geometry"]].copy()
     dados["valor"] = dados[chave].map(valores)
 
-    escala = escala_quantil(dados["valor"], rampa, decimais=decimais)
+    escala = escala_natural(dados["valor"], rampa, decimais=decimais)
     dados["classe"] = classificar(dados["valor"], escala)
     dados["cor"] = dados["classe"].map(
         lambda c: _rgb(escala.cores.get(c, SEM_DADO))
@@ -722,6 +777,9 @@ def deck(
         if rotulos is not None:
             camadas.append(rotulos)
 
+    if destacado is not None:
+        camadas += _camadas_destaque(pydeck, dados, chave, destacado, colunas[-1])
+
     mapa_deck = pydeck.Deck(
         layers=camadas,
         initial_view_state=pydeck.ViewState(
@@ -755,6 +813,74 @@ def deck(
     # nada mas parece fazer engana quem for mexer depois.
 
     return mapa_deck, escala
+
+
+#: Espessura das duas linhas do destaque, em pixels. A de baixo e branca e
+#: mais larga, a de cima e escura -- o par funciona sobre qualquer tom da
+#: rampa, que vai de creme a quase preto. Uma linha so sumiria numa ponta ou
+#: na outra.
+DESTAQUE_HALO = 5
+DESTAQUE_TRACO = 2
+
+
+def _camadas_destaque(pydeck, dados, chave, destacado, coluna_nome):
+    """Contorno e nome do municipio apontado pelo clique na barra.
+
+    Nao pinta o interior: a cor da feicao e o dado, e sobrepor tinta ali
+    esconderia justamente o que o mapa esta dizendo. O destaque e um contorno
+    e um nome, e nada mais.
+    """
+    alvo = dados[dados[chave].astype(str) == str(destacado)]
+    if alvo.empty:
+        return []
+
+    colecao = {
+        "type": "FeatureCollection",
+        "features": [
+            {"type": "Feature", "geometry": _arredondar(f["geometry"]), "properties": {}}
+            for f in alvo.__geo_interface__["features"]
+        ],
+    }
+
+    def contorno(cor, largura):
+        return pydeck.Layer(
+            "GeoJsonLayer",
+            data=colecao,
+            filled=False,
+            stroked=True,
+            get_line_color=cor,
+            line_width_min_pixels=largura,
+            # Nao pode roubar o clique de quem esta embaixo, que e a propria
+            # feicao destacada -- o mapa continua servindo para entrar nela.
+            pickable=False,
+        )
+
+    camadas = [
+        contorno([255, 255, 255, 235], DESTAQUE_HALO),
+        contorno([17, 24, 39, 245], DESTAQUE_TRACO),
+    ]
+
+    centro = alvo.geometry.iloc[0].centroid
+    nome = str(alvo.iloc[0][coluna_nome])
+    camadas.append(
+        pydeck.Layer(
+            "TextLayer",
+            data=[{"posicao": [centro.x, centro.y], "texto": nome}],
+            get_position="posicao",
+            get_text="texto",
+            get_size=13,
+            get_color=[17, 24, 39, 255],
+            get_alignment_baseline="'bottom'",
+            get_text_anchor="'middle'",
+            get_pixel_offset=[0, -10],
+            background=True,
+            get_background_color=[255, 255, 255, 225],
+            background_padding=[4, 2, 4, 2],
+            font_weight="bold",
+            pickable=False,
+        )
+    )
+    return camadas
 
 
 def legenda(escala: Escala, titulo: str) -> str:

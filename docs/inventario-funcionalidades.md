@@ -104,7 +104,10 @@ Comportamento:
 - [x] Drill-down por clique: BR → UF → MUN
 - [x] `fitBounds` ao trocar de nível — `mapa.enquadrar`
 - [x] Modo "detalhe" do município
-- [x] Escala por quantil k=6 — `mapa.escala_quantil`, com colapso de quantis repetidos
+- [x] Escala em 6 classes — `mapa.escala_natural`, com colapso de cortes
+      repetidos. **Divergência intencional:** o original usa quantil; aqui são
+      quebras naturais, porque o quantil comprimia a cauda e o ranking herdava
+      o problema. Ver `excecoes.md` §4
 - [x] Legenda — em HTML, porque o deck.gl não desenha uma
 - [x] `#F3F4F6` para valor ausente
 - [x] Rampa do *disease pack*, com fallback gerado a partir da cor base

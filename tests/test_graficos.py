@@ -391,8 +391,8 @@ def test_ranking_e_mapa_classificam_pelos_mesmos_cortes(nivel: str, uf: str | No
 
     camada = geo.ufs() if nivel == "BR" else geo.municipios(uf)
     chave = "uf" if nivel == "BR" else "cod_mun6"
-    do_mapa = mapa.escala_quantil(camada[chave].map(valores), rampa, decimais=1)
-    do_ranking = mapa.escala_quantil(valores, rampa, decimais=1)
+    do_mapa = mapa.escala_natural(camada[chave].map(valores), rampa, decimais=1)
+    do_ranking = mapa.escala_natural(valores, rampa, decimais=1)
 
     assert do_mapa.cortes == pytest.approx(do_ranking.cortes)
     assert do_mapa.cores == do_ranking.cores

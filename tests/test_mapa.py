@@ -19,17 +19,74 @@ from src.doencas import tuberculose as tb
 RAMPA = tb.rampa_mapa("casos")
 
 
-def test_escala_divide_em_classes_de_igual_frequencia() -> None:
+def _gvf(valores: pd.Series, escala) -> float:
+    """Quanto da variância a classificação explica. 1,0 seria perfeito.
+
+    É o critério do Jenks: soma dos desvios dentro de cada classe contra a
+    soma dos desvios em torno da média geral.
+    """
+    import numpy as np
+
+    v = valores.to_numpy(dtype=float)
+    total = ((v - v.mean()) ** 2).sum()
+    if not total:
+        return 1.0
+    idx = np.clip(np.searchsorted(escala.cortes, v, side="right") - 1, 0, len(escala.cortes) - 2)
+    dentro = sum(((v[idx == i] - v[idx == i].mean()) ** 2).sum() for i in set(idx))
+    return 1 - dentro / total
+
+
+def test_escala_uniforme_fica_equilibrada() -> None:
+    """Sem cauda, quebras naturais dão classes parecidas com os quantis.
+
+    Serve de piso: a troca de esquema não pode desequilibrar o caso fácil.
+    """
     valores = pd.Series(range(600))
-    escala = mapa.escala_quantil(valores, RAMPA)
+    escala = mapa.escala_natural(valores, RAMPA)
 
     assert escala.classes == mapa.CLASSES
     contagem = mapa.classificar(valores, escala).value_counts()
-    assert contagem.max() - contagem.min() <= 1, "as classes têm de ficar equilibradas"
+    assert contagem.max() / contagem.min() < 1.5, (
+        f"classes desequilibradas em dado uniforme: {dict(contagem)}"
+    )
+
+
+def test_a_escala_nao_comprime_a_cauda() -> None:
+    """O motivo da troca, preso em teste.
+
+    A incidência tem cauda longa, e classe de igual frequência põe tudo que é
+    extremo no mesmo balde: em PE, 29 municípios dividiam uma cor cobrindo de
+    59 a 445 por 100 mil — Itapissuma e Goiana pintados iguais com seis vezes
+    de diferença. Num painel de vigilância o topo é o que se olha.
+
+    O teste compara com o esquema antigo no mesmo dado: quebras naturais têm
+    de explicar mais variância que os quantis.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(42)
+    cauda = pd.Series(np.concatenate([rng.gamma(1.2, 8, 400), [180, 240, 445]]))
+
+    escala = mapa.escala_natural(cauda, RAMPA)
+    quantis = mapa.Escala(
+        cortes=sorted(set(np.quantile(cauda, np.linspace(0, 1, mapa.CLASSES + 1)))),
+        rotulos=[],
+        cores={},
+    )
+
+    assert _gvf(cauda, escala) > _gvf(cauda, quantis) + 0.2, (
+        f"naturais {_gvf(cauda, escala):.3f} contra quantis {_gvf(cauda, quantis):.3f} — "
+        f"a vantagem sumiu; a classificação voltou a comprimir a cauda?"
+    )
+
+    # E o topo não pode virar um balde só: o maior valor tem de estar numa
+    # classe menor que a metade dos dados.
+    no_topo = int((cauda >= escala.cortes[-2]).sum())
+    assert no_topo < len(cauda) / 8, f"{no_topo} de {len(cauda)} na classe do topo"
 
 
 def test_toda_classe_tem_cor() -> None:
-    escala = mapa.escala_quantil(pd.Series(range(100)), RAMPA)
+    escala = mapa.escala_natural(pd.Series(range(100)), RAMPA)
     for rotulo in escala.rotulos:
         assert rotulo in escala.cores
     assert escala.cores[mapa.ROTULO_SEM_DADO] == mapa.SEM_DADO
@@ -38,7 +95,7 @@ def test_toda_classe_tem_cor() -> None:
 def test_valor_minimo_entra_na_primeira_classe() -> None:
     """`pd.cut` exclui o limite inferior por padrão — o menor viraria "sem dado"."""
     valores = pd.Series([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    escala = mapa.escala_quantil(valores, RAMPA)
+    escala = mapa.escala_natural(valores, RAMPA)
     classes = mapa.classificar(valores, escala)
     assert classes.iloc[0] != mapa.ROTULO_SEM_DADO
 
@@ -50,7 +107,7 @@ def test_maioria_zerada_nao_gera_classes_vazias() -> None:
     mostraria classes "0,0 a 0,0" idênticas.
     """
     valores = pd.Series([0] * 70 + list(range(1, 31)))
-    escala = mapa.escala_quantil(valores, RAMPA)
+    escala = mapa.escala_natural(valores, RAMPA)
 
     assert len(set(escala.rotulos)) == len(escala.rotulos), "há classes repetidas"
     classes = mapa.classificar(valores, escala)
@@ -59,14 +116,14 @@ def test_maioria_zerada_nao_gera_classes_vazias() -> None:
 
 
 def test_valor_unico_produz_uma_classe() -> None:
-    escala = mapa.escala_quantil(pd.Series([7.0] * 20), RAMPA)
+    escala = mapa.escala_natural(pd.Series([7.0] * 20), RAMPA)
     assert escala.classes == 1
     classes = mapa.classificar(pd.Series([7.0] * 20), escala)
     assert (classes != mapa.ROTULO_SEM_DADO).all()
 
 
 def test_serie_vazia_nao_quebra() -> None:
-    escala = mapa.escala_quantil(pd.Series([], dtype=float), RAMPA)
+    escala = mapa.escala_natural(pd.Series([], dtype=float), RAMPA)
     assert escala.classes == 0
     classes = mapa.classificar(pd.Series([1.0, 2.0]), escala)
     assert (classes == mapa.ROTULO_SEM_DADO).all()
@@ -75,20 +132,20 @@ def test_serie_vazia_nao_quebra() -> None:
 @pytest.mark.parametrize("ruim", [np.nan, np.inf, -np.inf, None])
 def test_valores_invalidos_viram_sem_dado(ruim) -> None:
     valores = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, ruim], dtype=float)
-    escala = mapa.escala_quantil(valores, RAMPA)
+    escala = mapa.escala_natural(valores, RAMPA)
     classes = mapa.classificar(valores, escala)
     assert classes.iloc[-1] == mapa.ROTULO_SEM_DADO
 
 
 def test_cor_de_sem_dado_nao_colide_com_a_rampa() -> None:
     """Cinza tem de ser distinguível de qualquer tom, senão some no mapa."""
-    escala = mapa.escala_quantil(pd.Series(range(100)), RAMPA)
+    escala = mapa.escala_natural(pd.Series(range(100)), RAMPA)
     tons = {v.upper() for k, v in escala.cores.items() if k != mapa.ROTULO_SEM_DADO}
     assert mapa.SEM_DADO.upper() not in tons
 
 
 def test_rotulos_em_portugues() -> None:
-    escala = mapa.escala_quantil(pd.Series([0.0, 1234.5, 2000.0] * 5), RAMPA)
+    escala = mapa.escala_natural(pd.Series([0.0, 1234.5, 2000.0] * 5), RAMPA)
     assert any("," in r for r in escala.rotulos), "decimal tem de ser vírgula"
 
 
@@ -225,7 +282,7 @@ def test_evento_em_dicionario_tambem_funciona() -> None:
 
 def test_legenda_cobre_todas_as_classes() -> None:
     """O deck.gl não desenha legenda; ela é HTML, como os cards de KPI."""
-    escala = mapa.escala_quantil(pd.Series(range(100)), RAMPA)
+    escala = mapa.escala_natural(pd.Series(range(100)), RAMPA)
     html = mapa.legenda(escala, "Incidência")
     for rotulo in escala.rotulos:
         assert rotulo in html
@@ -234,7 +291,7 @@ def test_legenda_cobre_todas_as_classes() -> None:
 
 
 def test_legenda_escapa_o_titulo() -> None:
-    escala = mapa.escala_quantil(pd.Series(range(10)), RAMPA)
+    escala = mapa.escala_natural(pd.Series(range(10)), RAMPA)
     assert "<script>" not in mapa.legenda(escala, "<script>alert(1)</script>")
 
 

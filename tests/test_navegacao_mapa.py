@@ -74,7 +74,7 @@ def test_escala_e_classificacao_funcionam_em_todo_recorte(recorte: str) -> None:
 
     camada, chave = _camada_e_chave(nav)
     valores = _valores(nav, "incid")
-    escala = mapa.escala_quantil(camada[chave].map(valores), tb.rampa_mapa("incid"))
+    escala = mapa.escala_natural(camada[chave].map(valores), tb.rampa_mapa("incid"))
 
     assert escala.classes >= 1
     classes = mapa.classificar(camada[chave].map(valores), escala)

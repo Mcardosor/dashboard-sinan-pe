@@ -51,6 +51,17 @@ class Navegacao:
     #: Rótulo do município corrente, só para exibição.
     nome_mun: str | None = None
 
+    #: Municipio apontado no mapa sem entrar nele, vindo do clique na barra do
+    #: ranking. E so localizacao: o escopo continua na UF, e os KPIs, a serie e
+    #: a composicao seguem falando do estado inteiro.
+    #:
+    #: Existe porque as duas perguntas sao diferentes. "Onde fica esse
+    #: municipio?" se responde olhando o mapa com ele aceso; "como esta esse
+    #: municipio?" se responde entrando nele, o que o clique no proprio mapa e
+    #: a busca por nome ja fazem.
+    destacado: str | None = None
+    nome_destacado: str | None = None
+
     _historico: list[str] = field(default_factory=list, repr=False)
 
     # -- consultas ----------------------------------------------------------
@@ -87,6 +98,7 @@ class Navegacao:
         self.mun = None
         self.nome_mun = None
         self.detalhe = False
+        self.limpar_destaque()
         if not self.tem_recortes_de_saude:
             self.recorte = "MUN"
             self.macro = None
@@ -97,6 +109,25 @@ class Navegacao:
         self.nome_mun = nome
         self.nivel = "MUN"
         self.detalhe = False
+        self.limpar_destaque()
+
+    def destacar(self, mun: str, nome: str | None = None) -> None:
+        """Acende um municipio no mapa sem mudar o escopo.
+
+        **Idempotente de proposito, e nao um interruptor.** A selecao do
+        grafico persiste entre execucoes: o clique nao chega como evento, mas
+        como estado que continua la na proxima passada. Um `destacar` que
+        alternasse acendia, reiniciava a pagina, apagava, reiniciava -- laco
+        infinito, e foi o que aconteceu na primeira versao.
+
+        Quem apaga e `limpar_destaque`, pelo botao ao lado do mapa.
+        """
+        self.destacado = mun6(mun)
+        self.nome_destacado = nome
+
+    def limpar_destaque(self) -> None:
+        self.destacado = None
+        self.nome_destacado = None
 
     def abrir_detalhe(self) -> None:
         if self.nivel != "MUN":
@@ -173,6 +204,7 @@ class Navegacao:
         self.mun = None
         self.nome_mun = None
         self.detalhe = False
+        self.limpar_destaque()
         self.recorte = "MUN"
         self.macro = None
         self.micro = None

@@ -556,6 +556,7 @@ with esquerda, resiliencia.painel("Mapa"):
             # "13.315,0 curas", meia pessoa inclusa. Invertendo a pergunta,
             # métrica nova nasce como contagem até ser declarada taxa.
             decimais=1 if nav.metrica in pack.TAXAS else 0,
+            destacado=nav.destacado,
             geometrias=_geojson(
                 nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro
             ),
@@ -590,6 +591,23 @@ with esquerda, resiliencia.painel("Mapa"):
             st.caption("Clique de novo no município para abrir o detalhe.")
         elif nav.detalhe:
             st.caption(f"Detalhe de {nav.nome_mun or nav.mun}.")
+        elif nav.destacado:
+            # Diz o que está aceso e dá o botão de apagar. Sem isto o contorno
+            # vira um estado que o usuário não sabe que ligou nem como
+            # desligar — e clicar de novo na mesma barra não serve, porque a
+            # seleção do gráfico persiste e não chega como evento novo.
+            aceso, botao = st.columns([4, 1], vertical_alignment="center")
+            aceso.caption(
+                f"**{nav.nome_destacado or nav.destacado}** em destaque — os "
+                f"números continuam sendo de {nav.uf}. Clique no mapa para "
+                f"entrar no município."
+            )
+            botao.button(
+                "Tirar destaque",
+                use_container_width=True,
+                on_click=nav.limpar_destaque,
+                key="limpar_destaque",
+            )
 
         if alvo := mapa.alvo_do_clique(evento):
             if nivel_mapa == "UF" and alvo != nav.uf:
@@ -651,7 +669,7 @@ def _painel_ranking() -> None:
         # distintos, e o ranking recarrega sozinho quando o slider mexe.
         # `test_graficos.py` confere que as duas escalas dão os mesmos cortes.
         recorte_atual = nav.recorte if nav.tem_recortes_de_saude else "MUN"
-        escala_mapa = mapa.escala_quantil(
+        escala_mapa = mapa.escala_natural(
             _valores_mapa(
                 pack.DOENCA, nav.ano, nav.nivel, nav.uf, nav.metrica, recorte_atual
             ),
@@ -680,15 +698,24 @@ def _painel_ranking() -> None:
         )
 
         if clicado := graficos.alvo_do_clique(evento_rank, "barra"):
-            # Clicar numa barra navega o mapa — o ranking responde a mesma
-            # máquina de estados, não tem navegação própria.
+            # A barra faz coisas diferentes nos dois níveis, porque as
+            # perguntas são diferentes.
+            #
+            # No Brasil, o nome da UF já diz onde ela fica: clicar entra nela,
+            # e o ranking passa a listar os municípios dela.
+            #
+            # Dentro de uma UF, "Itapissuma" não diz nada sobre onde fica —
+            # e é essa a pergunta que o ranking deixa no ar. Clicar **acende**
+            # o município no mapa sem mudar o escopo: os KPIs, a série e a
+            # composição seguem falando do estado inteiro. Para entrar nele,
+            # o clique no próprio mapa e a busca por nome continuam valendo.
             if nav.nivel == "BR" and clicado != nav.uf:
                 nav.entrar_uf(clicado)
                 st.rerun(scope="app")
-            elif nav.nivel != "BR" and clicado != nav.mun:
+            elif nav.nivel != "BR" and clicado != nav.destacado:
                 nomes = _municipios(nav.uf)
                 if clicado in nomes:
-                    nav.entrar_municipio(clicado, nome=nomes[clicado])
+                    nav.destacar(clicado, nome=nomes[clicado])
                     st.rerun(scope="app")
 
 
