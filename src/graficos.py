@@ -47,6 +47,38 @@ ALTURA_EIXO_RANKING = 82
 #: Piso do ranking, para uma lista de 5 não virar uma tira.
 ALTURA_MIN_RANKING = 180
 
+#: Espaço para o nome no eixo do ranking, em pixels.
+#:
+#: **O critério não é estética, é identificação.** Cortado curto demais, dois
+#: municípios diferentes da mesma UF viram o mesmo texto, e o ranking deixa de
+#: dizer de quem é a barra. Medido sobre os 5.571 nomes, com a largura de
+#: :data:`PX_POR_CARACTERE`:
+#:
+#: ====== ======== =========
+#: limite cortados ambíguos
+#: ====== ======== =========
+#: 98         891        49
+#: 120        429         4
+#: **150**     23         0
+#: 175          2         0
+#: ====== ======== =========
+#:
+#: 98 era o que o Vega dava sozinho, e ali "São Domingos do Maranhão" e "São
+#: Domingos do Azeitão" apareciam idênticos. 150 é o **menor** valor onde
+#: nenhum par colide; os 23 que ainda cortam continuam únicos, e o nome
+#: inteiro está no tooltip. Subir para 175 salvaria dois nomes e custaria 25px
+#: de barra a todo mundo.
+LARGURA_ROTULO_RANKING = 150
+
+#: Largura média de um caractere do rótulo, medida no navegador com a fonte de
+#: 12px do tema: "José Gonçalves de Minas" ocupa 132px em 23 caracteres.
+#:
+#: Serve para o teste conferir a propriedade de identificação sem abrir um
+#: navegador. É aproximação — nome cheio de "i" ocupa menos que um de "m" —,
+#: mas o erro é da ordem de um caractere e a margem entre 150 e o primeiro
+#: valor que colide (120) é de seis.
+PX_POR_CARACTERE = 5.74
+
 #: Tooltip escuro do original: fundo quase preto, cantos arredondados.
 TOOLTIP_FUNDO = "#111827"
 
@@ -271,7 +303,12 @@ def ranking(
         alt.Chart(dados)
         .mark_bar(cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
         .encode(
-            y=alt.Y("nome:N", sort="-x", title=None),
+            y=alt.Y(
+                "nome:N",
+                sort="-x",
+                title=None,
+                axis=alt.Axis(labelLimit=LARGURA_ROTULO_RANKING),
+            ),
             x=alt.X("valor:Q", title=rotulo),
             color=alt.value(cor),
             # O item sob o cursor destaca; os demais recuam. Dá retorno de

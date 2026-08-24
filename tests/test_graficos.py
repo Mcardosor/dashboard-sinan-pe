@@ -336,3 +336,35 @@ def test_altura_do_ranking_e_piso_e_nao_teto() -> None:
     assert altura(5) == 484, "lista curta tem de fechar com o mapa"
     assert altura(15) == 484, "o padrão tem de fechar com o mapa"
     assert altura(30) > 484, "lista longa tem de crescer além do piso"
+
+
+def test_o_rotulo_do_ranking_nunca_deixa_dois_municipios_iguais() -> None:
+    """Cortar o nome curto demais faz o ranking mentir sobre quem é a barra.
+
+    Com os 98px que o Vega dava sozinho, 891 dos 5.571 municípios cortavam e
+    **49 ficavam ambíguos** — "São Domingos do Maranhão" e "São Domingos do
+    Azeitão" apareciam com o mesmo texto, na mesma UF, no mesmo gráfico.
+
+    Este teste não confere largura: confere a propriedade que a largura existe
+    para garantir. Baixar `LARGURA_ROTULO_RANKING` volta a colidir e ele
+    acusa, dizendo quais nomes.
+    """
+    import collections
+
+    from src.data import config, geo
+
+    cabem = int(graficos.LARGURA_ROTULO_RANKING / graficos.PX_POR_CARACTERE)
+    colisoes = []
+    for uf in sorted(config.CODIGO_POR_UF):
+        vistos = collections.defaultdict(list)
+        for nome in geo.municipios(uf)["nome_mun"]:
+            exibido = nome if len(nome) <= cabem else nome[: cabem - 1] + "…"
+            vistos[exibido].append(nome)
+        for exibido, originais in vistos.items():
+            if len(originais) > 1 and exibido.endswith("…"):
+                colisoes.append(f"{uf}: {originais}")
+
+    assert not colisoes, (
+        f"nomes que viram o mesmo texto no eixo, com {cabem} caracteres: "
+        + "; ".join(colisoes[:3])
+    )
