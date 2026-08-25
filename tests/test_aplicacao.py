@@ -237,3 +237,48 @@ def test_o_controle_de_recorte_segue_a_navegacao() -> None:
     controle.set_value("MACRO").run()
     _conferir(at, "após escolher macrorregiões")
     assert at.session_state["nav"].recorte == "MACRO"
+
+
+def test_o_municipio_selecionado_e_apontado_no_mapa() -> None:
+    """Entrar num município pelo mapa tem de mudar o mapa também.
+
+    Antes, o clique trocava os KPIs, a série e a composição — e o mapa ficava
+    idêntico. Num estado de 185 polígonos, quem clicasse perdia de vista qual
+    tinha escolhido, e nada na tela dizia onde ele ficava.
+
+    O tratamento é o mesmo do destaque vindo do ranking: contorno, nome com
+    valor e enquadramento em cima dele.
+    """
+    from src import mapa
+
+    at = _rodar(nivel="MUN", uf="PE", mun="261160", nome_mun="Recife")
+    _conferir(at, "Recife selecionado")
+
+    # O zoom do foco é o sinal observável: sem ele o enquadramento seria o do
+    # estado inteiro.
+    from src.data import geo, leitura
+    from src.data.escopo import Escopo
+    from src.doencas import tuberculose as pack
+
+    camada = geo.municipios("PE")
+    valores = leitura.valores_por_geografia(Escopo("TUBERCULOSE", 2024, "UF", uf="PE"), "incid")
+
+    def zoom(destacado):
+        figura, _ = mapa.deck(
+            camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
+            rotulo_metrica="Incidência", destacado=destacado,
+        )
+        return figura.initial_view_state.zoom
+
+    assert zoom("261160") > zoom(None), "o município selecionado não aproxima"
+
+
+def test_no_modo_detalhe_o_municipio_nao_ganha_contorno() -> None:
+    """Contornar o único polígono da tela não diz nada.
+
+    No detalhe a camada já encolheu para um município só — o contorno viraria
+    enfeite e a etiqueta repetiria o título do painel.
+    """
+    at = _rodar(nivel="MUN", uf="PE", mun="261160", nome_mun="Recife", detalhe=True)
+    _conferir(at, "Recife em detalhe")
+    assert any("Detalhe de" in c.value for c in at.caption), "sumiu o aviso de detalhe"

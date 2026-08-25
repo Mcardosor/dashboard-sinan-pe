@@ -573,7 +573,17 @@ with esquerda, resiliencia.painel("Mapa"):
             # "13.315,0 curas", meia pessoa inclusa. Invertendo a pergunta,
             # métrica nova nasce como contagem até ser declarada taxa.
             decimais=1 if nav.metrica in pack.TAXAS else 0,
-            destacado=nav.destacado,
+            # O município **selecionado** recebe o mesmo tratamento do
+            # destacado: contorno, nome com valor e enquadramento em cima
+            # dele. Antes, clicar num município no mapa mudava os KPIs e
+            # deixava o mapa idêntico — quem clicasse perdia de vista qual
+            # tinha escolhido, num mapa de 185 polígonos.
+            #
+            # No modo detalhe não: ali a camada já encolheu para um município
+            # só, e contornar o único da tela não diz nada.
+            destacado=nav.destacado or (
+                nav.mun if nav.nivel == "MUN" and not nav.detalhe else None
+            ),
             geometrias=_geojson(
                 nav.nivel, nav.uf, recorte, nav.mun, nav.detalhe, nav.micro
             ),
