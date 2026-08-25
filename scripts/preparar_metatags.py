@@ -54,7 +54,11 @@ def main() -> int:
 
     estatico = pathlib.Path(streamlit.__file__).parent / "static"
     indice = estatico / "index.html"
-    html = io.open(indice, encoding="utf-8").read()
+    # Com `with`, e não `io.open(...).read()`: o alvo é reescrito logo abaixo,
+    # e no Windows um descritor ainda aberto no mesmo arquivo faz a escrita
+    # falhar — em build de container passa despercebido porque lá é Linux.
+    with io.open(indice, encoding="utf-8") as arquivo:
+        html = arquivo.read()
 
     if "og:title" in html:
         print("metatags já presentes — nada a fazer")
@@ -70,7 +74,8 @@ def main() -> int:
         )
         return 1
 
-    io.open(indice, "w", encoding="utf-8").write(html.replace(ANCORA, NOVO, 1))
+    with io.open(indice, "w", encoding="utf-8") as arquivo:
+        arquivo.write(html.replace(ANCORA, NOVO, 1))
     print(f"metatags injetadas em {indice}")
     return 0
 

@@ -439,7 +439,7 @@ def destacar_ilhas(dados, limites, indices):
     from shapely import affinity
 
     xmin, ymin, xmax, ymax = limites
-    largura, altura_bbox = xmax - xmin, ymax - ymin
+    largura = xmax - xmin
     lado = largura * DESTAQUE_TAMANHO
     margem = largura * DESTAQUE_MARGEM
 

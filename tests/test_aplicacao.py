@@ -198,3 +198,42 @@ def test_a_trilha_aparece_dentro_de_uma_regiao_de_saude() -> None:
     at = _rodar(nivel="UF", uf="PE", recorte="MICRO", macro="Metropolitana")
     _conferir(at, "PE/micro")
     assert any("Macro" in c.value for c in at.caption), "sumiu a trilha"
+
+
+def test_entrar_numa_macrorregiao_nao_gira_a_pagina() -> None:
+    """O controle de recorte é espelho da navegação, não dono dela.
+
+    Com `key`, o widget reimpunha o valor antigo a cada rerun: entrar numa
+    macrorregião muda o recorte para "regiões de saúde", o controle forçava
+    de volta para "macrorregiões", `definir_recorte` limpava a macro
+    recém-escolhida, e o clique persistido reentrava nela. A página girava sem
+    parar.
+
+    O `AppTest` executa até estabilizar, então um laço aparece aqui como
+    estouro de tempo — que é o que este teste prende.
+    """
+    at = _rodar(nivel="UF", uf="PE", recorte="MICRO", macro="Metropolitana")
+    _conferir(at, "PE dentro de uma macrorregião")
+
+    assert at.session_state["nav"].recorte == "MICRO", (
+        f"o recorte voltou para {at.session_state['nav'].recorte} — o controle "
+        f"está brigando com a navegação de novo"
+    )
+    assert at.session_state["nav"].macro == "Metropolitana", (
+        "a macrorregião foi limpa; era isso que alimentava o laço"
+    )
+
+
+def test_o_controle_de_recorte_segue_a_navegacao() -> None:
+    """Trocar de recorte pelo controle continua funcionando.
+
+    O contrapeso do teste acima: tirar a `key` não pode quebrar o caminho
+    normal, que é o usuário escolhendo a divisão na barra.
+    """
+    at = _rodar(nivel="UF", uf="PE")
+    controle = next(c for c in at.segmented_control if "Recorte" in c.label)
+    assert controle.value == "MUN"
+
+    controle.set_value("MACRO").run()
+    _conferir(at, "após escolher macrorregiões")
+    assert at.session_state["nav"].recorte == "MACRO"

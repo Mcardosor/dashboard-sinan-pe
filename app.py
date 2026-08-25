@@ -357,12 +357,24 @@ with st.container(border=True):
         with next(colunas):
             # Segmentado como a métrica, e pela mesma razão: são poucas
             # opções, sempre uma ativa, e o rádio gastava três linhas.
+            # **Sem `key`, e isso não é descuido.** Este controle é espelho da
+            # navegação, não dono dela: entrar numa macrorregião pelo mapa ou
+            # pelo ranking muda o recorte para "regiões de saúde" sozinho.
+            #
+            # Com `key`, o widget passava a ser o dono e brigava com a
+            # navegação: a cada rerun ele reimpunha o valor antigo, o
+            # `definir_recorte` limpava a macro recém-escolhida, o clique
+            # persistido reentrava nela — e a página girava sem parar. O
+            # clique no mapa já sofria disso em silêncio desde 23/ago; o
+            # clique na barra só tornou o laço visível.
+            #
+            # Sem `key`, `default` manda a cada execução e o controle segue a
+            # navegação, como o seletor de município ao lado.
             recorte_escolhido = st.segmented_control(
                 "Recorte do mapa",
                 RECORTES,
                 default=nav.recorte,
                 format_func=ROTULO_RECORTE.get,
-                key="recorte_mapa",
                 help="Em que divisão o mapa reparte a UF.",
             )
             # Mesma guarda do seletor de métrica.
@@ -730,10 +742,21 @@ def _painel_ranking() -> None:
             # o município no mapa sem mudar o escopo: os KPIs, a série e a
             # composição seguem falando do estado inteiro. Para entrar nele,
             # o clique no próprio mapa e a busca por nome continuam valendo.
+            #
+            # Nos recortes de saúde a barra é uma região, não um município, e
+            # aí ela faz o que o polígono correspondente faz: entra nela. Sem
+            # isto o clique caía no guarda de município e não acontecia nada —
+            # barra inerte, sem aviso.
             if nav.nivel == "BR" and clicado != nav.uf:
                 nav.entrar_uf(clicado)
                 st.rerun(scope="app")
-            elif nav.nivel != "BR" and clicado != nav.destacado:
+            elif recorte_atual == "MACRO" and clicado != nav.macro:
+                nav.entrar_macro(clicado)
+                st.rerun(scope="app")
+            elif recorte_atual == "MICRO" and clicado != nav.micro:
+                nav.entrar_micro(clicado)
+                st.rerun(scope="app")
+            elif recorte_atual == "MUN" and clicado != nav.destacado:
                 nomes = _municipios(nav.uf)
                 if clicado in nomes:
                     nav.destacar(clicado, nome=nomes[clicado])
