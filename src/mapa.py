@@ -918,23 +918,39 @@ def _camadas_destaque(pydeck, dados, chave, destacado, coluna_nome):
         contorno([17, 24, 39, 245], DESTAQUE_TRACO),
     ]
 
+    # A etiqueta traz nome **e** valor, e nao so o nome.
+    #
+    # O contorno ja diz onde; o que falta e quanto, que e a pergunta do painel.
+    # Sem o valor, quem destaca um municipio tem de procurar a barra dele no
+    # ranking para saber o numero -- ida e volta que a etiqueta resolve.
+    #
+    # `font_weight` saiu: a camada de rotulos de valor, que funciona ha
+    # semanas, nao usa, e a diferenca entre as duas era essa mais o
+    # alinhamento. Nao vale carregar uma propriedade a mais numa camada que
+    # precisa ser legivel acima de tudo.
     centro = alvo.geometry.iloc[0].centroid
     nome = str(alvo.iloc[0][coluna_nome])
+    exibicao = alvo.iloc[0].get("exibicao")
+    texto = f"{nome}  {exibicao}" if exibicao not in (None, "", "\u2014") else nome
     camadas.append(
         pydeck.Layer(
             "TextLayer",
-            data=[{"posicao": [centro.x, centro.y], "texto": nome}],
+            data=[{"posicao": [centro.x, centro.y], "texto": texto}],
             get_position="posicao",
             get_text="texto",
-            get_size=13,
+            # 14 contra os 11 dos rotulos de valor: a etiqueta e uma so na
+            # tela, entao pode ser maior sem virar poluicao, e ela precisa se
+            # destacar do proprio mapa que esta anotando.
+            get_size=14,
             get_color=[17, 24, 39, 255],
-            get_alignment_baseline="'bottom'",
             get_text_anchor="'middle'",
-            get_pixel_offset=[0, -10],
+            get_alignment_baseline="'center'",
+            get_pixel_offset=[0, -22],
             background=True,
-            get_background_color=[255, 255, 255, 225],
-            background_padding=[4, 2, 4, 2],
-            font_weight="bold",
+            get_background_color=[255, 255, 255, 235],
+            background_padding=[6, 3, 6, 3],
+            get_border_color=[17, 24, 39, 180],
+            get_border_width=1,
             pickable=False,
         )
     )
