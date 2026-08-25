@@ -348,6 +348,49 @@ def extensao_visivel(limites, largura=None, altura=None):
     )
 
 
+#: Quantas vezes o municipio destacado cabe na largura enquadrada.
+#:
+#: 5 e nao 1: enquadrar so o municipio responde "como ele e por dentro", e a
+#: pergunta do destaque e "onde ele fica". Com cinco vezes, os vizinhos
+#: aparecem e da para se localizar sem perder o municipio de vista.
+FOCO_VIZINHANCA = 5
+
+#: Piso do enquadramento, como fracao do recorte inteiro. Sem ele, um
+#: municipio de 8 km2 levaria a um zoom em que nada mais e reconhecivel.
+FOCO_MINIMO = 0.28
+
+
+def enquadrar_foco(limites, alvo):
+    """Retangulo em volta de ``alvo``, com vizinhanca e preso dentro de ``limites``.
+
+    Devolve `None` quando nao ha o que focar, e ai o chamador segue com o
+    enquadramento do recorte inteiro.
+    """
+    if alvo is None:
+        return None
+
+    ax0, ay0, ax1, ay1 = alvo
+    x0, y0, x1, y1 = limites
+    largura_recorte, altura_recorte = x1 - x0, y1 - y0
+
+    lado = max(
+        (ax1 - ax0) * FOCO_VIZINHANCA,
+        (ay1 - ay0) * FOCO_VIZINHANCA,
+        largura_recorte * FOCO_MINIMO,
+        altura_recorte * FOCO_MINIMO,
+    )
+    cx, cy = (ax0 + ax1) / 2, (ay0 + ay1) / 2
+    meia = lado / 2
+
+    # Preso dentro do recorte: um municipio na borda puxaria o enquadramento
+    # para fora do estado, e sobraria oceano ou territorio vizinho sem dado.
+    meia_x = min(meia, largura_recorte / 2)
+    meia_y = min(meia, altura_recorte / 2)
+    cx = min(max(cx, x0 + meia_x), x1 - meia_x)
+    cy = min(max(cy, y0 + meia_y), y1 - meia_y)
+    return (cx - meia_x, cy - meia_y, cx + meia_x, cy + meia_y)
+
+
 def destacar_ilhas(dados, limites, indices):
     """Move ilhas oceanicas para um quadro no canto, fora de escala.
 
@@ -688,7 +731,22 @@ def deck(
     dados["rotulo"] = dados[colunas[-1]].astype(str)
 
     limites, ilhas = limites_uteis(camada)
-    quadro = enquadrar(limites)
+
+    # Destaque tambem aproxima. Sem isso, um municipio pequeno acende como um
+    # contorno de tres pixels no meio do estado e a pergunta "onde fica"
+    # continua sem resposta.
+    #
+    # A ilha e a excecao: ela ja aparece ampliada no quadro do canto, e
+    # aproximar nela levaria o enquadramento para o oceano.
+    foco = None
+    if destacado is not None and destacado not in {str(i) for i in ilhas}:
+        alvo = dados[dados[chave].astype(str) == str(destacado)]
+        if not alvo.empty and str(destacado) not in {
+            str(camada.loc[i, chave]) for i in ilhas
+        }:
+            foco = enquadrar_foco(limites, tuple(alvo.total_bounds))
+
+    quadro = enquadrar(foco or limites)
 
     # A ilha vai para o canto **antes** de virar GeoJSON, para que o clique,
     # o tooltip e a cor sigam a feicao movida sem tratamento especial.
@@ -699,7 +757,7 @@ def deck(
     moldura = None
     if ilhas:
         dados, moldura = destacar_ilhas(
-            dados, extensao_visivel(limites, altura=altura), ilhas
+            dados, extensao_visivel(foco or limites, altura=altura), ilhas
         )
         geometrias = None
 

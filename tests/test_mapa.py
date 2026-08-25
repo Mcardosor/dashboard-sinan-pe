@@ -549,3 +549,87 @@ def test_a_ilha_destacada_cai_dentro_da_area_visivel() -> None:
 
     ilha = movido.loc[ilhas[0]].geometry.bounds
     assert x0 <= ilha[0] and ilha[2] <= x1, "a ilha vazou da moldura"
+
+
+def test_o_destaque_aproxima_mas_nao_perde_o_contexto() -> None:
+    """Acender sem aproximar deixa a pergunta sem resposta.
+
+    Recife tem 0,23° num estado de 6,55°: o contorno sai com três pixels e
+    "onde fica" continua no ar. Mas enquadrar **só** o município responde
+    outra pergunta — como ele é por dentro —, e aí some a referência.
+    """
+    pe = geo.municipios("PE")
+    limites, _ = mapa.limites_uteis(pe)
+    recife = tuple(pe[pe["nome_mun"] == "Recife"].total_bounds)
+
+    foco = mapa.enquadrar_foco(limites, recife)
+    largura_foco = foco[2] - foco[0]
+
+    assert largura_foco > (recife[2] - recife[0]) * 2, "aproximou demais"
+    assert largura_foco < (limites[2] - limites[0]), "não aproximou"
+
+
+def test_o_foco_nao_sai_do_recorte() -> None:
+    """Município de borda puxaria o enquadramento para fora do estado.
+
+    Fora dali não há dado nenhum: sobraria oceano, ou território vizinho em
+    branco fingindo ser 'sem dado'.
+    """
+    pe = geo.municipios("PE")
+    limites, _ = mapa.limites_uteis(pe)
+
+    for nome in ("Petrolina", "Recife", "Afrânio"):
+        alvo = pe[pe["nome_mun"] == nome]
+        if alvo.empty:
+            continue
+        f = mapa.enquadrar_foco(limites, tuple(alvo.total_bounds))
+        # Tolerância porque o grampo encosta exatamente na borda, e aí a
+        # comparação vira ruído de ponto flutuante.
+        folga = 1e-9
+        assert limites[0] - folga <= f[0] and f[2] <= limites[2] + folga, (
+            f"{nome} vazou na horizontal"
+        )
+        assert limites[1] - folga <= f[1] and f[3] <= limites[3] + folga, (
+            f"{nome} vazou na vertical"
+        )
+
+
+def test_municipio_maior_que_o_estado_nao_estoura_o_foco() -> None:
+    """Barcelos sozinho tem quase a largura do Amazonas.
+
+    Cinco vezes o tamanho dele daria um enquadramento maior que a UF, e o
+    grampo tem de segurar sem inverter o retângulo.
+    """
+    am = geo.municipios("AM")
+    limites, _ = mapa.limites_uteis(am)
+    barcelos = am[am["nome_mun"] == "Barcelos"]
+    if barcelos.empty:
+        pytest.skip("Barcelos não está na camada")
+
+    f = mapa.enquadrar_foco(limites, tuple(barcelos.total_bounds))
+    assert f[0] < f[2] and f[1] < f[3], "retângulo invertido"
+    assert f[2] - f[0] <= limites[2] - limites[0] + 1e-9
+
+
+def test_destacar_ilha_nao_aproxima() -> None:
+    """Fernando de Noronha já aparece ampliada no quadro do canto.
+
+    Aproximar nela levaria o enquadramento para o meio do oceano, e o estado
+    sumiria da tela.
+    """
+    from src.data import leitura
+    from src.data.escopo import Escopo
+    from src.doencas import tuberculose as pack
+
+    pe = geo.municipios("PE")
+    valores = leitura.valores_por_geografia(Escopo("TUBERCULOSE", 2024, "UF", uf="PE"), "incid")
+
+    def zoom(destacado):
+        figura, _ = mapa.deck(
+            pe, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
+            rotulo_metrica="Incidência", destacado=destacado,
+        )
+        return figura.initial_view_state.zoom
+
+    assert zoom("260545") == pytest.approx(zoom(None)), "aproximou na ilha"
+    assert zoom("261160") > zoom(None), "não aproximou no continente"
