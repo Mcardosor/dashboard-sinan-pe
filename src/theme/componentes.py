@@ -199,21 +199,33 @@ def css_base() -> str:
    Duração maior que a dos gráficos (260ms contra 180ms) porque aqui há uma
    troca de contexto a acompanhar, não só um redesenho. `ease-out` para a
    chegada desacelerar, que é o que dá a sensação de assentar. */
-@keyframes sinan-aproximar {{
-  from {{ opacity: 0; transform: scale(.975); }}
-  to   {{ opacity: 1; transform: scale(1); }}
-}}
-[data-testid="stDeckGlJsonChart"] {{
-  animation: sinan-aproximar .26s ease-out;
-  /* Sem isto o canvas do deck.gl pode piscar na borda durante a escala. */
-  transform-origin: center center;
-  will-change: transform, opacity;
-}}
+/* **O mapa não anima.** A animação de entrada acima foi removida em
+   24/ago/2026, e o comentário fica porque a razão vale para qualquer tentativa
+   futura.
+
+   Ela era `opacity: 0 -> 1` com escala, e o Streamlit **recria o contêiner e
+   o canvas do deck a cada rerun** — inclusive quando a `key` do widget não
+   muda, medido no navegador. Então a animação de entrada tocava a cada
+   interação, e como o mapa nascia transparente sobre o branco da página, isso
+   lia como piscada.
+
+   O que se queria de verdade era outra coisa: a câmera deslizando da vista
+   antiga para a nova. Isso o deck.gl faz com `transitionDuration` e
+   `FlyToInterpolator`, e o pydeck emite os dois — mas eles não têm efeito
+   aqui, porque sem instância anterior não há de onde partir. `initialViewState`
+   é sempre inicial de fato.
+
+   Entre uma piscada e nenhum movimento, nenhum movimento é melhor: o mapa
+   simplesmente está no lugar novo, e o retorno ao clique é imediato. */
 
 @media (prefers-reduced-motion: reduce) {{
   .kpi-card {{ transition: none !important; transform: none !important; }}
   /* Quem pediu menos movimento não recebe nem o fade. Vestibular é o motivo:
-     animação repetida a cada interação é gatilho, e aqui ela é decoração. */
+     animação repetida a cada interação é gatilho, e aqui ela é decoração.
+
+     O mapa continua listado embora já não anime: se alguém reintroduzir
+     movimento ali, ele nasce respeitando a preferência em vez de precisar
+     lembrar deste bloco. */
   [data-testid="stVegaLiteChart"],
   [data-testid="stDeckGlJsonChart"] {{
     animation: none !important;

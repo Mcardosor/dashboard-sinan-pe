@@ -872,6 +872,12 @@ def deck(
             bearing=0,
             pitch=0,
             height=altura,
+            # Sem `transition_duration` nem `FlyToInterpolator`: o pydeck
+            # emite os dois, e eles não fazem nada aqui. Medido no navegador —
+            # o Streamlit **recria o contêiner e o canvas do deck a cada
+            # rerun**, inclusive quando a `key` do widget não muda. Sem
+            # instância anterior não há câmera de onde partir, e
+            # `initialViewState` é sempre inicial de fato.
         ),
         map_provider=None,
         tooltip={
