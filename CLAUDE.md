@@ -13,7 +13,7 @@ Documentação em português. Código, commits e comentários também.
 
 ```bash
 streamlit run app.py                      # aplicação (porta 8501)
-pytest                                    # suíte inteira (~640 testes, ~15 s)
+pytest                                    # suíte inteira (~690 testes, ~35 s)
 pytest tests/test_mapa.py -q              # um módulo
 pytest tests/test_mapa.py::test_x -q      # um teste
 pytest tests/paridade -q                  # só o harness de paridade
@@ -23,13 +23,15 @@ python -m scripts.preparar_geometria      # regera data/geo/ (~40 s, 27 UFs)
 python -m scripts.preparar_publicacao --conferir          # mede o pacote
 python -m scripts.preparar_publicacao --destino <pasta>   # monta o pacote
 python -m scripts.medir_performance       # linha de base dos leitores
+pytest tests/test_aplicacao.py -q         # só o app de ponta a ponta (~20 s)
+pip install pytest-cov && pytest --cov=src --cov=app --cov-report=term-missing
 ```
 
 Não há linter nem formatter configurados no projeto.
 
 **Testes sem os dados:** os parquets não são versionados (892 MB). Sem eles,
 `tests/conftest.py` ignora os módulos que dependem de dado e a suíte roda com
-88 testes em vez de ~640. O cabeçalho do pytest mostra `dados: presentes` ou
+54 testes em vez de ~690. O cabeçalho do pytest mostra `dados: presentes` ou
 `AUSENTES` com o caminho — se disser AUSENTES, confira `SINAN_DATA_DIR`.
 
 ## Arquitetura
@@ -75,10 +77,14 @@ uma investigação; a íntegra está em `docs/contrato-dados.md`.
    `RerunException`, que herda de `BaseException` justamente para atravessar
    `except Exception`. Ampliar a captura mata a navegação por clique sem erro
    nenhum aparecer.
-8. **A suíte não importa o `app.py`.** Importar dispararia o script inteiro.
-   `tests/test_app.py` faz checagem estática com `ast` — foi assim que se
-   pegou uma constante de cache definida **depois** do decorador que a usava,
-   com o app quebrando na importação e 629 testes verdes.
+8. **Não importe o `app.py` num teste** — importar dispara o script inteiro.
+   Há dois jeitos certos, e os dois existem:
+   `tests/test_app.py` faz checagem estática com `ast`, que pegou uma
+   constante de cache definida **depois** do decorador que a usava; e
+   `tests/test_aplicacao.py` **executa** a aplicação com o `AppTest` do
+   Streamlit, que roda o script num contexto controlado em vez de importá-lo.
+   Sem o segundo, 950 linhas de orquestração não tinham cobertura nenhuma, e
+   era ali que os erros vinham acontecendo.
 9. **A pirâmide de CURA está zerada** para tuberculose e hanseníase em todos
    os anos — falha do pipeline da equipe parceira, não ausência de dado.
    Óbitos saem de `obitos_sim_faixa`; cura não tem fonte local.
@@ -91,6 +97,18 @@ uma investigação; a íntegra está em `docs/contrato-dados.md`.
    São 4.264 casos em 2024. Toda proporção de encerramento sai maior do que é,
    e a série ganha um degrau artificial naquele ano. Não dá para corrigir do
    nosso lado — está registrado como pedido à equipe parceira.
+
+### Cobertura
+
+`app.py` a 88%, `src/` a 93%, 92% no total. O que falta são caminhos que o
+`AppTest` não alcança — clique no mapa e clique na barra do ranking dependem
+de componentes externos (deck.gl e Vega) —, mais o `src/data/banco.py`, que
+só roda com VPN e credenciais e por isso fica fora da suíte.
+
+**Um painel que cai não derruba a página**, por desenho (`src/resiliencia.py`).
+Num teste ingênuo isso é armadilha: a aplicação "sobe" com metade dos gráficos
+quebrados e o teste passa. `test_aplicacao.py` confere o aviso de painel caído
+além da ausência de exceção.
 
 ### Paridade
 

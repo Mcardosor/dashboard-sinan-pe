@@ -133,6 +133,7 @@ def test_card_nao_e_mais_escondido_do_leitor_de_tela() -> None:
     assert "aria-hidden" not in html
 
 
+@pytest.mark.dado
 def test_seletor_do_mapa_so_oferece_metrica_que_o_mapa_pinta() -> None:
     """Oferecer opção que leva a painel vazio é pior que não oferecer.
 
