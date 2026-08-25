@@ -40,6 +40,29 @@ ALTURA = 530
 
 ROTULO_SEM_DADO = "sem dado"
 
+def _caracteres(textos) -> tuple[str, ...]:
+    """Conjunto de caracteres para o atlas de fonte de uma camada de texto.
+
+    O `TextLayer` do deck.gl monta o atlas com um conjunto fixo, e o que fica
+    fora dele não vira caractere errado: vira **espaço em branco**. "Maués"
+    aparecia como "Mau s", e o defeito só se manifesta em nome acentuado — que
+    é a maioria dos municípios brasileiros.
+
+    **Lista explícita, e não `"auto"`.** O deck aceita a string `"auto"`, mas
+    o pydeck a converte em acessor de dado — vira `@@=auto`, o deck procura um
+    campo chamado `auto` em cada linha, não acha, e cai no conjunto padrão. É
+    a mesma armadilha que já custou o `size_units="pixels"` virar `@@=pixels`
+    e fazer o texto do mapa escalar junto com o zoom.
+
+    **Tupla, e não lista.** O pydeck converte lista em acessor do mesmo jeito
+    que converte string: `["a", "é"]` vira `@@=[a, é]`. Tupla ele serializa
+    como array JSON, que é o que o deck.gl espera. Testadas as quatro formas.
+
+    Montado a partir do texto que a camada de fato desenha, então o atlas fica
+    do tamanho do necessário.
+    """
+    return tuple(sorted({c for t in textos for c in str(t)}))
+
 
 @dataclass(frozen=True, slots=True)
 class Escala:
@@ -672,6 +695,7 @@ def _camada_rotulos(pydeck, dados):
 
     return pydeck.Layer(
         "TextLayer",
+        character_set=_caracteres(d["texto"] for d in fonte),
         data=fonte,
         get_position="posicao",
         get_text="texto",
@@ -819,6 +843,7 @@ def deck(
         camadas.append(
             pydeck.Layer(
                 "TextLayer",
+                character_set=_caracteres([f"{nomes} (fora de escala)"]),
                 data=[{"posicao": [(x0 + x1) / 2, y0], "texto": f"{nomes} (fora de escala)"}],
                 get_position="posicao",
                 get_text="texto",
@@ -935,6 +960,7 @@ def _camadas_destaque(pydeck, dados, chave, destacado, coluna_nome):
     camadas.append(
         pydeck.Layer(
             "TextLayer",
+            character_set=_caracteres([texto]),
             data=[{"posicao": [centro.x, centro.y], "texto": texto}],
             get_position="posicao",
             get_text="texto",

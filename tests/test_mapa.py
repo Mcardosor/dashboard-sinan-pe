@@ -633,3 +633,41 @@ def test_destacar_ilha_nao_aproxima() -> None:
 
     assert zoom("260545") == pytest.approx(zoom(None)), "aproximou na ilha"
     assert zoom("261160") > zoom(None), "não aproximou no continente"
+
+
+def test_o_atlas_de_fonte_cobre_o_texto_que_a_camada_desenha() -> None:
+    """Caractere fora do atlas do deck.gl vira **espaço em branco**.
+
+    Não vira caractere errado nem quadradinho: some. "Maués" saía "Mau s", e
+    como quase todo município brasileiro tem acento, o defeito valia para a
+    maioria dos nomes — mas só aparecia no destaque, que é onde o mapa escreve
+    nome em vez de número.
+    """
+    import json
+
+    from src.data import leitura
+    from src.data.escopo import Escopo
+    from src.doencas import tuberculose as pack
+
+    camada = geo.municipios("AM")
+    alvo = camada[camada["nome_mun"] == "Maués"]
+    if alvo.empty:
+        pytest.skip("Maués não está na camada")
+
+    valores = leitura.valores_por_geografia(Escopo("TUBERCULOSE", 2024, "UF", uf="AM"), "incid")
+    figura, _ = mapa.deck(
+        camada, valores, chave="cod_mun6", rampa=pack.rampa_mapa("incid"),
+        rotulo_metrica="Incidência", destacado=alvo["cod_mun6"].iloc[0],
+    )
+
+    for camada_json in json.loads(figura.to_json())["layers"]:
+        if camada_json["@@type"] != "TextLayer" or not camada_json.get("data"):
+            continue
+        conjunto = camada_json.get("characterSet")
+        assert isinstance(conjunto, list), (
+            f"characterSet virou {conjunto!r} — o pydeck converteu em acessor. "
+            f"Passe tupla, não lista nem string."
+        )
+        for linha in camada_json["data"]:
+            faltando = [c for c in linha["texto"] if c not in conjunto]
+            assert not faltando, f"{linha['texto']!r} perde {faltando} no atlas"
