@@ -16,6 +16,18 @@
 
 ---
 
+> **Onde o projeto está, em 24/ago/2026.** Todo item de escopo nosso está
+> fechado. O que segue desmarcado se divide em três baldes:
+>
+> | Balde | Situação |
+> |---|---|
+> | **Hanseníase** | Fora do escopo — o painel é só de tuberculose |
+> | **Bloqueado na origem** | Pirâmide de CURA: o dado chega zerado da equipe parceira |
+> | **Superset** (semana 7) | Adiada. É produto separado, não parte do painel |
+>
+> As perguntas abertas com a equipe parceira estão em
+> `docs/perguntas-equipe-r.md`. Nenhuma delas bloqueia o painel.
+
 ## Semana 1 — Fundação (03–07/ago)
 
 ### 1.1 Ambiente e dados
@@ -37,9 +49,13 @@
 - [x] Ligar óbitos de TB ao SIM (`cache_ts_sim_obitos`) — `incidence.casos_obitos` é zero para TB em todos os anos
 
 ### 1.3 Harness de paridade (`tests/paridade/`)
-- [ ] **Gate: decidir a metodologia do abandono** — Regra do R = 11,89% ·
-      padrão MS = 14,75% (TB/PE/2024). **Bloqueado na equipe de R.** As duas
-      regras estão implementadas e testadas; falta a decisão de qual vale.
+- [x] **Gate: decidir a metodologia do abandono** — **resolvido em
+      20/ago/2026.** A responsável pelo painel em R confirmou que conta só o
+      código 2, levou a questão ao **José Mário**, e ele definiu: o correto é
+      somar abandono (2) e abandono primário (10) — quem nunca iniciou o
+      tratamento também interrompeu. `REGRA_INTERRUPCAO = "boletim"`, que usa
+      esse numerador com todos os encerramentos no denominador, porque é o que
+      reproduz a Tabela 9 do Boletim de TB 2026. Ver `excecoes.md` §2
 - [x] Extrair valores de referência do dashboard em R **rodando** — feito
       em 2026-08-07, dos dois painéis, em `tests/paridade/referencia_r.json`
 - [x] Suite pytest comparando os números com tolerância declarada
@@ -216,9 +232,12 @@ Fechado com dois de três: cura não tem quebra por idade em nenhum parquet.
 - [x] Usar o **código**, nunca o `valor_lbl` — os rótulos vêm reagrupados (óbito e abandono ambos como "Desfavorável")
 - [x] Supressão do percentual em base pequena, na camada de dados
 
-### 5.3 Filtro de grau de incapacidade
-- [ ] Descoberta das opções em runtime
-- [ ] Propagação para KPIs, mapa e gráficos
+### 5.3 Filtro de grau de incapacidade — **fora do escopo**
+Grau de incapacidade é de **hanseníase**, não de tuberculose. O painel é só de
+TB por decisão de 21/ago/2026; estes itens entram com o pack da doença, se ele
+existir.
+- [ ] ~~Descoberta das opções em runtime~~
+- [ ] ~~Propagação para KPIs, mapa e gráficos~~
 
 ### 5.4 Ajuda contextual — **feito, antecipado**
 - [x] Tooltips nos 6 KPIs e nos controles ambíguos. Explicam sobretudo o
