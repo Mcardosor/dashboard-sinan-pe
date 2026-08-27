@@ -141,6 +141,8 @@ com base em `.env.exemplo`.
 
 ## Documentação
 
+- **[docs/como-fazer.md](docs/como-fazer.md)** — **comece por aqui se vai construir o próximo
+  painel da família**: o que se reaproveita, em que ordem trabalhar, e o que custou caro
 - **[docs/cronograma.md](docs/cronograma.md)** — plano de 8 semanas com marcos e riscos
 - **[docs/inventario-funcionalidades.md](docs/inventario-funcionalidades.md)** — checklist de paridade com o original
 - **[docs/contrato-dados.md](docs/contrato-dados.md)** — datasets, esquemas, fórmulas dos KPIs e armadilhas

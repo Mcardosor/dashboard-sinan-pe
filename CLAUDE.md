@@ -9,6 +9,11 @@ recortes de saúde que hoje só Pernambuco tem.
 
 Documentação em português. Código, commits e comentários também.
 
+Este painel é o primeiro de uma família — outros vão nascer dele.
+`docs/como-fazer.md` é a receita: o que é core e o que é configuração, o que
+se reaproveita inteiro, e as armadilhas que reaparecem em qualquer painel
+desta base.
+
 ## Comandos
 
 ```bash
