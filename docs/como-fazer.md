@@ -2,6 +2,12 @@
 
 Escrito no fim do primeiro painel, para quem vai começar o segundo.
 
+> **Este arquivo é a fonte.** Existe uma versão publicada em
+> <https://claude.ai/code/artifact/b0c0592b-c523-47e4-9a95-b4f616d4ac77>, para
+> quem precisa ler o guia sem ter acesso a este repositório, que é privado.
+> Ela é **espelho**: quem editar este arquivo republica lá, na mesma URL — o
+> link já circulou na equipe. Editar só o espelho é como o guia morre.
+
 **Não é um resumo dos outros documentos.** O contrato de dados, o cronograma,
 a performance e o deploy continuam sendo a fonte de cada assunto — aqui só
 está o que atravessa todos eles: **o que reaproveitar, em que ordem trabalhar,
